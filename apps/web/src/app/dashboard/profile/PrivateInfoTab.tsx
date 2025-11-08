@@ -36,9 +36,16 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           placeholder="Enter your address"
         />
 
-        <EditableField label="City" value={profile.city || ""} onSave={(value) => handleFieldSave("city", value)} placeholder="Enter your city" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <EditableField label="City" value={profile.city || ""} onSave={(value) => handleFieldSave("city", value)} placeholder="Enter your city" />
 
-        <EditableField label="State" value={profile.state || ""} onSave={(value) => handleFieldSave("state", value)} placeholder="Enter your state" />
+          <EditableField
+            label="State"
+            value={profile.state || ""}
+            onSave={(value) => handleFieldSave("state", value)}
+            placeholder="Enter your state"
+          />
+        </div>
 
         <EditableField
           label="Country"
@@ -47,23 +54,17 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           placeholder="Enter your country"
         />
 
-        <EditableField label="Personal Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <EditableField label="Personal Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
 
-        <EditableField
-          label="Alternate Phone"
-          value={profile.alternatePhone || ""}
-          type="tel"
-          onSave={(value) => handleFieldSave("alternatePhone", value)}
-          placeholder="Enter alternate phone"
-        />
-
-        <EditableField
-          label="Date of Joining"
-          value={new Date(profile.dateOfJoining).toISOString().split("T")[0]}
-          type="date"
-          onSave={async () => {}}
-          readOnly
-        />
+          <EditableField
+            label="Date of Joining"
+            value={new Date(profile.dateOfJoining).toISOString().split("T")[0]}
+            type="date"
+            onSave={async () => {}}
+            readOnly
+          />
+        </div>
       </div>
 
       {/* Column 2 - Bank Details */}
@@ -93,19 +94,21 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           placeholder="Enter IFSC code"
         />
 
-        <EditableField
-          label="PAN Number"
-          value={profile.panNumber || ""}
-          onSave={(value) => handleFieldSave("panNumber", value)}
-          placeholder="Enter PAN number"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <EditableField
+            label="PAN Number"
+            value={profile.panNumber || ""}
+            onSave={(value) => handleFieldSave("panNumber", value)}
+            placeholder="Enter PAN number"
+          />
 
-        <EditableField
-          label="UAN Number"
-          value={profile.uanNumber || ""}
-          onSave={(value) => handleFieldSave("uanNumber", value)}
-          placeholder="Enter UAN number"
-        />
+          <EditableField
+            label="UAN Number"
+            value={profile.uanNumber || ""}
+            onSave={(value) => handleFieldSave("uanNumber", value)}
+            placeholder="Enter UAN number"
+          />
+        </div>
 
         <EditableField label="Employee Code" value={profile.employeeCode} onSave={async () => {}} readOnly />
       </div>

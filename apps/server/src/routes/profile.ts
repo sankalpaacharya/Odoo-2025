@@ -30,6 +30,9 @@ router.get("/", async (req, res) => {
         country: true,
         postalCode: true,
         profileImage: true,
+        about: true,
+        jobLove: true,
+        interests: true,
         accountNumber: true,
         bankName: true,
         ifscCode: true,
@@ -99,6 +102,7 @@ router.get("/", async (req, res) => {
       phone: employee.phone,
       alternatePhone: employee.alternatePhone,
       image: employee.user.image,
+      profileImage: employee.profileImage,
 
       // Personal Information
       dateOfBirth: employee.dateOfBirth?.toISOString(),
@@ -108,6 +112,18 @@ router.get("/", async (req, res) => {
       state: employee.state,
       country: employee.country,
       postalCode: employee.postalCode,
+
+      // Resume Information
+      about: employee.about,
+      jobLove: employee.jobLove,
+      interests: employee.interests,
+
+      // Bank Details
+      accountNumber: employee.accountNumber,
+      bankName: employee.bankName,
+      ifscCode: employee.ifscCode,
+      panNumber: employee.panNumber,
+      uanNumber: employee.uanNumber,
 
       // Employment Details
       role: employee.role,
@@ -179,6 +195,14 @@ router.put("/", async (req, res) => {
       postalCode,
       department,
       designation,
+      accountNumber,
+      bankName,
+      ifscCode,
+      panNumber,
+      uanNumber,
+      about,
+      jobLove,
+      interests,
     } = req.body;
 
     // Find employee first
@@ -209,6 +233,14 @@ router.put("/", async (req, res) => {
         ...(postalCode !== undefined && { postalCode }),
         ...(department !== undefined && { department }),
         ...(designation !== undefined && { designation }),
+        ...(accountNumber !== undefined && { accountNumber }),
+        ...(bankName !== undefined && { bankName }),
+        ...(ifscCode !== undefined && { ifscCode }),
+        ...(panNumber !== undefined && { panNumber }),
+        ...(uanNumber !== undefined && { uanNumber }),
+        ...(about !== undefined && { about }),
+        ...(jobLove !== undefined && { jobLove }),
+        ...(interests !== undefined && { interests }),
       },
       select: {
         id: true,
@@ -227,6 +259,14 @@ router.put("/", async (req, res) => {
         postalCode: true,
         department: true,
         designation: true,
+        accountNumber: true,
+        bankName: true,
+        ifscCode: true,
+        panNumber: true,
+        uanNumber: true,
+        about: true,
+        jobLove: true,
+        interests: true,
       },
     });
 

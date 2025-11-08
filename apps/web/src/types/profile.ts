@@ -53,6 +53,11 @@ export interface ProfileData {
   country: string | null;
   postalCode: string | null;
 
+  // Resume Information
+  about: string | null;
+  jobLove: string | null;
+  interests: string | null;
+
   // Bank Details
   accountNumber: string | null;
   bankName: string | null;
@@ -99,6 +104,9 @@ export interface UpdateProfilePayload {
   ifscCode?: string | null;
   panNumber?: string | null;
   uanNumber?: string | null;
+  about?: string | null;
+  jobLove?: string | null;
+  interests?: string | null;
 }
 
 export interface UpdateSalaryPayload {

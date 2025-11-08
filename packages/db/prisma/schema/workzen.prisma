@@ -61,6 +61,11 @@ model Employee {
     postalCode     String?
     profileImage   String?
     
+    // Resume Information
+    about          String?   @db.Text
+    jobLove        String?   @db.Text
+    interests      String?   @db.Text
+    
     // Bank Details
     accountNumber  String?
     bankName       String?

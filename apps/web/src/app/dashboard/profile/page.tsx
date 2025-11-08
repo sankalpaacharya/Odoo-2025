@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
@@ -15,7 +14,6 @@ import { EditableField } from "@/components/editable-field";
 export default function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
-  const [isEditing] = useState(false);
 
   const handleFieldSave = async (field: string, value: string) => {
     await updateProfile.mutateAsync({ [field]: value });
@@ -59,30 +57,34 @@ export default function ProfilePage() {
 
               {/* Column 2 - Profile Fields */}
               <div className="space-y-5">
-                <EditableField
-                  label="Full Name"
-                  value={`${profile.firstName} ${profile.lastName}`}
-                  onSave={async (value) => {
-                    const names = value.split(" ");
-                    await handleFieldSave("firstName", names[0] || "");
-                    if (names.length > 1) {
-                      await handleFieldSave("lastName", names.slice(1).join(" "));
-                    }
-                  }}
-                  placeholder="Enter your full name"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <EditableField
+                    label="Full Name"
+                    value={`${profile.firstName} ${profile.lastName}`}
+                    onSave={async (value) => {
+                      const names = value.split(" ");
+                      await handleFieldSave("firstName", names[0] || "");
+                      if (names.length > 1) {
+                        await handleFieldSave("lastName", names.slice(1).join(" "));
+                      }
+                    }}
+                    placeholder="Enter your full name"
+                  />
 
-                <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
+                  <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
+                </div>
 
-                <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
 
-                <EditableField
-                  label="Mobile"
-                  value={profile.phone || ""}
-                  type="tel"
-                  onSave={(value) => handleFieldSave("phone", value)}
-                  placeholder="+1 234 567 8900"
-                />
+                  <EditableField
+                    label="Mobile"
+                    value={profile.phone || ""}
+                    type="tel"
+                    onSave={(value) => handleFieldSave("phone", value)}
+                    placeholder="+1 234 567 8900"
+                  />
+                </div>
 
                 <EditableField label="Company" value={profile.organization?.companyName || "No Company"} onSave={async () => {}} readOnly />
               </div>
@@ -90,7 +92,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Tabs Section */}
         <div>
           <Tabs defaultValue="resume" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
