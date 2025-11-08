@@ -77,6 +77,7 @@ router.patch("/:employeeId/role", async (req, res) => {
       where: { userId },
       select: {
         role: true,
+        organizationId: true,
       },
     });
 
@@ -93,6 +94,23 @@ router.patch("/:employeeId/role", async (req, res) => {
     const validRoles = ["ADMIN", "EMPLOYEE", "HR_OFFICER", "PAYROLL_OFFICER"];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
+    }
+
+    // Check if the employee exists and belongs to the same organization
+    const targetEmployee = await db.employee.findUnique({
+      where: { id: employeeId },
+      select: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!targetEmployee) {
+      return res.status(404).json({ error: "Target employee not found" });
+    }
+
+    if (targetEmployee.organizationId !== currentEmployee.organizationId) {
+      return res.status(403).json({ error: "Cannot modify employees from other organizations" });
     }
 
     // Update the employee role

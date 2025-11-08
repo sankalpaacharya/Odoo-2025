@@ -88,22 +88,40 @@ export function UserListTable() {
       // Convert display role to database role
       const dbRole = reverseRoleMap[newRole];
 
-      await apiClient(`/api/users/${employeeId}/role`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: dbRole }),
-      });
+      console.log("Updating role for employee:", employeeId, "to:", dbRole);
 
-      // Update local state
-      setEmployees((prevEmployees) =>
-        prevEmployees.map((emp) =>
-          emp.id === employeeId ? { ...emp, role: dbRole.toLowerCase() } : emp
-        )
+      const response = await apiClient<{ success: boolean; employee: any }>(
+        `/api/users/${employeeId}/role`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ role: dbRole }),
+        }
       );
 
-      toast.success("User role updated successfully.");
+      console.log("Role update response:", response);
+
+      if (response.success) {
+        // Update local state with the new role
+        setEmployees((prevEmployees) =>
+          prevEmployees.map((emp) =>
+            emp.id === employeeId ? { ...emp, role: dbRole.toLowerCase() } : emp
+          )
+        );
+
+        toast.success("Employee role updated successfully.");
+      }
     } catch (error) {
       console.error("Error updating role:", error);
-      toast.error("Failed to update user role. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update employee role. Please try again."
+      );
+      // Refresh the employee list to revert any optimistic updates
+      fetchEmployees();
     } finally {
       setUpdatingRole(null);
     }
