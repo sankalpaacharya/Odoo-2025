@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Download, FileText, Calendar as CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -19,17 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useApproveLeave, useRejectLeave } from "../hooks";
-import { formatLeaveType, formatDate } from "../utils";
+import { Calendar as CalendarIcon, Download, FileText, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useApproveLeave, useRejectLeave } from "../hooks";
 import type { Leave, LeaveType } from "../types";
+import { formatDate, formatLeaveType } from "../utils";
 
 interface ApprovalDialogProps {
   open: boolean;
@@ -244,14 +243,9 @@ export function ApprovalDialog({
 
                 <div className="space-y-2">
                   <Label htmlFor="totalDays">Total Days</Label>
-                  <Input
-                    id="totalDays"
-                    type="number"
-                    value={totalDays}
-                    onChange={(e) => setTotalDays(Number(e.target.value))}
-                    min={1}
-                    step={0.5}
-                  />
+                  <div className="px-3 py-2 border rounded-md bg-muted text-muted-foreground">
+                    {totalDays} {totalDays === 1 ? "day" : "days"}
+                  </div>
                 </div>
               </>
             ) : (
