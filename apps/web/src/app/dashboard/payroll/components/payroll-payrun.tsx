@@ -753,7 +753,9 @@ export function PayrollPayrun() {
       <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 sm:gap-4">
         <div className="flex flex-1 gap-3 items-center">
           <div className="flex-1">
-            <label className="text-xs sm:text-sm font-medium mb-2 block">Month</label>
+            <label className="text-xs sm:text-sm font-medium mb-2 block">
+              Month
+            </label>
             <Select
               value={selectedMonth.toString()}
               onValueChange={handleMonthChange}
@@ -772,7 +774,9 @@ export function PayrollPayrun() {
           </div>
 
           <div className="flex-1">
-            <label className="text-xs sm:text-sm font-medium mb-2 block">Year</label>
+            <label className="text-xs sm:text-sm font-medium mb-2 block">
+              Year
+            </label>
             <Select
               value={selectedYear.toString()}
               onValueChange={handleYearChange}
@@ -886,19 +890,25 @@ export function PayrollPayrun() {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Employer Cost</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Employer Cost
+                  </div>
                   <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalEmployerCost)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Gross Wage</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Gross Wage
+                  </div>
                   <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalGrossWage)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Net Wage</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Net Wage
+                  </div>
                   <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalNetWage)}
                   </div>

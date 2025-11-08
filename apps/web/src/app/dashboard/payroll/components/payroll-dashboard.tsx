@@ -180,7 +180,9 @@ export function PayrollDashboard() {
               <AlertCircle className="size-4 sm:size-5 text-yellow-600" />
               Warning
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Employee setup issues</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
+              Employee setup issues
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col">
             {isLoadingWarnings ? (
@@ -214,7 +216,9 @@ export function PayrollDashboard() {
               <FileText className="size-4 sm:size-5" />
               Recent Pay Runs
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Latest payroll processing history</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
+              Latest payroll processing history
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-1">
@@ -249,7 +253,9 @@ export function PayrollDashboard() {
         <CardHeader className="pb-3 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle className="text-base sm:text-lg">Payroll Statistics</CardTitle>
+              <CardTitle className="text-base sm:text-lg">
+                Payroll Statistics
+              </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
                 Employer cost and employee count trends{" "}
                 {employerCostView === "annually" ? "annually" : "monthly"}
@@ -290,7 +296,10 @@ export function PayrollDashboard() {
           </div>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
-          <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] lg:h-[350px] w-full">
+          <ChartContainer
+            config={chartConfig}
+            className="h-[250px] sm:h-[300px] lg:h-[350px] w-full"
+          >
             {isLoadingStatistics ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-sm text-muted-foreground">
