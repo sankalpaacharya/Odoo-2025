@@ -59,6 +59,19 @@ model Employee {
     state          String?
     country        String?
     postalCode     String?
+    profileImage   String?
+    
+    // Resume Information
+    about          String?   @db.Text
+    jobLove        String?   @db.Text
+    interests      String?   @db.Text
+    
+    // Bank Details
+    accountNumber  String?
+    bankName       String?
+    ifscCode       String?
+    panNumber      String?
+    uanNumber      String?
 
     // Employment Details
     role               Role             @default(EMPLOYEE)
