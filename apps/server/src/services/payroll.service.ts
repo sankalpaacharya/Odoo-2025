@@ -385,4 +385,123 @@ export const payrollService = {
       orderBy: [{ year: "desc" }, { month: "desc" }],
     });
   },
+
+  async getPayrollWarnings(organizationId?: string) {
+    const warnings = [];
+
+    const employeesWithoutBankAccount = await db.employee.findMany({
+      where: {
+        employmentStatus: "ACTIVE",
+        OR: [
+          { accountNumber: null },
+          { accountNumber: "" },
+          { bankName: null },
+          { bankName: "" },
+          { ifscCode: null },
+          { ifscCode: "" },
+        ],
+        ...(organizationId && { organizationId }),
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        department: true,
+        designation: true,
+        accountNumber: true,
+        bankName: true,
+        ifscCode: true,
+      },
+    });
+
+    if (employeesWithoutBankAccount.length > 0) {
+      warnings.push({
+        id: "bank_account",
+        type: "bank_account",
+        message: "Employee without Bank A/c",
+        count: employeesWithoutBankAccount.length,
+        employees: employeesWithoutBankAccount,
+      });
+    }
+
+    const employeesWithoutPAN = await db.employee.findMany({
+      where: {
+        employmentStatus: "ACTIVE",
+        OR: [{ panNumber: null }, { panNumber: "" }],
+        ...(organizationId && { organizationId }),
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        department: true,
+        designation: true,
+        panNumber: true,
+      },
+    });
+
+    if (employeesWithoutPAN.length > 0) {
+      warnings.push({
+        id: "pan_number",
+        type: "pan_number",
+        message: "Employee without PAN Number",
+        count: employeesWithoutPAN.length,
+        employees: employeesWithoutPAN,
+      });
+    }
+
+    const employeesWithoutUAN = await db.employee.findMany({
+      where: {
+        employmentStatus: "ACTIVE",
+        OR: [{ uanNumber: null }, { uanNumber: "" }],
+        ...(organizationId && { organizationId }),
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        department: true,
+        designation: true,
+        uanNumber: true,
+      },
+    });
+
+    if (employeesWithoutUAN.length > 0) {
+      warnings.push({
+        id: "uan_number",
+        type: "uan_number",
+        message: "Employee without UAN Number",
+        count: employeesWithoutUAN.length,
+        employees: employeesWithoutUAN,
+      });
+    }
+
+    return warnings;
+  },
+
+  async getRecentPayruns(organizationId?: string, limit: number = 5) {
+    return db.payrun.findMany({
+      where: {
+        status: { in: ["COMPLETED", "PROCESSING"] },
+      },
+      select: {
+        id: true,
+        month: true,
+        year: true,
+        status: true,
+        totalAmount: true,
+        processedAt: true,
+        _count: {
+          select: {
+            payslips: true,
+          },
+        },
+      },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+      take: limit,
+    });
+  },
 };

@@ -14,6 +14,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -36,6 +37,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { format } from "date-fns";
+import { DataTable, type Column } from "@/components/data-table";
 
 interface Employee {
   id: string;
@@ -208,45 +210,125 @@ export function PayrollPayrun() {
     (_, i) => currentDate.getFullYear() - 5 + i
   );
 
+  const payslipColumns: Column<Payslip>[] = [
+    {
+      key: "month",
+      label: "Pay Period",
+      render: (payslip) => (
+        <div className="font-medium">
+          {format(new Date(payslip.year, payslip.month - 1), "MMM yyyy")}
+        </div>
+      ),
+    },
+    {
+      key: "employee.firstName",
+      label: "Employee",
+      sortable: false,
+      render: (payslip) => (
+        <div
+          className="cursor-pointer"
+          onClick={() => handlePayslipClick(payslip)}
+        >
+          <div className="font-medium">
+            {payslip.employee.firstName} {payslip.employee.lastName}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {payslip.employee.employeeCode}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "grossSalary",
+      label: "Employer Cost",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (payslip) => formatCurrency(Number(payslip.grossSalary)),
+    },
+    {
+      key: "basicSalary",
+      label: "Basic Wage",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (payslip) => formatCurrency(Number(payslip.basicSalary)),
+    },
+    {
+      key: "totalEarnings",
+      label: "Gross Wage",
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (payslip) => formatCurrency(Number(payslip.grossSalary)),
+    },
+    {
+      key: "netSalary",
+      label: "Net Wage",
+      className: "text-right font-medium",
+      headerClassName: "text-right",
+      render: (payslip) => formatCurrency(Number(payslip.netSalary)),
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: false,
+      render: (payslip) => {
+        if (payslip.status === "PAID") {
+          return <Badge variant="success">Approved</Badge>;
+        }
+        if (payslip.status === "PROCESSED") {
+          return <Badge variant="default">Approved</Badge>;
+        }
+        if (payslip.status === "PENDING") {
+          return <Badge variant="secondary">Pending</Badge>;
+        }
+        if (payslip.status === "CANCELLED") {
+          return <Badge variant="destructive">Cancelled</Badge>;
+        }
+        return null;
+      },
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-sm font-medium mb-2 block">Month</label>
-          <Select
-            value={selectedMonth.toString()}
-            onValueChange={(value) => setSelectedMonth(Number(value))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month.value} value={month.value.toString()}>
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="flex-1 flex gap-3 items-center">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Month</label>
+            <Select
+              value={selectedMonth.toString()}
+              onValueChange={(value) => setSelectedMonth(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month) => (
+                  <SelectItem key={month.value} value={month.value.toString()}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-sm font-medium mb-2 block">Year</label>
-          <Select
-            value={selectedYear.toString()}
-            onValueChange={(value) => setSelectedYear(Number(value))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Year</label>
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(value) => setSelectedYear(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -344,76 +426,39 @@ export function PayrollPayrun() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pay Period</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Employer Cost</TableHead>
-                    <TableHead className="text-right">Basic Wage</TableHead>
-                    <TableHead className="text-right">Gross Wage</TableHead>
-                    <TableHead className="text-right">Net Wage</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payslips.map((payslip) => (
-                    <TableRow
-                      key={payslip.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handlePayslipClick(payslip)}
-                    >
-                      <TableCell className="font-medium">
-                        {format(
-                          new Date(payslip.year, payslip.month - 1),
-                          "MMM yyyy"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {payslip.employee.firstName}{" "}
-                            {payslip.employee.lastName}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {payslip.employee.employeeCode}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(Number(payslip.grossSalary))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(Number(payslip.basicSalary))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(Number(payslip.grossSalary))}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(Number(payslip.netSalary))}
-                      </TableCell>
-                      <TableCell>
-                        {payslip.status === "PAID" && (
-                          <Badge variant="success">Approved</Badge>
-                        )}
-                        {payslip.status === "PROCESSED" && (
-                          <Badge variant="default">Approved</Badge>
-                        )}
-                        {payslip.status === "PENDING" && (
-                          <Badge variant="secondary">Pending</Badge>
-                        )}
-                        {payslip.status === "CANCELLED" && (
-                          <Badge variant="destructive">Cancelled</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <DataTable
+            data={payslips}
+            columns={payslipColumns}
+            keyExtractor={(payslip) => payslip.id}
+            emptyMessage="No payslips found"
+            footer={
+              <>
+                <TableRow>
+                  <TableCell colSpan={2} className="font-medium">
+                    Total
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(totalEmployerCost)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(
+                      payslips.reduce(
+                        (sum, p) => sum + Number(p.basicSalary),
+                        0
+                      )
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(totalGrossWage)}
+                  </TableCell>
+                  <TableCell className="text-right font-bold">
+                    {formatCurrency(totalNetWage)}
+                  </TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </>
+            }
+          />
         </>
       )}
 
@@ -421,7 +466,7 @@ export function PayrollPayrun() {
         <CardHeader>
           <CardTitle>Payroll Definitions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-1 text-sm">
           <div>
             <span className="font-medium">Employer Cost:</span>{" "}
             <span className="text-muted-foreground">
@@ -549,17 +594,19 @@ export function PayrollPayrun() {
                           )}
                         </TableCell>
                       </TableRow>
-                      <TableRow className="font-medium border-t-2">
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
                         <TableCell></TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-medium">
                           {Number(selectedPayslip.presentDays) +
                             Number(selectedPayslip.leaveDays)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-medium">
                           {formatCurrency(Number(selectedPayslip.basicSalary))}
                         </TableCell>
                       </TableRow>
-                    </TableBody>
+                    </TableFooter>
                   </Table>
                   <p className="text-sm text-muted-foreground">
                     Salary is calculated based on the employee's monthly
@@ -632,14 +679,7 @@ export function PayrollPayrun() {
                           )}
                         </TableCell>
                       </TableRow>
-                      <TableRow className="font-medium border-t-2">
-                        <TableCell>Gross</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(Number(selectedPayslip.grossSalary))}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow className="border-t">
+                      <TableRow>
                         <TableCell>PF Employee</TableCell>
                         <TableCell className="text-right">100</TableCell>
                         <TableCell className="text-right text-destructive">
@@ -665,14 +705,29 @@ export function PayrollPayrun() {
                           )}
                         </TableCell>
                       </TableRow>
-                      <TableRow className="font-medium border-t-2">
-                        <TableCell>Net Amount</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell className="font-medium">Gross</TableCell>
+                        <TableCell className="text-right font-medium">
+                          100
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(Number(selectedPayslip.grossSalary))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          Net Amount
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          100
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
                           {formatCurrency(Number(selectedPayslip.netSalary))}
                         </TableCell>
                       </TableRow>
-                    </TableBody>
+                    </TableFooter>
                   </Table>
                   <p className="text-sm text-muted-foreground">
                     Users can also view the payslip computation, which shows how

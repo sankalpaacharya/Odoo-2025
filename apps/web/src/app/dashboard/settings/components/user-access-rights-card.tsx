@@ -55,17 +55,17 @@ export function UserAccessRightsCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="space-y-4">
+      <div className="space-y-2">
         <CardTitle>User Access Rights</CardTitle>
         <CardDescription>
           Configure module-based permissions for each user role. Access rights
           define what users are allowed to access and what they are restricted
           from accessing.
         </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      </div>
+      <>
+        <div className="space-y-2">
           {ROLES.map((role) => (
             <Collapsible
               key={role}
@@ -98,7 +98,7 @@ export function UserAccessRightsCard() {
             {isResetting ? "Resetting..." : "Reset to Default"}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </>
+    </div>
   );
 }

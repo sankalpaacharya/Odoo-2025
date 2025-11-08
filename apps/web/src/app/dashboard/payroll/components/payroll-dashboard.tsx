@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { AlertCircle, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bar,
   BarChart,
@@ -31,6 +31,43 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { apiClient } from "@/lib/api-client";
+import { PayrollWarningModal } from "./payroll-warning-modal";
+
+interface Warning {
+  id: string;
+  type: string;
+  message: string;
+  count: number;
+  employees: any[];
+}
+
+interface Payrun {
+  id: string;
+  month: number;
+  year: number;
+  status: string;
+  totalAmount: number;
+  processedAt: string | null;
+  _count: {
+    payslips: number;
+  };
+}
+
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function PayrollDashboard() {
   const [employerCostView, setEmployerCostView] = useState<
@@ -40,15 +77,50 @@ export function PayrollDashboard() {
     "monthly" | "annually"
   >("monthly");
 
-  const warnings = [
-    { id: 1, message: "Employee without Bank A/c", count: 1 },
-    { id: 2, message: "Employee without Manager", count: 1 },
-  ];
+  const [warnings, setWarnings] = useState<Warning[]>([]);
+  const [recentPayruns, setRecentPayruns] = useState<Payrun[]>([]);
+  const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [isLoadingWarnings, setIsLoadingWarnings] = useState(true);
+  const [isLoadingPayruns, setIsLoadingPayruns] = useState(true);
 
-  const recentPayruns = [
-    { id: 1, month: "Oct 2025", payslips: 3 },
-    { id: 2, month: "Sept 2025", payslips: 3 },
-  ];
+  useEffect(() => {
+    fetchWarnings();
+    fetchRecentPayruns();
+  }, []);
+
+  const fetchWarnings = async () => {
+    try {
+      setIsLoadingWarnings(true);
+      const data = await apiClient<Warning[]>("/api/payroll/warnings");
+      setWarnings(data);
+    } catch (error) {
+      console.error("Error fetching warnings:", error);
+    } finally {
+      setIsLoadingWarnings(false);
+    }
+  };
+
+  const fetchRecentPayruns = async () => {
+    try {
+      setIsLoadingPayruns(true);
+      const data = await apiClient<Payrun[]>("/api/payroll/payruns/recent");
+      setRecentPayruns(data);
+    } catch (error) {
+      console.error("Error fetching recent payruns:", error);
+    } finally {
+      setIsLoadingPayruns(false);
+    }
+  };
+
+  const handleWarningClick = (warning: Warning) => {
+    setSelectedWarning(warning);
+    setWarningModalOpen(true);
+  };
+
+  const formatPayrunMonth = (month: number, year: number) => {
+    return `${MONTH_NAMES[month - 1]} ${year}`;
+  };
 
   const payrollData = {
     monthly: [
@@ -85,6 +157,12 @@ export function PayrollDashboard() {
 
   return (
     <div className="grid gap-6">
+      <PayrollWarningModal
+        open={warningModalOpen}
+        onOpenChange={setWarningModalOpen}
+        warning={selectedWarning}
+      />
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Warning Panel */}
         <Card>
@@ -96,19 +174,30 @@ export function PayrollDashboard() {
             <CardDescription>Employee setup issues</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {warnings.map((warning) => (
-              <Button
-                key={warning.id}
-                variant="ghost"
-                className="w-full justify-start text-left h-auto py-2 px-3"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-blue-600 hover:underline">
-                    {warning.count} {warning.message}
-                  </span>
-                </div>
-              </Button>
-            ))}
+            {isLoadingWarnings ? (
+              <p className="text-sm text-muted-foreground">
+                Loading warnings...
+              </p>
+            ) : warnings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No warnings found. All employees have complete information.
+              </p>
+            ) : (
+              warnings.map((warning) => (
+                <Button
+                  key={warning.id}
+                  variant="ghost"
+                  className="w-full justify-start text-left h-auto py-2 px-3"
+                  onClick={() => handleWarningClick(warning)}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600 hover:underline">
+                      {warning.count} {warning.message}
+                    </span>
+                  </div>
+                </Button>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -122,19 +211,30 @@ export function PayrollDashboard() {
             <CardDescription>Recent pay runs</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentPayruns.map((payrun) => (
-              <Button
-                key={payrun.id}
-                variant="ghost"
-                className="w-full justify-start text-left h-auto py-2 px-3"
-              >
-                <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium text-blue-600 hover:underline">
-                    Payrun for {payrun.month} ({payrun.payslips} Payslips)
-                  </span>
-                </div>
-              </Button>
-            ))}
+            {isLoadingPayruns ? (
+              <p className="text-sm text-muted-foreground">
+                Loading payruns...
+              </p>
+            ) : recentPayruns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recent payruns found.
+              </p>
+            ) : (
+              recentPayruns.map((payrun) => (
+                <Button
+                  key={payrun.id}
+                  variant="ghost"
+                  className="w-full justify-start text-left h-auto py-2 px-3"
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium text-blue-600 hover:underline">
+                      Payrun for {formatPayrunMonth(payrun.month, payrun.year)}{" "}
+                      ({payrun._count.payslips} Payslips)
+                    </span>
+                  </div>
+                </Button>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
