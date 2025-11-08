@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { authClient } from "@/lib/auth-client";
 
-export default async function DashboardPage() {
+export default async function AttendancePage() {
   const session = await authClient.getSession({
     fetchOptions: {
       headers: await headers(),
@@ -17,10 +17,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {session.user.name}
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
+        <p className="text-muted-foreground">Track employee attendance</p>
       </div>
     </div>
   );
