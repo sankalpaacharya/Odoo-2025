@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,57 +10,86 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, Loader2 } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
-const recentLeaves = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    initials: "SJ",
-    type: "Sick Leave",
-    startDate: "Nov 12, 2025",
-    duration: "2 days",
-    status: "pending",
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    initials: "MC",
-    type: "Vacation",
-    startDate: "Nov 15, 2025",
-    duration: "5 days",
-    status: "pending",
-  },
-  {
-    id: 3,
-    name: "Emily Davis",
-    initials: "ED",
-    type: "Personal",
-    startDate: "Nov 10, 2025",
-    duration: "1 day",
-    status: "pending",
-  },
-  {
-    id: 4,
-    name: "James Wilson",
-    initials: "JW",
-    type: "Emergency",
-    startDate: "Nov 13, 2025",
-    duration: "3 days",
-    status: "pending",
-  },
-  {
-    id: 5,
-    name: "Lisa Anderson",
-    initials: "LA",
-    type: "Sick Leave",
-    startDate: "Nov 14, 2025",
-    duration: "1 day",
-    status: "pending",
-  },
-];
+interface Leave {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  department: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string;
+  attachment: string | null;
+  status: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
+interface LeavesResponse {
+  leaves: Leave[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatLeaveType(type: string): string {
+  return type
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export function RecentLeaveRequests() {
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchLeaves() {
+      try {
+        const data = await apiClient<LeavesResponse>(
+          "/api/leaves/all?limit=5&status=PENDING"
+        );
+        setLeaves(data.leaves || []);
+      } catch (err) {
+        console.error("Error fetching leaves:", err);
+        setError(err instanceof Error ? err.message : "Failed to load leaves");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchLeaves();
+  }, []);
+
   return (
     <Card className="w-full h-full flex flex-col">
       <CardHeader>
@@ -69,40 +99,56 @@ export function RecentLeaveRequests() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
-        <div className="space-y-3">
-          {recentLeaves.map((leave) => (
-            <div
-              key={leave.id}
-              className="flex items-center justify-between gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="shrink-0">
-                  <AvatarFallback>{leave.initials}</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1 min-w-0">
-                  <p className="text-sm font-medium leading-none truncate">
-                    {leave.name}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline" className="text-xs">
-                      {leave.type}
-                    </Badge>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+            {error}
+          </div>
+        ) : leaves.length === 0 ? (
+          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+            No pending leave requests
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {leaves.map((leave) => (
+              <div
+                key={leave.id}
+                className="flex items-center justify-between gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="shrink-0">
+                    <AvatarFallback>
+                      {getInitials(leave.employeeName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-sm font-medium leading-none truncate">
+                      {leave.employeeName}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-xs">
+                        {formatLeaveType(leave.leaveType)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
+                  <div className="flex items-center gap-1 whitespace-nowrap">
+                    <Calendar className="h-3 w-3" />
+                    {formatDate(leave.startDate)}
+                  </div>
+                  <div className="flex items-center gap-1 whitespace-nowrap">
+                    <Clock className="h-3 w-3" />
+                    {leave.totalDays} {leave.totalDays === 1 ? "day" : "days"}
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
-                <div className="flex items-center gap-1 whitespace-nowrap">
-                  <Calendar className="h-3 w-3" />
-                  {leave.startDate}
-                </div>
-                <div className="flex items-center gap-1 whitespace-nowrap">
-                  <Clock className="h-3 w-3" />
-                  {leave.duration}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
