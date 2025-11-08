@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { authClient } from "@/lib/auth-client";
 import EmployeeCard from "@/components/employee-card";
 import { AddEmployeeModal } from "@/components/add-employee-modal";
 
@@ -19,7 +17,8 @@ interface Employee {
 
 async function fetchEmployees(sessionToken: string): Promise<Employee[]> {
   try {
-    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+    const API_URL =
+      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     const response = await fetch(`${API_URL}/api/employees`, {
       method: "GET",
       headers: {
@@ -44,17 +43,6 @@ async function fetchEmployees(sessionToken: string): Promise<Employee[]> {
 }
 
 export default async function EmployeesPage() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
   // Get the session token from cookies
   const headersList = await headers();
   const cookies = headersList.get("cookie") || "";
@@ -67,10 +55,8 @@ export default async function EmployeesPage() {
   // Fetch employees from the API
   const employees = await fetchEmployees(sessionToken);
 
-  // Roles that can see all employee cards
-  const allowedRoles = ["admin", "hr_officer", "payroll_officer"];
-  const userRole = (session?.user as any)?.role as string | undefined;
-  const showAll = userRole ? allowedRoles.includes(userRole) : false;
+  // TODO: Get user role from employee API to check permissions
+  const showAll = false;
 
   return (
     <div className="space-y-6">
@@ -90,7 +76,13 @@ export default async function EmployeesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {employees.map((emp) => (
-              <EmployeeCard key={emp.id} id={emp.id} name={emp.name} role={emp.role} status={emp.status} />
+              <EmployeeCard
+                key={emp.id}
+                id={emp.id}
+                name={emp.name}
+                role={emp.role}
+                status={emp.status}
+              />
             ))}
           </div>
         )}

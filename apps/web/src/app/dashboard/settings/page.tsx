@@ -1,21 +1,7 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { authClient } from "@/lib/auth-client";
 import { UserListTable } from "./components/user-list-table";
 import { UserAccessRightsCard } from "./components/user-access-rights-card";
 
-export default async function SettingsPage() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
+export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -30,4 +16,3 @@ export default async function SettingsPage() {
     </div>
   );
 }
-

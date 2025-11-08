@@ -1,19 +1,4 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { authClient } from "@/lib/auth-client";
-
-export default async function ReportsPage() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
+export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>

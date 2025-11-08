@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { AttendanceRecord, EmployeeAttendance } from "./types";
+import type { MyAttendanceResponse, EmployeeAttendance } from "./types";
 
 export function useMyAttendance(month: number, year: number) {
   return useQuery({
     queryKey: ["attendance", "my", month, year],
     queryFn: () =>
-      apiClient<AttendanceRecord[]>(
+      apiClient<MyAttendanceResponse>(
         `/api/attendance/my-attendance?month=${month}&year=${year}`
       ),
     retry: 1,

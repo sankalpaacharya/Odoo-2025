@@ -1,4 +1,4 @@
-import type { AttendanceStatus } from "../types";
+import type { AttendanceStatus } from "./types";
 
 export function getStatusColor(
   status: AttendanceStatus
@@ -25,7 +25,7 @@ export function formatStatus(status: AttendanceStatus): string {
   return status.replace(/_/g, " ");
 }
 
-export function formatDate(dateString: string | Date): string {
+export function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", {
     weekday: "short",
@@ -35,7 +35,7 @@ export function formatDate(dateString: string | Date): string {
   });
 }
 
-export function formatTime(timeString: string | Date | null): string {
+export function formatTime(timeString: string | null): string {
   if (!timeString) return "-";
   const date = new Date(timeString);
   return date.toLocaleTimeString("en-US", {
