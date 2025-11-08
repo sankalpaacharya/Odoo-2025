@@ -25,41 +25,107 @@ import {
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ROLES } from "../constants";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { apiClient } from "@/lib/api-client";
 
-const MOCK_USERS = [
-  {
-    id: 1,
-    username: "john.doe",
-    loginId: "john_doe",
-    email: "abcd@gmail.com",
-    role: "Admin",
-  },
-  {
-    id: 2,
-    username: "jane.smith",
-    loginId: "jane_smith",
-    email: "jane@gmail.com",
-    role: "HR Officer",
-  },
-  {
-    id: 3,
-    username: "bob.wilson",
-    loginId: "bob_wilson",
-    email: "bob@gmail.com",
-    role: "Payroll Officer",
-  },
-  {
-    id: 4,
-    username: "alice.brown",
-    loginId: "alice_brown",
-    email: "alice@gmail.com",
-    role: "Employee",
-  },
-];
+interface Employee {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  employeeCode: string;
+  department: string;
+  designation: string;
+  employmentStatus: string;
+}
+
+// Map database roles to display roles
+const roleMap: Record<string, string> = {
+  admin: "Admin",
+  employee: "Employee",
+  hr_officer: "HR Officer",
+  payroll_officer: "Payroll Officer",
+};
+
+// Map display roles back to database roles
+const reverseRoleMap: Record<string, string> = {
+  Admin: "ADMIN",
+  Employee: "EMPLOYEE",
+  "HR Officer": "HR_OFFICER",
+  "Payroll Officer": "PAYROLL_OFFICER",
+};
+
+const ROLES = ["Employee", "HR Officer", "Payroll Officer", "Admin"] as const;
 
 export function UserListTable() {
   const router = useRouter();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const data = await apiClient<Employee[]>("/api/employees");
+      setEmployees(data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      toast.error("Failed to fetch employees. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (employeeId: string, newRole: string) => {
+    try {
+      setUpdatingRole(employeeId);
+
+      // Convert display role to database role
+      const dbRole = reverseRoleMap[newRole];
+
+      await apiClient(`/api/users/${employeeId}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: dbRole }),
+      });
+
+      // Update local state
+      setEmployees((prevEmployees) =>
+        prevEmployees.map((emp) =>
+          emp.id === employeeId ? { ...emp, role: dbRole.toLowerCase() } : emp
+        )
+      );
+
+      toast.success("User role updated successfully.");
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update user role. Please try again.");
+    } finally {
+      setUpdatingRole(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+          <CardDescription>
+            Manage users and assign roles to control access rights
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading employees...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -78,55 +144,79 @@ export function UserListTable() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User name</TableHead>
-                  <TableHead>Login id</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Employee Code</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_USERS.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{user.loginId}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Select defaultValue={user.role}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => router.push(`/dashboard/settings/users/${user.id}` as any)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => router.push(`/dashboard/settings/users/${user.id}/edit` as any)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {employees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <p className="text-muted-foreground">
+                        No employees found
+                      </p>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell>{employee.name}</TableCell>
+                      <TableCell>{employee.employeeCode}</TableCell>
+                      <TableCell>{employee.department || "N/A"}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={roleMap[employee.role] || employee.role}
+                          onValueChange={(value) =>
+                            handleRoleChange(employee.id, value)
+                          }
+                          disabled={updatingRole === employee.id}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/settings/users/${employee.id}` as any
+                              )
+                            }
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/settings/users/${employee.id}/edit` as any
+                              )
+                            }
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

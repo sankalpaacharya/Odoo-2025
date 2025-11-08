@@ -121,14 +121,6 @@ router.post("/request", async (req, res) => {
       year
     );
 
-    if (!validation.isValid) {
-      return res.status(400).json({
-        error: validation.error,
-        remaining: validation.remaining,
-        requested: totalDays,
-      });
-    }
-
     const leave = await leaveService.createLeave({
       employeeId: targetEmployeeId,
       leaveType,
@@ -150,6 +142,11 @@ router.post("/request", async (req, res) => {
       approvedAt: leave.approvedAt?.toISOString() || null,
       rejectionReason: leave.rejectionReason,
       createdAt: leave.createdAt.toISOString(),
+      warning: validation.warning,
+      balanceInfo: {
+        remaining: validation.remaining,
+        requested: totalDays,
+      },
     });
   } catch (error) {
     console.error("Error creating leave request:", error);

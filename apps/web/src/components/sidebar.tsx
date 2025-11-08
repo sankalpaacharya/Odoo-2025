@@ -13,7 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   User,
-  ChevronsDownUp,
+  ChevronsUpDown,
 } from "lucide-react";
 import type { Route } from "next";
 import {
@@ -40,6 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SidebarStatus } from "@/components/sidebar-status";
 
 type NavigationItem = {
   name: string;
@@ -141,7 +142,9 @@ export function Sidebar() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
+      <SidebarStatus />
+
+      <SidebarFooter className="border-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -164,7 +167,7 @@ export function Sidebar() {
                         </span>
                       </div>
                     </div>
-                    <ChevronsDownUp className="h-4 w-4 ml-auto group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="h-4 w-4 ml-auto group-data-[collapsible=icon]:hidden" />
                   </div>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
