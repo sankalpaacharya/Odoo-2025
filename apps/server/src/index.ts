@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import path from "path";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "@my-better-t-app/auth";
 import attendanceRoutes from "./routes/attendance";
@@ -10,6 +11,7 @@ import sessionRoutes from "./routes/session";
 import leaveRoutes from "./routes/leave";
 import permissionsRoutes from "./routes/permissions";
 import usersRoutes from "./routes/users";
+import organizationRoutes from "./routes/organization";
 import profileRoutes from "./routes/profile";
 
 const app = express();
@@ -24,6 +26,11 @@ app.use(
     credentials: true,
   })
 );
+
+// Serve static files from uploads directory
+const uploadsPath = path.join(__dirname, "../uploads");
+app.use("/uploads", express.static(uploadsPath));
+console.log("Serving static files from:", uploadsPath);
 
 app.get("/", (_req, res) => {
   res.status(200).send("OK");
@@ -40,6 +47,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/permissions", permissionsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/organization", organizationRoutes);
 app.use("/api/profile", profileRoutes);
 
 const port = process.env.PORT || 3000;

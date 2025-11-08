@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, apiClientFormData } from "@/lib/api-client";
 import type {
   Leave,
   LeaveBalance,
@@ -88,11 +88,18 @@ export function useCreateLeaveRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateLeaveRequest) =>
-      apiClient<Leave>("/api/leaves/request", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: (data: CreateLeaveRequest) => {
+      const formData = new FormData();
+
+      if (data.employeeId) formData.append("employeeId", data.employeeId);
+      formData.append("leaveType", data.leaveType);
+      formData.append("startDate", data.startDate);
+      formData.append("endDate", data.endDate);
+      formData.append("reason", data.reason);
+      if (data.attachment) formData.append("attachment", data.attachment);
+
+      return apiClientFormData<Leave>("/api/leaves/request", formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
     },

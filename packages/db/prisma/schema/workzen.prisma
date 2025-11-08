@@ -3,14 +3,14 @@
 // ================================
 
 model Organization {
-    id          String   @id @default(cuid()) @map("_id")
-    companyName String   @unique
+    id          String  @id @default(cuid()) @map("_id")
+    companyName String  @unique
     logo        String?
 
-    employees   Employee[]
+    employees Employee[]
 
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     @@index([companyName])
     @@map("organization")
@@ -117,18 +117,18 @@ model WorkSession {
     employeeId String
     employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    date        DateTime  @db.Date
-    startTime   DateTime
-    endTime     DateTime?
-    isActive    Boolean   @default(true)
-    
+    date      DateTime  @db.Date
+    startTime DateTime
+    endTime   DateTime?
+    isActive  Boolean   @default(true)
+
     breakStartTime DateTime?
     breakEndTime   DateTime?
     totalBreakTime Decimal?  @default(0) @db.Decimal(5, 2)
-    
-    workingHours   Decimal?  @db.Decimal(5, 2)
-    overtimeHours  Decimal?  @default(0) @db.Decimal(5, 2)
-    
+
+    workingHours  Decimal? @db.Decimal(5, 2)
+    overtimeHours Decimal? @default(0) @db.Decimal(5, 2)
+
     notes String?
 
     createdAt DateTime @default(now())
@@ -145,13 +145,9 @@ model WorkSession {
 // ================================
 
 enum LeaveType {
-    CASUAL
-    SICK
-    EARNED
-    MATERNITY
-    PATERNITY
-    UNPAID
-    COMPENSATORY
+    PAID_TIME_OFF
+    SICK_LEAVE
+    UNPAID_LEAVE
 }
 
 enum LeaveStatus {
@@ -166,12 +162,13 @@ model Leave {
     employeeId String
     employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    leaveType LeaveType
-    startDate DateTime    @db.Date
-    endDate   DateTime    @db.Date
-    totalDays Decimal     @db.Decimal(5, 2)
-    reason    String
-    status    LeaveStatus @default(PENDING)
+    leaveType  LeaveType
+    startDate  DateTime    @db.Date
+    endDate    DateTime    @db.Date
+    totalDays  Decimal     @db.Decimal(5, 2)
+    reason     String
+    attachment String?
+    status     LeaveStatus @default(PENDING)
 
     approvedBy      String?
     approvedAt      DateTime?
@@ -367,7 +364,7 @@ model AuditLog {
 model RolePermission {
     id String @id @default(cuid()) @map("_id")
 
-    role       String  // Using String instead of Role enum for flexibility
+    role       String // Using String instead of Role enum for flexibility
     module     String
     permission String
 

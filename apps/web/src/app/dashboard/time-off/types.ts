@@ -1,11 +1,4 @@
-export type LeaveType =
-  | "CASUAL"
-  | "SICK"
-  | "EARNED"
-  | "MATERNITY"
-  | "PATERNITY"
-  | "UNPAID"
-  | "COMPENSATORY";
+export type LeaveType = "PAID_TIME_OFF" | "SICK_LEAVE" | "UNPAID_LEAVE";
 
 export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
@@ -28,6 +21,7 @@ export interface Leave {
   endDate: string;
   totalDays: number;
   reason: string;
+  attachment?: string | null;
   status: LeaveStatus;
   approvedBy: string | null;
   approvedAt: string | null;
@@ -41,6 +35,7 @@ export interface CreateLeaveRequest {
   startDate: string;
   endDate: string;
   reason: string;
+  attachment?: File;
 }
 
 export interface ApproveLeaveRequest {
@@ -60,4 +55,3 @@ export interface LeavesResponse {
     totalPages: number;
   };
 }
-

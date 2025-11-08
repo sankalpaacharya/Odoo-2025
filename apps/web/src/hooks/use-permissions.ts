@@ -75,7 +75,19 @@ export function usePermissions() {
   };
 
   const canAccessRoute = (route: string): boolean => {
-    const routePermission = ROUTE_PERMISSIONS[route];
+    // Check exact match first
+    let routePermission = ROUTE_PERMISSIONS[route];
+    
+    // If no exact match, check for parent route (e.g., /dashboard/employees/123 -> /dashboard/employees)
+    if (!routePermission) {
+      const pathParts = route.split('/').filter(Boolean);
+      for (let i = pathParts.length; i > 0; i--) {
+        const parentPath = '/' + pathParts.slice(0, i).join('/');
+        routePermission = ROUTE_PERMISSIONS[parentPath];
+        if (routePermission) break;
+      }
+    }
+    
     if (!routePermission) return true; // Allow access to routes without specific permissions
     return hasPermission(routePermission.module, routePermission.permission);
   };

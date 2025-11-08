@@ -4,6 +4,7 @@ import { authClient } from "@/lib/auth-client";
 import { SidebarWrapper } from "@/components/sidebar-wrapper";
 import DashboardClientLayout from "./dashboard-client-layout";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AuthGuard } from "@/components/auth-guard";
 
 export default async function DashboardLayout({
   children,
@@ -25,7 +26,9 @@ export default async function DashboardLayout({
     <DashboardClientLayout>
       <SidebarWrapper />
       <SidebarInset>
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <AuthGuard>
+          <main className="flex-1 overflow-auto p-6">{children}</main>
+        </AuthGuard>
       </SidebarInset>
     </DashboardClientLayout>
   );
