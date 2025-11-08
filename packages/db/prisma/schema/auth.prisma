@@ -6,6 +6,12 @@ model User {
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
+  
+  // Additional fields for employee
+  firstName     String?
+  lastName      String?
+  companyName   String?
+  
   sessions      Session[]
   accounts      Account[]
   employee      Employee?
