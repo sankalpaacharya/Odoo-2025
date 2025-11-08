@@ -8,6 +8,7 @@ import { useState, useRef } from "react";
 import PrivateInfoTab from "./PrivateInfoTab";
 import ResumeTab from "./ResumeTab";
 import SalaryInfoTab from "./SalaryInfoTab";
+import SecurityTab from "./SecurityTab";
 import Loader from "@/components/loader";
 import { getProfileImageUrl } from "@/lib/image-utils";
 import { EditableField } from "@/components/editable-field";
@@ -59,9 +60,7 @@ export default function ProfilePage() {
         queryClient.invalidateQueries({ queryKey: ["employee", "me"] });
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload image"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
     } finally {
       setIsUploading(false);
     }
@@ -95,23 +94,18 @@ export default function ProfilePage() {
                   accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={handleImageUpload}
                   className="hidden"
+                  aria-label="Upload profile photo"
                 />
                 <button
                   type="button"
                   title="Upload profile photo"
                   onClick={handleImageClick}
                   disabled={isUploading}
-                  className="group relative h-30 w-30 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="group relative h-30 w-30 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   {getProfileImageUrl(profile.profileImage, profile.image) ? (
                     <>
                       <img
-                        src={
-                          getProfileImageUrl(
-                            profile.profileImage,
-                            profile.image
-                          )!
-                        }
+                        src={getProfileImageUrl(profile.profileImage, profile.image)!}
                         alt={`${profile.firstName} ${profile.lastName}`}
                         className="h-full w-full object-cover z-100 relative"
                       />
@@ -142,31 +136,17 @@ export default function ProfilePage() {
                       const names = value.split(" ");
                       await handleFieldSave("firstName", names[0] || "");
                       if (names.length > 1) {
-                        await handleFieldSave(
-                          "lastName",
-                          names.slice(1).join(" ")
-                        );
+                        await handleFieldSave("lastName", names.slice(1).join(" "));
                       }
                     }}
                     placeholder="Enter your full name"
                   />
 
-                  <EditableField
-                    label="Login ID"
-                    value={profile.employeeCode}
-                    onSave={async () => {}}
-                    readOnly
-                  />
+                  <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField
-                    label="Email"
-                    value={profile.email}
-                    type="email"
-                    onSave={async () => {}}
-                    readOnly
-                  />
+                  <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
 
                   <EditableField
                     label="Mobile"
@@ -177,12 +157,7 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <EditableField
-                  label="Company"
-                  value={profile.organization?.companyName || "No Company"}
-                  onSave={async () => {}}
-                  readOnly
-                />
+                <EditableField label="Company" value={profile.organization?.companyName || "No Company"} onSave={async () => {}} readOnly />
               </div>
             </div>
           </CardContent>
@@ -208,23 +183,16 @@ export default function ProfilePage() {
               {profile.currentUserRole === "EMPLOYEE" && (
                 <div className="mb-4 p-4 bg-muted/50 border border-border rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Note:</span> Salary
-                    information is read-only. Only administrators and payroll
-                    officers can modify salary details.
+                    <span className="font-medium">Note:</span> Salary information is read-only. Only administrators and payroll officers can modify
+                    salary details.
                   </p>
                 </div>
               )}
               <SalaryInfoTab profile={profile} />
             </TabsContent>
 
-            <TabsContent value="security">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground">
-                    Security settings content goes here...
-                  </p>
-                </CardContent>
-              </Card>
+            <TabsContent value="security" className="mt-8">
+              <SecurityTab profile={profile} />
             </TabsContent>
           </Tabs>
         </div>
