@@ -225,10 +225,7 @@ export function PayrollPayrun() {
       label: "Employee",
       sortable: false,
       render: (payslip) => (
-        <div
-          className="cursor-pointer"
-          onClick={() => handlePayslipClick(payslip)}
-        >
+        <div>
           <div className="font-medium">
             {payslip.employee.firstName} {payslip.employee.lastName}
           </div>
@@ -431,6 +428,7 @@ export function PayrollPayrun() {
             columns={payslipColumns}
             keyExtractor={(payslip) => payslip.id}
             emptyMessage="No payslips found"
+            onRowClick={handlePayslipClick}
             footer={
               <>
                 <TableRow>

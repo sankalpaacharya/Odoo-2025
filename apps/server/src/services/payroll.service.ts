@@ -503,4 +503,112 @@ export const payrollService = {
       take: limit,
     });
   },
+
+  async getPayrollStatistics(
+    organizationId?: string,
+    view: "monthly" | "annually" = "monthly"
+  ) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    if (view === "monthly") {
+      // Get last 6 months of data
+      const monthsToFetch = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(currentYear, currentMonth - 1 - i, 1);
+        monthsToFetch.push({
+          month: date.getMonth() + 1,
+          year: date.getFullYear(),
+        });
+      }
+
+      const payruns = await db.payrun.findMany({
+        where: {
+          OR: monthsToFetch.map((m) => ({
+            month: m.month,
+            year: m.year,
+          })),
+        },
+        include: {
+          payslips: {
+            select: {
+              employeeId: true,
+              netSalary: true,
+            },
+          },
+        },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      });
+
+      const MONTH_NAMES = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      return monthsToFetch.map((m) => {
+        const payrun = payruns.find(
+          (p) => p.month === m.month && p.year === m.year
+        );
+        const cost = payrun ? parseFloat(payrun.totalAmount.toString()) : 0;
+        const count = payrun ? payrun.payslips.length : 0;
+
+        return {
+          month: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
+          cost: Math.round(cost),
+          count,
+        };
+      });
+    } else {
+      // Get last 6 years of data
+      const yearsToFetch = [];
+      for (let i = 5; i >= 0; i--) {
+        yearsToFetch.push(currentYear - i);
+      }
+
+      const payruns = await db.payrun.findMany({
+        where: {
+          year: { in: yearsToFetch },
+        },
+        include: {
+          payslips: {
+            select: {
+              employeeId: true,
+            },
+          },
+        },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      });
+
+      return yearsToFetch.map((year) => {
+        const yearPayruns = payruns.filter((p) => p.year === year);
+        const cost = yearPayruns.reduce(
+          (sum, p) => sum + parseFloat(p.totalAmount.toString()),
+          0
+        );
+
+        // Get unique employee count across all months in the year
+        const uniqueEmployees = new Set(
+          yearPayruns.flatMap((p) => p.payslips.map((ps) => ps.employeeId))
+        );
+        const count = uniqueEmployees.size;
+
+        return {
+          month: year.toString(),
+          cost: Math.round(cost),
+          count,
+        };
+      });
+    }
+  },
 };

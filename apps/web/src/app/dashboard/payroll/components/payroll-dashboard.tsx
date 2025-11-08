@@ -54,6 +54,12 @@ interface Payrun {
   };
 }
 
+interface PayrollStatistic {
+  month: string;
+  cost: number;
+  count: number;
+}
+
 const MONTH_NAMES = [
   "Jan",
   "Feb",
@@ -79,15 +85,23 @@ export function PayrollDashboard() {
 
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [recentPayruns, setRecentPayruns] = useState<Payrun[]>([]);
+  const [payrollStatistics, setPayrollStatistics] = useState<
+    PayrollStatistic[]
+  >([]);
   const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [isLoadingWarnings, setIsLoadingWarnings] = useState(true);
   const [isLoadingPayruns, setIsLoadingPayruns] = useState(true);
+  const [isLoadingStatistics, setIsLoadingStatistics] = useState(true);
 
   useEffect(() => {
     fetchWarnings();
     fetchRecentPayruns();
   }, []);
+
+  useEffect(() => {
+    fetchPayrollStatistics(employerCostView);
+  }, [employerCostView]);
 
   const fetchWarnings = async () => {
     try {
@@ -113,6 +127,20 @@ export function PayrollDashboard() {
     }
   };
 
+  const fetchPayrollStatistics = async (view: "monthly" | "annually") => {
+    try {
+      setIsLoadingStatistics(true);
+      const data = await apiClient<PayrollStatistic[]>(
+        `/api/payroll/statistics?view=${view}`
+      );
+      setPayrollStatistics(data);
+    } catch (error) {
+      console.error("Error fetching payroll statistics:", error);
+    } finally {
+      setIsLoadingStatistics(false);
+    }
+  };
+
   const handleWarningClick = (warning: Warning) => {
     setSelectedWarning(warning);
     setWarningModalOpen(true);
@@ -122,27 +150,7 @@ export function PayrollDashboard() {
     return `${MONTH_NAMES[month - 1]} ${year}`;
   };
 
-  const payrollData = {
-    monthly: [
-      { month: "Jul 2025", cost: 120000, count: 10 },
-      { month: "Aug 2025", cost: 135000, count: 11 },
-      { month: "Sep 2025", cost: 150000, count: 12 },
-      { month: "Oct 2025", cost: 165000, count: 13 },
-      { month: "Nov 2025", cost: 180000, count: 15 },
-      { month: "Dec 2025", cost: 220000, count: 18 },
-    ],
-    annually: [
-      { month: "2020", cost: 1200000, count: 30 },
-      { month: "2021", cost: 1500000, count: 38 },
-      { month: "2022", cost: 1800000, count: 45 },
-      { month: "2023", cost: 2100000, count: 52 },
-      { month: "2024", cost: 2400000, count: 60 },
-      { month: "2025", cost: 550000, count: 18 },
-    ],
-  };
-
-  const currentMonthIndex = payrollData.monthly.length - 1;
-  const currentYearIndex = payrollData.annually.length - 1;
+  const currentMonthIndex = payrollStatistics.length - 1;
 
   const chartConfig = {
     cost: {
@@ -289,101 +297,107 @@ export function PayrollDashboard() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
-            <BarChart
-              accessibilityLayer
-              data={payrollData[employerCostView]}
-              margin={{
-                top: 20,
-              }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
-              />
-              <YAxis
-                yAxisId="left"
-                orientation="left"
-                stroke="var(--chart-1)"
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                stroke="var(--chart-2)"
-                tickLine={false}
-                axisLine={false}
-              />
-              <ChartTooltip
-                cursor={true}
-                content={<ChartTooltipContent indicator="dashed" />}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar
-                yAxisId="left"
-                dataKey="cost"
-                fill="var(--chart-1)"
-                radius={4}
-                strokeWidth={2}
-                activeIndex={
-                  employerCostView === "monthly"
-                    ? currentMonthIndex
-                    : currentYearIndex
-                }
-                activeBar={({ ...props }) => {
-                  return (
-                    <Rectangle
-                      {...props}
-                      fillOpacity={0.8}
-                      stroke="var(--chart-1)"
-                      strokeDasharray={4}
-                      strokeDashoffset={4}
-                    />
-                  );
+            {isLoadingStatistics ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-muted-foreground">
+                  Loading statistics...
+                </p>
+              </div>
+            ) : payrollStatistics.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-muted-foreground">
+                  No payroll data available
+                </p>
+              </div>
+            ) : (
+              <BarChart
+                accessibilityLayer
+                data={payrollStatistics}
+                margin={{
+                  top: 20,
                 }}
               >
-                <LabelList
-                  position="top"
-                  offset={12}
-                  className="fill-foreground"
-                  fontSize={12}
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value.slice(0, 3)}
                 />
-              </Bar>
-              <Bar
-                yAxisId="right"
-                dataKey="count"
-                fill="var(--chart-2)"
-                radius={4}
-                strokeWidth={2}
-                activeIndex={
-                  employerCostView === "monthly"
-                    ? currentMonthIndex
-                    : currentYearIndex
-                }
-                activeBar={({ ...props }) => {
-                  return (
-                    <Rectangle
-                      {...props}
-                      fillOpacity={0.8}
-                      stroke="var(--chart-2)"
-                      strokeDasharray={4}
-                      strokeDashoffset={4}
-                    />
-                  );
-                }}
-              >
-                <LabelList
-                  position="top"
-                  offset={12}
-                  className="fill-foreground"
-                  fontSize={12}
+                <YAxis
+                  yAxisId="left"
+                  orientation="left"
+                  stroke="var(--chart-1)"
+                  tickLine={false}
+                  axisLine={false}
                 />
-              </Bar>
-            </BarChart>
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="var(--chart-2)"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <ChartTooltip
+                  cursor={true}
+                  content={<ChartTooltipContent indicator="dashed" />}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="cost"
+                  fill="var(--chart-1)"
+                  radius={4}
+                  strokeWidth={2}
+                  activeIndex={currentMonthIndex}
+                  activeBar={({ ...props }) => {
+                    return (
+                      <Rectangle
+                        {...props}
+                        fillOpacity={0.8}
+                        stroke="var(--chart-1)"
+                        strokeDasharray={4}
+                        strokeDashoffset={4}
+                      />
+                    );
+                  }}
+                >
+                  <LabelList
+                    position="top"
+                    offset={12}
+                    className="fill-foreground"
+                    fontSize={12}
+                  />
+                </Bar>
+                <Bar
+                  yAxisId="right"
+                  dataKey="count"
+                  fill="var(--chart-2)"
+                  radius={4}
+                  strokeWidth={2}
+                  activeIndex={currentMonthIndex}
+                  activeBar={({ ...props }) => {
+                    return (
+                      <Rectangle
+                        {...props}
+                        fillOpacity={0.8}
+                        stroke="var(--chart-2)"
+                        strokeDasharray={4}
+                        strokeDashoffset={4}
+                      />
+                    );
+                  }}
+                >
+                  <LabelList
+                    position="top"
+                    offset={12}
+                    className="fill-foreground"
+                    fontSize={12}
+                  />
+                </Bar>
+              </BarChart>
+            )}
           </ChartContainer>
         </CardContent>
         <CardFooter className="flex-col items-start gap-2 text-sm">
@@ -391,12 +405,11 @@ export function PayrollDashboard() {
             Showing payroll trends for the last{" "}
             {employerCostView === "monthly" ? "6 months" : "6 years"}
           </div>
-          <div className="text-muted-foreground leading-none">
-            Active period:{" "}
-            {employerCostView === "monthly"
-              ? payrollData.monthly[currentMonthIndex].month
-              : payrollData.annually[currentYearIndex].month}
-          </div>
+          {payrollStatistics.length > 0 && (
+            <div className="text-muted-foreground leading-none">
+              Active period: {payrollStatistics[currentMonthIndex]?.month}
+            </div>
+          )}
         </CardFooter>
       </Card>
     </div>
