@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   formatLeaveType,
   formatLeaveStatus,
@@ -22,6 +23,15 @@ interface LeaveDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   leave: Leave | null;
 }
+
+const isImage = (filename: string) => {
+  const ext = filename.toLowerCase().split(".").pop();
+  return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "");
+};
+
+const getAttachmentUrl = (filename: string) => {
+  return `${process.env.NEXT_PUBLIC_SERVER_URL}/api/leaves/attachment/${filename}`;
+};
 
 export function LeaveDetailsDialog({
   open,
@@ -108,16 +118,27 @@ export function LeaveDetailsDialog({
               <div className="text-sm text-muted-foreground mb-1">
                 Attachment
               </div>
-              <a
-                href={`${process.env.NEXT_PUBLIC_SERVER_URL}/api/leaves/attachment/${leave.attachment}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <FileText className="h-4 w-4" />
-                <span>{leave.attachment}</span>
-                <Download className="h-3 w-3" />
-              </a>
+              {isImage(leave.attachment) ? (
+                <div className="border rounded-md overflow-hidden mt-2">
+                  <img
+                    src={getAttachmentUrl(leave.attachment)}
+                    alt="Leave attachment"
+                    className="w-full h-auto max-h-96 object-contain"
+                  />
+                </div>
+              ) : (
+                <a
+                  href={getAttachmentUrl(leave.attachment)}
+                  download
+                  className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent transition-colors mt-2"
+                >
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <span className="flex-1 text-sm truncate">
+                    {leave.attachment}
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </a>
+              )}
             </div>
           )}
 

@@ -109,14 +109,11 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
-    const targetEmployeeId = employeeId && isAdmin ? employeeId : employee.id;
+    const isAdmin = await employeeService.isAdmin(userId);
+      const targetEmployeeId = employeeId && isAdmin ? employeeId : employee.id;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
 
     if (end < start) {
       return res
@@ -139,8 +136,8 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
       id: leave.id,
       employeeId: leave.employeeId,
       leaveType: leave.leaveType,
-      startDate: leave.startDate.toISOString(),
-      endDate: leave.endDate.toISOString(),
+      startDate: leave.startDate,
+      endDate: leave.endDate,
       totalDays: parseFloat(leave.totalDays.toString()),
       reason: leave.reason,
       status: leave.status,
@@ -235,6 +232,7 @@ router.patch("/:leaveId/approve", async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { leaveId } = req.params;
+    const { leaveType, startDate, endDate, totalDays } = req.body;
 
     const employee = await employeeService.findByUserId(userId);
 
@@ -254,7 +252,13 @@ router.patch("/:leaveId/approve", async (req, res) => {
     const updatedLeave = await leaveService.approveLeave(
       leaveId,
       employee.employeeCode,
-      true
+      true,
+      {
+        leaveType,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        totalDays: totalDays ? parseFloat(totalDays) : undefined,
+      }
     );
 
     res.json({
