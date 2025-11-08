@@ -14,10 +14,16 @@ export function useMyAttendance(month: number, year: number) {
   });
 }
 
-export function useTodayAttendance() {
+export function useTodayAttendance(date?: Date) {
+  const dateStr = date ? date.toISOString().split("T")[0] : undefined;
   return useQuery({
-    queryKey: ["attendance", "today"],
-    queryFn: () => apiClient<EmployeeAttendance[]>("/api/attendance/today"),
+    queryKey: ["attendance", "today", dateStr],
+    queryFn: () => {
+      const url = dateStr
+        ? `/api/attendance/today?date=${dateStr}`
+        : "/api/attendance/today";
+      return apiClient<EmployeeAttendance[]>(url);
+    },
     retry: 1,
     staleTime: 1 * 60 * 1000,
   });

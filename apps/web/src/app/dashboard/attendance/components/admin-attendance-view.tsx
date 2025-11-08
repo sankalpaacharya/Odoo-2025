@@ -1,14 +1,14 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Calendar as CalendarIcon, Search } from "lucide-react";
 import { useState } from "react";
+import { format } from "date-fns";
 
 import { DataTable, type Column } from "@/components/data-table";
 import Loader from "@/components/loader";
 import { EmployeeAvatar, StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,13 +17,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatHoursToTime, formatTime } from "@/lib/time-utils";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useTodayAttendance } from "../hooks";
 import type { EmployeeAttendance } from "../types";
 
 import { StatsCards, type StatItem } from "@/components";
+import { cn } from "@/lib/utils";
 
 const attendanceColumns: Column<EmployeeAttendance>[] = [
   {
@@ -86,12 +93,7 @@ const attendanceColumns: Column<EmployeeAttendance>[] = [
     sortable: false,
     render: (record) =>
       record.isCurrentlyActive ? (
-        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-          <div className="flex items-center gap-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-            Working
-          </div>
-        </Badge>
+        <StatusBadge status="PRESENT" />
       ) : (
         <span className="text-muted-foreground text-sm">-</span>
       ),
@@ -100,8 +102,8 @@ const attendanceColumns: Column<EmployeeAttendance>[] = [
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const { data: response, isLoading, error } = useTodayAttendance();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { data: response, isLoading, error } = useTodayAttendance(selectedDate);
 
   if (error) {
     toast.error("Failed to load today's attendance");
@@ -193,10 +195,36 @@ export function AdminAttendanceView() {
           <Button variant="outline" size="icon" onClick={goToPreviousDay}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-2 min-w-[300px] justify-center">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{dateDisplay}</span>
-          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "min-w-[300px] justify-center font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? (
+                  format(selectedDate, "EEEE, MMMM d, yyyy")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date: Date | undefined) =>
+                  date && setSelectedDate(date)
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
           <Button variant="outline" size="icon" onClick={goToNextDay}>
             <ChevronRight className="h-4 w-4" />
           </Button>

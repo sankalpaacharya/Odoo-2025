@@ -200,8 +200,10 @@ router.get("/today", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Support date parameter, default to today
+    const dateParam = req.query.date as string | undefined;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    targetDate.setHours(0, 0, 0, 0);
 
     const allActiveEmployees = await employeeService.findActiveEmployees(
       employee.organizationId || undefined
@@ -215,7 +217,7 @@ router.get("/today", async (req, res) => {
       ),
       Promise.all(
         allActiveEmployees.map((emp) =>
-          sessionService.findSessionsByEmployeeAndDate(emp.id, today)
+          sessionService.findSessionsByEmployeeAndDate(emp.id, targetDate)
         )
       ),
     ]);
