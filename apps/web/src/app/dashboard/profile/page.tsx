@@ -48,7 +48,10 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append("profileImage", file);
 
-      const response = await apiClientFormData<{ success: boolean; profileImage: string }>("/api/profile/upload-image", formData);
+      const response = await apiClientFormData<{
+        success: boolean;
+        profileImage: string;
+      }>("/api/profile/upload-image", formData);
 
       if (response.success) {
         toast.success("Profile image uploaded successfully");
@@ -56,7 +59,9 @@ export default function ProfilePage() {
         queryClient.invalidateQueries({ queryKey: ["employee", "me"] });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload image"
+      );
     } finally {
       setIsUploading(false);
     }
@@ -96,12 +101,17 @@ export default function ProfilePage() {
                   title="Upload profile photo"
                   onClick={handleImageClick}
                   disabled={isUploading}
-                  className="group relative h-36 w-36 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative h-30 w-30 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {getProfileImageUrl(profile.profileImage, profile.image) ? (
                     <>
                       <img
-                        src={getProfileImageUrl(profile.profileImage, profile.image)!}
+                        src={
+                          getProfileImageUrl(
+                            profile.profileImage,
+                            profile.image
+                          )!
+                        }
                         alt={`${profile.firstName} ${profile.lastName}`}
                         className="h-full w-full object-cover z-100 relative"
                       />

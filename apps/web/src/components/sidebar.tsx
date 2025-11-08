@@ -22,6 +22,8 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import { apiClient } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
+import { getProfileImageUrl } from "@/lib/image-utils";
+import { useProfile } from "@/hooks/useProfile";
 import {
   Calendar,
   ChevronsUpDown,
@@ -109,6 +111,7 @@ export function Sidebar() {
   const { data: session } = authClient.useSession();
   const { theme, setTheme } = useTheme();
   const user = (session as any)?.user as any;
+  const { data: profile } = useProfile();
   const [organization, setOrganization] = useState<{
     companyName: string;
     logo: string | null;
@@ -145,6 +148,11 @@ export function Sidebar() {
         .join("")
         .toUpperCase()
     : "U";
+
+  const profileImageUrl = getProfileImageUrl(
+    profile?.profileImage,
+    profile?.image
+  );
 
   return (
     <SidebarUI collapsible="icon" className="border-r">
@@ -233,11 +241,21 @@ export function Sidebar() {
                 >
                   <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground ">
-                        <span className="text-sm font-semibold">
-                          {userInitials}
-                        </span>
-                      </div>
+                      {profileImageUrl ? (
+                        <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden bg-muted">
+                          <img
+                            src={profileImageUrl}
+                            alt={user?.name || "User"}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                          <span className="text-sm font-semibold">
+                            {userInitials}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden min-w-0 flex-1">
                         <span className="font-semibold truncate">
                           {user?.name}
