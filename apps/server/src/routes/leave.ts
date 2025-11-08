@@ -155,15 +155,7 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
 router.get("/all", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-<<<<<<< HEAD
     const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
-=======
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
-    console.log("route is hit");
->>>>>>> d579369 (feat: display pending leave on dashboard)
 
     if (!isAdmin) {
       return res.status(403).json({ error: "Forbidden" });
