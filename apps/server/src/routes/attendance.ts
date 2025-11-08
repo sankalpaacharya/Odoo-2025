@@ -64,14 +64,37 @@ router.get("/my-attendance", async (req, res) => {
           ? parseFloat(att.overtimeHours.toString())
           : 0,
         notes: att.notes,
-        sessions: sessions.map((s: any) => ({
-          startTime: s.startTime.toISOString(),
-          endTime: s.endTime?.toISOString() || null,
-          isActive: s.isActive,
-          totalBreakTime: s.totalBreakTime
-            ? parseFloat(s.totalBreakTime.toString())
-            : 0,
-        })),
+        sessions: sessions.map((s: any) => {
+          const startTime = new Date(s.startTime);
+          const endTime = s.endTime ? new Date(s.endTime) : new Date();
+          const breakMinutes = s.totalBreakTime
+            ? parseFloat(s.totalBreakTime.toString()) * 60
+            : 0;
+          const totalMinutes = Math.floor(
+            (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+          );
+          const workingMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hours = Math.floor(workingMinutes / 60);
+          const minutes = Math.floor(workingMinutes % 60);
+
+          return {
+            id: s.id,
+            startTime: s.startTime.toISOString(),
+            endTime: s.endTime?.toISOString() || null,
+            isActive: s.isActive,
+            totalBreakTime: s.totalBreakTime
+              ? parseFloat(s.totalBreakTime.toString())
+              : 0,
+            workingHours: s.workingHours
+              ? parseFloat(s.workingHours.toString())
+              : null,
+            overtimeHours: s.overtimeHours
+              ? parseFloat(s.overtimeHours.toString())
+              : 0,
+            durationMinutes: workingMinutes,
+            durationFormatted: `${hours}h ${minutes}m`,
+          };
+        }),
       };
     });
 

@@ -7,8 +7,15 @@ interface Employee {
   employeeCode: string;
   firstName: string;
   lastName: string;
+  middleName?: string | null;
   role: "ADMIN" | "EMPLOYEE" | "HR_OFFICER" | "PAYROLL_OFFICER";
   department: string | null;
+  designation: string | null;
+  dateOfJoining: string;
+  employmentStatus: string;
+  phone: string | null;
+  email: string;
+  image: string | null;
 }
 
 interface EmployeeContextType {

@@ -27,6 +27,8 @@ export interface WorkSessionInfo {
   workingHours: number | null;
   overtimeHours: number;
   totalBreakTime: number;
+  durationMinutes: number;
+  durationFormatted: string;
 }
 
 export interface AttendanceSummary {

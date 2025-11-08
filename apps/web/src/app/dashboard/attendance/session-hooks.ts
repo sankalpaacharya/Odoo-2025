@@ -96,3 +96,22 @@ export function useEndBreak() {
     },
   });
 }
+
+interface TodayHoursResponse {
+  totalMinutes: number;
+  hours: number;
+  minutes: number;
+  formattedTime: string;
+  hasActiveSession: boolean;
+  sessionCount: number;
+}
+
+export function useTodayHours() {
+  return useQuery({
+    queryKey: ["session", "today-hours"],
+    queryFn: () => apiClient<TodayHoursResponse>("/api/session/today-hours"),
+    retry: 1,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
