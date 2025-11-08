@@ -70,14 +70,12 @@ export function UserListTable() {
 
   const fetchEmployees = async () => {
     setLoading(true);
-    const result = await apiClient<Employee[]>("/api/employees");
-
-    if (result.success) {
-      setEmployees(result.data);
-    } else {
-      toast.error(result.error);
+    try {
+      const employees = await apiClient<Employee[]>("/api/employees");
+      setEmployees(employees);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch employees");
     }
-
     setLoading(false);
   };
 
@@ -87,18 +85,18 @@ export function UserListTable() {
     // Convert display role to database role
     const dbRole = reverseRoleMap[newRole];
 
-    const result = await apiClient<{ success: boolean; employee: any }>(
-      `/api/users/${employeeId}/role`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ role: dbRole }),
-      }
-    );
+    try {
+      await apiClient<{ success: boolean; employee: any }>(
+        `/api/users/${employeeId}/role`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ role: dbRole }),
+        }
+      );
 
-    if (result.success) {
       // Update local state with the new role
       setEmployees((prevEmployees) =>
         prevEmployees.map((emp) =>
@@ -106,8 +104,8 @@ export function UserListTable() {
         )
       );
       toast.success("Employee role updated successfully.");
-    } else {
-      toast.error(result.error);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update role");
       // Refresh the employee list to revert any optimistic updates
       fetchEmployees();
     }

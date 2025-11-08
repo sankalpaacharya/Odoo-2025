@@ -12,11 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
 import { formatStatus, getStatusColor } from "../utils";
@@ -25,20 +20,13 @@ import { toast } from "sonner";
 import type { AttendanceRecord } from "../types";
 import { useState } from "react";
 
-interface EmployeeAttendanceViewProps {
-  currentMonth: Date;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
-}
-
-export function EmployeeAttendanceView({
-  currentMonth,
-  onPreviousMonth,
-  onNextMonth,
-}: EmployeeAttendanceViewProps) {
-  const month = currentMonth.getMonth() + 1;
-  const year = currentMonth.getFullYear();
+export function EmployeeAttendanceView() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const month = selectedDate.getMonth() + 1;
+  const year = selectedDate.getFullYear();
+  const day = selectedDate.getDate();
 
   const {
     data: attendanceData,
@@ -62,21 +50,38 @@ export function EmployeeAttendanceView({
     });
   };
 
-  const attendances = attendanceData?.attendances || [];
-  const summary = attendanceData?.summary;
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
 
-  const monthYear = currentMonth.toLocaleDateString("en-US", {
-    month: "long",
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const allAttendances = attendanceData?.attendances || [];
+
+  // Filter to show only the selected date
+  const selectedDateString = selectedDate.toISOString().split("T")[0];
+  const todayRecord = allAttendances.find(
+    (record) => record.date.split("T")[0] === selectedDateString
+  );
+
+  const dateDisplay = selectedDate.toLocaleDateString("en-US", {
+    weekday: "long",
     year: "numeric",
+    month: "long",
+    day: "numeric",
   });
-
-  const totalWorkingDays = summary?.totalWorkingDays || 0;
-  const presentDays = summary?.totalPresentDays || 0;
-  const halfDays = summary?.totalHalfDays || 0;
-  const leaveDays = summary?.totalLeaveDays || 0;
-  const totalWorkingHours = summary?.totalWorkingHours || 0;
-  const totalOvertimeHours = summary?.totalOvertimeHours || 0;
-  const payableDays = presentDays + halfDays * 0.5;
 
   if (isLoading) {
     return <Loader />;
@@ -84,255 +89,153 @@ export function EmployeeAttendanceView({
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={onPreviousMonth}>
+          <Button variant="outline" size="icon" onClick={goToPreviousDay}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-2 min-w-[200px] justify-center">
+          <div className="flex items-center gap-2 min-w-[300px] justify-center">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{monthYear}</span>
+            <span className="font-medium">{dateDisplay}</span>
           </div>
-          <Button variant="outline" size="icon" onClick={onNextMonth}>
+          <Button variant="outline" size="icon" onClick={goToNextDay}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          {!isToday && (
+            <Button variant="outline" onClick={goToToday}>
+              Today
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Working Days</CardTitle>
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalWorkingDays}</div>
-            <p className="text-xs text-muted-foreground">Total days in month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Days Present</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {presentDays} {halfDays > 0 && `+ ${halfDays} half`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalWorkingDays > 0
-                ? ((presentDays / totalWorkingDays) * 100).toFixed(1)
-                : 0}
-              % attendance
+            <Badge
+              variant={getStatusColor(todayRecord?.status || "ABSENT")}
+              className="text-lg"
+            >
+              {formatStatus(todayRecord?.status || "ABSENT")}
+            </Badge>
+            <p className="text-xs text-muted-foreground mt-2">
+              Today's attendance
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Leave Days</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{leaveDays}</div>
-            <p className="text-xs text-muted-foreground">
-              Approved leaves taken
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Total Working Hours
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Check In</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatHoursToTime(totalWorkingHours)}
+              {formatTime(todayRecord?.checkIn || null)}
             </div>
-            <p className="text-xs text-muted-foreground">Logged this month</p>
+            <p className="text-xs text-muted-foreground">First check-in time</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Overtime Hours
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Check Out</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatHoursToTime(totalOvertimeHours)}
+            <div className="text-2xl font-bold">
+              {formatTime(todayRecord?.checkOut || null)}
             </div>
-            <p className="text-xs text-muted-foreground">Extra hours worked</p>
+            <p className="text-xs text-muted-foreground">Last check-out time</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Payable Days</CardTitle>
+            <CardTitle className="text-sm font-medium">Working Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {payableDays.toFixed(1)}
+            <div className="text-2xl font-bold text-green-600">
+              {formatHoursToTime(todayRecord?.workingHours || 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              For payslip computation
-            </p>
+            <p className="text-xs text-muted-foreground">Total for today</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Attendance Records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Work Hours</TableHead>
-                <TableHead>Extra Hours</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendances.length > 0 ? (
-                attendances.map((record: AttendanceRecord) => {
-                  const hasSessions =
-                    record.sessions && record.sessions.length > 0;
-                  const isExpanded = expandedRows.has(record.id);
-
-                  return (
-                    <>
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {formatDate(record.date)}
-                            {hasSessions && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => toggleRow(record.id)}
-                              >
-                                <Clock
-                                  className={`h-4 w-4 transition-transform ${
-                                    isExpanded ? "rotate-90" : ""
-                                  }`}
-                                />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatTime(record.checkIn)}</TableCell>
-                        <TableCell>{formatTime(record.checkOut)}</TableCell>
-                        <TableCell>
-                          {record.workingHours > 0 ? (
-                            <div className="flex flex-col">
-                              <span className="font-semibold">
-                                {formatHoursToTime(record.workingHours)}
-                              </span>
-                              {hasSessions && record.sessions && (
-                                <span className="text-xs text-muted-foreground">
-                                  {record.sessions.length} session
-                                  {record.sessions.length > 1 ? "s" : ""}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {record.overtimeHours > 0
-                            ? formatHoursToTime(record.overtimeHours)
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusColor(record.status)}>
-                            {formatStatus(record.status)}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                      {hasSessions && isExpanded && (
-                        <TableRow>
-                          <TableCell colSpan={6} className="bg-muted/50 p-4">
-                            <div className="space-y-2">
-                              <h4 className="font-semibold text-sm">
-                                Work Sessions
-                              </h4>
-                              <div className="space-y-2">
-                                {record.sessions?.map((session, idx) => (
-                                  <div
-                                    key={session.id}
-                                    className="flex items-center justify-between p-3 bg-background rounded-md border"
-                                  >
-                                    <div className="flex items-center gap-4">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium text-muted-foreground">
-                                          Session {idx + 1}
-                                        </span>
-                                        {session.isActive && (
-                                          <Badge
-                                            variant="default"
-                                            className="text-xs"
-                                          >
-                                            Active
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-2 text-sm">
-                                        <span>
-                                          {formatTime(session.startTime)}
-                                        </span>
-                                        <span>→</span>
-                                        <span>
-                                          {session.endTime
-                                            ? formatTime(session.endTime)
-                                            : "In Progress"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                      {session.totalBreakTime > 0 && (
-                                        <span className="text-xs text-muted-foreground">
-                                          Break:{" "}
-                                          {formatHoursToTime(
-                                            session.totalBreakTime
-                                          )}
-                                        </span>
-                                      )}
-                                      <span className="font-semibold text-primary">
-                                        {session.durationFormatted}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground"
+      {todayRecord &&
+        todayRecord.sessions &&
+        todayRecord.sessions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Sessions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {todayRecord.sessions.map((session, idx) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between p-4 bg-muted/50 rounded-md border"
                   >
-                    No attendance records found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Session {idx + 1}
+                        </span>
+                        {session.isActive && (
+                          <Badge
+                            variant="default"
+                            className="text-xs bg-green-500"
+                          >
+                            <div className="flex items-center gap-1">
+                              <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                              Active
+                            </div>
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">
+                            Check In:{" "}
+                          </span>
+                          <span className="font-medium">
+                            {formatTime(session.startTime)}
+                          </span>
+                        </div>
+                        <span className="text-muted-foreground">→</span>
+                        <div>
+                          <span className="text-muted-foreground">
+                            Check Out:{" "}
+                          </span>
+                          <span className="font-medium">
+                            {session.endTime
+                              ? formatTime(session.endTime)
+                              : "In Progress"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      {session.totalBreakTime > 0 && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Break: </span>
+                          <span className="font-medium">
+                            {formatHoursToTime(session.totalBreakTime)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-lg font-semibold text-primary">
+                        {session.durationFormatted}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
     </>
   );
 }

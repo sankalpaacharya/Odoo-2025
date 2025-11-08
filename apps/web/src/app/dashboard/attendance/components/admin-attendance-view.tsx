@@ -103,7 +103,7 @@ export function AdminAttendanceView() {
     toast.error("Failed to load today's attendance");
   }
 
-  const attendances = response?.success ? response.data : [];
+  const attendances = response || [];
 
   const filteredAttendances = attendances.filter(
     (record: EmployeeAttendance) =>
