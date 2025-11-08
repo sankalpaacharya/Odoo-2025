@@ -233,6 +233,53 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/active-list", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const employees = await db.employee.findMany({
+      where: {
+        employmentStatus: "ACTIVE",
+        organizationId: currentEmployee.organizationId,
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        department: true,
+        designation: true,
+      },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+    });
+
+    const formatted = employees.map((emp) => ({
+      id: emp.id,
+      employeeCode: emp.employeeCode,
+      name: `${emp.firstName} ${emp.lastName}`,
+      department: emp.department || "N/A",
+      designation: emp.designation || "N/A",
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error("Error fetching active employees:", error);
+    res.status(500).json({ error: "Failed to fetch active employees" });
+  }
+});
+
 // Create employee endpoint (for HR/Admin)
 router.post("/create", async (req, res) => {
   try {
