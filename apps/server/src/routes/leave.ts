@@ -235,6 +235,7 @@ router.patch("/:leaveId/approve", async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { leaveId } = req.params;
+    const { leaveType, startDate, endDate, totalDays } = req.body;
 
     const employee = await employeeService.findByUserId(userId);
 
@@ -254,7 +255,13 @@ router.patch("/:leaveId/approve", async (req, res) => {
     const updatedLeave = await leaveService.approveLeave(
       leaveId,
       employee.employeeCode,
-      true
+      true,
+      {
+        leaveType,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        totalDays: totalDays ? parseFloat(totalDays) : undefined,
+      }
     );
 
     res.json({

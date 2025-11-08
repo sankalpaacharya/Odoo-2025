@@ -156,7 +156,13 @@ export const leaveService = {
   async approveLeave(
     leaveId: string,
     approverCode: string,
-    updateBalance: boolean = true
+    updateBalance: boolean = true,
+    updates?: {
+      leaveType?: LeaveType;
+      startDate?: Date;
+      endDate?: Date;
+      totalDays?: number;
+    }
   ) {
     const leave = await this.findById(leaveId);
 
@@ -168,8 +174,15 @@ export const leaveService = {
       throw new Error("Leave request is not pending");
     }
 
-    const year = leave.startDate.getFullYear();
-    const totalDays = parseFloat(leave.totalDays.toString());
+    const leaveType = updates?.leaveType || leave.leaveType;
+    const startDate = updates?.startDate || leave.startDate;
+    const endDate = updates?.endDate || leave.endDate;
+    const totalDays =
+      updates?.totalDays !== undefined
+        ? updates.totalDays
+        : parseFloat(leave.totalDays.toString());
+
+    const year = startDate.getFullYear();
 
     if (updateBalance) {
       return db.$transaction(async (tx) => {
@@ -179,6 +192,10 @@ export const leaveService = {
             status: "APPROVED",
             approvedBy: approverCode,
             approvedAt: new Date(),
+            leaveType,
+            startDate,
+            endDate,
+            totalDays,
           },
         });
 
@@ -186,7 +203,7 @@ export const leaveService = {
           where: {
             employeeId_leaveType_year: {
               employeeId: leave.employeeId,
-              leaveType: leave.leaveType,
+              leaveType,
               year,
             },
           },
@@ -216,6 +233,10 @@ export const leaveService = {
         status: "APPROVED",
         approvedBy: approverCode,
         approvedAt: new Date(),
+        leaveType,
+        startDate,
+        endDate,
+        totalDays,
       },
     });
   },
@@ -272,6 +293,27 @@ export const leaveService = {
   calculateTotalDays(startDate: Date, endDate: Date): number {
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  },
+
+  async findApprovedLeavesByDateRange(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date
+  ) {
+    return db.leave.findMany({
+      where: {
+        employeeId,
+        status: "APPROVED",
+        OR: [
+          {
+            AND: [
+              { startDate: { lte: endDate } },
+              { endDate: { gte: startDate } },
+            ],
+          },
+        ],
+      },
+    });
   },
 
   async validateLeaveBalance(
