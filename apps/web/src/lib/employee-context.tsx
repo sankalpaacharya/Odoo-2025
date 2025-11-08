@@ -17,27 +17,18 @@ interface EmployeeContextType {
   isAdmin: boolean;
 }
 
-const EmployeeContext = createContext<EmployeeContextType | undefined>(
-  undefined
-);
+const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 
 export function EmployeeProvider({ children }: { children: ReactNode }) {
   const { data: employee, isLoading } = useQuery({
     queryKey: ["employee", "me"],
-    queryFn: () => apiClient<Employee>("/api/employee/me"),
+    queryFn: () => apiClient<Employee>("/api/employees/me"),
     staleTime: 5 * 60 * 1000,
   });
 
-  const isAdmin =
-    employee?.role === "ADMIN" ||
-    employee?.role === "HR_OFFICER" ||
-    employee?.role === "PAYROLL_OFFICER";
+  const isAdmin = employee?.role === "ADMIN" || employee?.role === "HR_OFFICER" || employee?.role === "PAYROLL_OFFICER";
 
-  return (
-    <EmployeeContext.Provider value={{ employee, isLoading, isAdmin }}>
-      {children}
-    </EmployeeContext.Provider>
-  );
+  return <EmployeeContext.Provider value={{ employee, isLoading, isAdmin }}>{children}</EmployeeContext.Provider>;
 }
 
 export function useEmployee() {

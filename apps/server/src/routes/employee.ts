@@ -72,6 +72,7 @@ router.get("/", async (req, res) => {
         department: true,
         designation: true,
         employmentStatus: true,
+        organizationId: true,
       },
     });
 
@@ -110,10 +111,11 @@ router.get("/", async (req, res) => {
       ]);
     }
 
-    // Fetch all employees with only ACTIVE employment status
+    // Fetch all employees with only ACTIVE employment status from the same organization
     const employees = await db.employee.findMany({
       where: {
         employmentStatus: "ACTIVE",
+        organizationId: currentEmployee.organizationId,
       },
       select: {
         id: true,
@@ -124,6 +126,7 @@ router.get("/", async (req, res) => {
         department: true,
         designation: true,
         employmentStatus: true,
+        organizationId: true,
       },
       orderBy: {
         firstName: "asc",
