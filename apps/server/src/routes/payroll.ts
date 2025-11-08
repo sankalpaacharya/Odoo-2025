@@ -217,4 +217,26 @@ router.get("/statistics", async (req, res) => {
   }
 });
 
+router.post("/payslip/:payslipId/approve", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee || !(await employeeService.isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const { payslipId } = req.params;
+
+    const result = await payrollService.approvePayslip(payslipId);
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Error approving payslip:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to approve payslip" });
+  }
+});
+
 export default router;

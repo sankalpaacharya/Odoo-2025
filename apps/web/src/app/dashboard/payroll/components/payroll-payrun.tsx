@@ -95,15 +95,22 @@ export function PayrollPayrun() {
   const [payrun, setPayrun] = useState<Payrun | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
+  const [approvingPayslipId, setApprovingPayslipId] = useState<string | null>(
+    null
+  );
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchPayrun();
+    const loadPayrun = async () => {
+      setIsLoading(true);
+      await fetchPayrun();
+      setIsLoading(false);
+    };
+    loadPayrun();
   }, [selectedMonth, selectedYear]);
 
   const fetchPayrun = async () => {
-    setIsLoading(true);
     try {
       const data = await apiClient<Payrun>(
         `/api/payroll/payrun/${selectedMonth}/${selectedYear}`
@@ -111,8 +118,6 @@ export function PayrollPayrun() {
       setPayrun(data);
     } catch (error: any) {
       setPayrun(null);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -141,6 +146,11 @@ export function PayrollPayrun() {
   const handleApprovePayrun = async () => {
     if (!payrun) return;
 
+    const pendingCount = payslips.filter((p) => p.status === "PENDING").length;
+    const processedCount = payslips.filter(
+      (p) => p.status === "PROCESSED"
+    ).length;
+
     setIsMarkingDone(true);
     try {
       const data = await apiClient<Payrun>(
@@ -150,10 +160,19 @@ export function PayrollPayrun() {
         }
       );
       setPayrun(data);
-      toast.success("Payrun approved successfully");
+
+      if (pendingCount > 0) {
+        toast.success(
+          `Payrun completed! Approved ${pendingCount} pending and ${processedCount} processed payslips.`
+        );
+      } else {
+        toast.success(
+          `Payrun completed! All ${payslips.length} payslips marked as paid.`
+        );
+      }
     } catch (error: any) {
-      console.error("Error approving payrun:", error);
-      toast.error("Failed to approve payrun", {
+      console.error("Error completing payrun:", error);
+      toast.error("Failed to complete payrun", {
         description: error.message,
       });
     } finally {
@@ -164,6 +183,36 @@ export function PayrollPayrun() {
   const handlePayslipClick = (payslip: Payslip) => {
     setSelectedPayslip(payslip);
     setIsModalOpen(true);
+  };
+
+  const handleApprovePayslip = async (
+    e: React.MouseEvent,
+    payslip: Payslip
+  ) => {
+    e.stopPropagation(); // Prevent row click
+
+    if (!payrun) return;
+
+    setApprovingPayslipId(payslip.id);
+    try {
+      await apiClient<Payslip>(`/api/payroll/payslip/${payslip.id}/approve`, {
+        method: "POST",
+      });
+
+      // Refetch the entire payrun to get updated statuses (including auto-completion)
+      await fetchPayrun();
+
+      toast.success(
+        `Payslip approved for ${payslip.employee.firstName} ${payslip.employee.lastName}`
+      );
+    } catch (error: any) {
+      console.error("Error approving payslip:", error);
+      toast.error("Failed to approve payslip", {
+        description: error.message,
+      });
+    } finally {
+      setApprovingPayslipId(null);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -268,11 +317,8 @@ export function PayrollPayrun() {
       label: "Status",
       sortable: false,
       render: (payslip) => {
-        if (payslip.status === "PAID") {
+        if (payslip.status === "PAID" || payslip.status === "PROCESSED") {
           return <Badge variant="success">Approved</Badge>;
-        }
-        if (payslip.status === "PROCESSED") {
-          return <Badge variant="default">Approved</Badge>;
         }
         if (payslip.status === "PENDING") {
           return <Badge variant="secondary">Pending</Badge>;
@@ -284,6 +330,44 @@ export function PayrollPayrun() {
       },
     },
   ];
+
+  // Add approve column only if payrun is not done
+  if (!isDone) {
+    payslipColumns.push({
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (payslip) => {
+        // Only show button for pending payslips
+        if (payslip.status !== "PENDING") {
+          return null;
+        }
+
+        const isApproving = approvingPayslipId === payslip.id;
+        const isAnyApproving = approvingPayslipId !== null;
+
+        return (
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => handleApprovePayslip(e, payslip)}
+              disabled={isAnyApproving || isMarkingDone}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                "Approve"
+              )}
+            </Button>
+          </div>
+        );
+      },
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -343,8 +427,18 @@ export function PayrollPayrun() {
             )}
           </Button>
           {payrun && !isDone && (
-            <Button onClick={handleApprovePayrun} disabled={isMarkingDone}>
-              {isMarkingDone ? "Approving..." : "Approve"}
+            <Button
+              onClick={handleApprovePayrun}
+              disabled={isMarkingDone || approvingPayslipId !== null}
+            >
+              {isMarkingDone ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Completing...
+                </>
+              ) : (
+                "Complete Payrun"
+              )}
             </Button>
           )}
         </div>
@@ -387,15 +481,24 @@ export function PayrollPayrun() {
                   </CardTitle>
                   <CardDescription>
                     {payslips.length} employee(s)
+                    {!isDone && (
+                      <span className="ml-2">
+                        •{" "}
+                        {
+                          payslips.filter((p) => p.status === "PROCESSED")
+                            .length
+                        }{" "}
+                        approved ,{" "}
+                        {payslips.filter((p) => p.status === "PENDING").length}{" "}
+                        pending
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 {isDone ? (
-                  <Badge variant="success" className="gap-1">
-                    <CheckCircle2 className="size-3" />
-                    Approved
-                  </Badge>
+                  <Badge variant="success">Completed</Badge>
                 ) : (
-                  <Badge variant="secondary">Pending Approval</Badge>
+                  <Badge variant="secondary">In Progress</Badge>
                 )}
               </div>
             </CardHeader>
@@ -453,6 +556,7 @@ export function PayrollPayrun() {
                     {formatCurrency(totalNetWage)}
                   </TableCell>
                   <TableCell></TableCell>
+                  {!isDone && <TableCell></TableCell>}
                 </TableRow>
               </>
             }

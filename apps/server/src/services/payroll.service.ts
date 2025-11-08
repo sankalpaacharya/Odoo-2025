@@ -348,10 +348,20 @@ export const payrollService = {
       throw new Error("Payrun not found");
     }
 
-    if (payrun.status !== "PROCESSING") {
-      throw new Error("Payrun must be validated first");
+    if (payrun.status === "COMPLETED") {
+      throw new Error("Payrun is already completed");
     }
 
+    // First, mark all pending payslips as PROCESSED
+    await db.payslip.updateMany({
+      where: {
+        payrunId,
+        status: "PENDING",
+      },
+      data: { status: "PROCESSED" },
+    });
+
+    // Then mark all payslips as PAID and complete the payrun
     await db.$transaction([
       db.payslip.updateMany({
         where: { payrunId },
@@ -364,6 +374,84 @@ export const payrollService = {
     ]);
 
     return this.getPayrunWithPayslips(payrun.month, payrun.year);
+  },
+
+  async approvePayslip(payslipId: string) {
+    const payslip = await db.payslip.findUnique({
+      where: { id: payslipId },
+      include: {
+        payrun: true,
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            department: true,
+            designation: true,
+          },
+        },
+      },
+    });
+
+    if (!payslip) {
+      throw new Error("Payslip not found");
+    }
+
+    if (payslip.payrun.status === "COMPLETED") {
+      throw new Error("Cannot approve payslip in a completed payrun");
+    }
+
+    if (payslip.status === "PROCESSED" || payslip.status === "PAID") {
+      throw new Error("Payslip is already approved");
+    }
+
+    if (payslip.status === "CANCELLED") {
+      throw new Error("Cannot approve a cancelled payslip");
+    }
+
+    const updatedPayslip = await db.payslip.update({
+      where: { id: payslipId },
+      data: { status: "PROCESSED" },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            department: true,
+            designation: true,
+          },
+        },
+      },
+    });
+
+    // Check if all payslips in the payrun are now approved (PROCESSED or PAID)
+    const allPayslips = await db.payslip.findMany({
+      where: { payrunId: payslip.payrunId },
+      select: { status: true },
+    });
+
+    const allApproved = allPayslips.every(
+      (p) => p.status === "PROCESSED" || p.status === "PAID"
+    );
+
+    // If all payslips are approved, automatically complete the payrun
+    if (allApproved && payslip.payrun.status === "PROCESSING") {
+      await db.$transaction([
+        db.payslip.updateMany({
+          where: { payrunId: payslip.payrunId },
+          data: { status: "PAID", paidAt: new Date() },
+        }),
+        db.payrun.update({
+          where: { id: payslip.payrunId },
+          data: { status: "COMPLETED" },
+        }),
+      ]);
+    }
+
+    return updatedPayslip;
   },
 
   async getPayslipsByEmployee(employeeId: string, year?: number) {
