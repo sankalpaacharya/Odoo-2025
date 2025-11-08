@@ -25,7 +25,8 @@ app.get("/", (_req, res) => {
 });
 
 // Better Auth handler - handles all authentication endpoints
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/*splat", toNodeHandler(auth)); 
+
 
 // API Routes
 app.use("/api", authRoutes);
