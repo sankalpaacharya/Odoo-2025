@@ -4,26 +4,47 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  formatLeaveType,
-  formatLeaveStatus,
-  getStatusColor,
-  formatDate,
-} from "../utils";
+import { DataTable, type Column } from "@/components/data-table";
+import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
+import { formatLeaveType, formatDate } from "../utils";
 import { TimeOffRequestDialog } from "./time-off-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
 import { useMyLeaves, useMyLeaveBalances } from "../hooks";
 import type { Leave } from "../types";
 import Loader from "@/components/loader";
+
+const leaveColumns: Column<Leave>[] = [
+  {
+    key: "leaveType",
+    label: "Leave Type",
+    className: "font-medium",
+    render: (leave) => formatLeaveType(leave.leaveType),
+  },
+  {
+    key: "startDate",
+    label: "Start Date",
+    render: (leave) => formatDate(leave.startDate),
+  },
+  {
+    key: "endDate",
+    label: "End Date",
+    render: (leave) => formatDate(leave.endDate),
+  },
+  {
+    key: "totalDays",
+    label: "Days",
+  },
+  {
+    key: "reason",
+    label: "Reason",
+    className: "max-w-[200px] truncate",
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (leave) => <StatusBadge status={leave.status} />,
+  },
+];
 
 export function EmployeeTimeOffView() {
   const [newLeaveDialogOpen, setNewLeaveDialogOpen] = useState(false);
@@ -103,60 +124,19 @@ export function EmployeeTimeOffView() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>My Leave Requests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Leave Type</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leaves && leaves.length > 0 ? (
-                leaves.map((leave) => (
-                  <TableRow
-                    key={leave.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(leave)}
-                  >
-                    <TableCell className="font-medium">
-                      {formatLeaveType(leave.leaveType)}
-                    </TableCell>
-                    <TableCell>{formatDate(leave.startDate)}</TableCell>
-                    <TableCell>{formatDate(leave.endDate)}</TableCell>
-                    <TableCell>{leave.totalDays}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {leave.reason}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(leave.status)}>
-                        {formatLeaveStatus(leave.status)}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground"
-                  >
-                    No leave requests found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">My Leave Requests</h2>
+        </div>
+        <DataTable
+          data={leaves || []}
+          columns={leaveColumns}
+          keyExtractor={(leave) => leave.id}
+          emptyMessage="No leave requests found"
+          isLoading={isLoadingLeaves}
+          loadingMessage="Loading leave requests..."
+        />
+      </div>
 
       <TimeOffRequestDialog
         open={newLeaveDialogOpen}
