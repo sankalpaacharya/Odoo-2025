@@ -25,9 +25,6 @@ export default async function DashboardLayout({
     <DashboardClientLayout>
       <SidebarWrapper />
       <SidebarInset>
-        <header className="border-b px-6 py-4 flex items-center gap-4">
-          <SidebarTrigger />
-        </header>
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </SidebarInset>
     </DashboardClientLayout>

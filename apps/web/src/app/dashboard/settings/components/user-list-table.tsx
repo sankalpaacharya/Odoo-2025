@@ -69,44 +69,50 @@ export function UserListTable() {
   }, []);
 
   const fetchEmployees = async () => {
-    try {
-      setLoading(true);
-      const data = await apiClient<Employee[]>("/api/employees");
-      setEmployees(data);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      toast.error("Failed to fetch employees. Please try again.");
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    const result = await apiClient<Employee[]>("/api/employees");
+
+    if (result.success) {
+      setEmployees(result.data);
+    } else {
+      toast.error(result.error);
     }
+
+    setLoading(false);
   };
 
   const handleRoleChange = async (employeeId: string, newRole: string) => {
-    try {
-      setUpdatingRole(employeeId);
+    setUpdatingRole(employeeId);
 
-      // Convert display role to database role
-      const dbRole = reverseRoleMap[newRole];
+    // Convert display role to database role
+    const dbRole = reverseRoleMap[newRole];
 
-      await apiClient(`/api/users/${employeeId}/role`, {
+    const result = await apiClient<{ success: boolean; employee: any }>(
+      `/api/users/${employeeId}/role`,
+      {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ role: dbRole }),
-      });
+      }
+    );
 
-      // Update local state
+    if (result.success) {
+      // Update local state with the new role
       setEmployees((prevEmployees) =>
         prevEmployees.map((emp) =>
           emp.id === employeeId ? { ...emp, role: dbRole.toLowerCase() } : emp
         )
       );
-
-      toast.success("User role updated successfully.");
-    } catch (error) {
-      console.error("Error updating role:", error);
-      toast.error("Failed to update user role. Please try again.");
-    } finally {
-      setUpdatingRole(null);
+      toast.success("Employee role updated successfully.");
+    } else {
+      toast.error(result.error);
+      // Refresh the employee list to revert any optimistic updates
+      fetchEmployees();
     }
+
+    setUpdatingRole(null);
   };
 
   if (loading) {

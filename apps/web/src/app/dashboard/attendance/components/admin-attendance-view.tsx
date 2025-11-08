@@ -1,19 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Search, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { DataTable, type Column } from "@/components/data-table";
+import Loader from "@/components/loader";
+import { EmployeeAvatar, StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -21,21 +13,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Loader from "@/components/loader";
-import { useTodayAttendance } from "../hooks";
-import { formatStatus, getStatusColor } from "../utils";
+import { Badge } from "@/components/ui/badge";
 import { formatTime, formatHoursToTime } from "@/lib/time-utils";
+import { Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { useTodayAttendance } from "../hooks";
 import type { EmployeeAttendance } from "../types";
+
+const attendanceColumns: Column<EmployeeAttendance>[] = [
+  {
+    key: "avatar",
+    // No label for avatar column
+    sortable: false,
+    render: (record) => <EmployeeAvatar name={record.employeeName} size="sm" />,
+    className: "w-12",
+  },
+  {
+    key: "employeeName",
+    label: "Name",
+    className: "font-medium",
+  },
+  {
+    key: "employeeCode",
+    label: "Employee ID",
+    className: "font-medium",
+  },
+  {
+    key: "department",
+    label: "Department",
+  },
+  {
+    key: "designation",
+    label: "Designation",
+    render: (record) => record.designation || "N/A",
+  },
+  {
+    key: "checkIn",
+    label: "Check In",
+    render: (record) => (
+      <div className="flex items-center gap-2">
+        {record.isCurrentlyActive && (
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+        )}
+        {formatTime(record.checkIn)}
+      </div>
+    ),
+  },
+  {
+    key: "checkOut",
+    label: "Check Out",
+    render: (record) => formatTime(record.checkOut),
+  },
+  {
+    key: "workingHours",
+    label: "Work Hours",
+    render: (record) =>
+      record.workingHours > 0 ? formatHoursToTime(record.workingHours) : "-",
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (record) => <StatusBadge status={record.status} />,
+  },
+  {
+    key: "isCurrentlyActive",
+    label: "Active",
+    sortable: false,
+    render: (record) =>
+      record.isCurrentlyActive ? (
+        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            Working
+          </div>
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-sm">-</span>
+      ),
+  },
+];
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { data: attendances = [], isLoading, error } = useTodayAttendance();
+  const { data: response, isLoading, error } = useTodayAttendance();
 
   if (error) {
     toast.error("Failed to load today's attendance");
   }
+
+  const attendances = response?.success ? response.data : [];
 
   const filteredAttendances = attendances.filter(
     (record: EmployeeAttendance) =>
@@ -193,85 +261,19 @@ export function AdminAttendanceView() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Work Hours</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Active</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAttendances.length > 0 ? (
-                filteredAttendances.map((record: EmployeeAttendance) => (
-                  <TableRow key={record.employeeId}>
-                    <TableCell className="font-medium">
-                      {record.employeeCode}
-                    </TableCell>
-                    <TableCell>{record.employeeName}</TableCell>
-                    <TableCell>{record.department}</TableCell>
-                    <TableCell>{record.designation || "N/A"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {record.isCurrentlyActive && (
-                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                        )}
-                        {formatTime(record.checkIn)}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatTime(record.checkOut)}</TableCell>
-                    <TableCell>
-                      {record.workingHours > 0
-                        ? formatHoursToTime(record.workingHours)
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(record.status)}>
-                        {formatStatus(record.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {record.isCurrentlyActive ? (
-                        <Badge
-                          variant="default"
-                          className="bg-green-500 hover:bg-green-600"
-                        >
-                          <div className="flex items-center gap-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                            Working
-                          </div>
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="text-center text-muted-foreground"
-                  >
-                    No employees found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg">
+        <div className="py-4">
+          <h2 className="text-lg font-semibold">Today's Attendance</h2>
+        </div>
+        <DataTable
+          data={filteredAttendances}
+          columns={attendanceColumns}
+          keyExtractor={(record) => record.employeeId}
+          emptyMessage="No employees found"
+          isLoading={isLoading}
+          loadingMessage="Loading attendance..."
+        />
+      </div>
     </>
   );
 }

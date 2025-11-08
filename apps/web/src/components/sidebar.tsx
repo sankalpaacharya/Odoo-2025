@@ -107,14 +107,17 @@ export function Sidebar() {
   return (
     <SidebarUI collapsible="icon" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-3">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center ">
-            <span className="text-primary-foreground font-bold text-lg">W</span>
+        <div className="flex items-center gap-2 px-2 py-3 justify-between">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <span className="text-primary-foreground font-bold">W</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-semibold text-base">WorkZen</span>
+              <span className="text-xs text-muted-foreground">HR Platform</span>
+            </div>
           </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="font-semibold text-base">WorkZen</span>
-            <span className="text-xs text-muted-foreground">HR Platform</span>
-          </div>
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
 
@@ -153,21 +156,23 @@ export function Sidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground ">
                         <span className="text-sm font-semibold">
                           {userInitials}
                         </span>
                       </div>
-                      <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                        <span className="font-semibold">{user?.name}</span>
-                        <span className="text-xs text-muted-foreground">
+                      <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden min-w-0 flex-1">
+                        <span className="font-semibold truncate">
+                          {user?.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">
                           {user?.email}
                         </span>
                       </div>
                     </div>
-                    <ChevronsUpDown className="h-4 w-4 ml-auto group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="h-5 w-5 ml-2 shrink-0 group-data-[collapsible=icon]:hidden" />
                   </div>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
