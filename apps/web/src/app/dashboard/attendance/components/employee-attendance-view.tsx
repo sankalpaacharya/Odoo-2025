@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
 import { formatStatus, getStatusColor } from "../utils";
@@ -19,6 +30,8 @@ import { formatDate, formatTime, formatHoursToTime } from "@/lib/time-utils";
 import { toast } from "sonner";
 import type { AttendanceRecord } from "../types";
 import { useState } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function EmployeeAttendanceView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -94,10 +107,36 @@ export function EmployeeAttendanceView() {
           <Button variant="outline" size="icon" onClick={goToPreviousDay}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-2 min-w-[300px] justify-center">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{dateDisplay}</span>
-          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "min-w-[300px] justify-center font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? (
+                  format(selectedDate, "EEEE, MMMM d, yyyy")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date: Date | undefined) =>
+                  date && setSelectedDate(date)
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
           <Button variant="outline" size="icon" onClick={goToNextDay}>
             <ChevronRight className="h-4 w-4" />
           </Button>
