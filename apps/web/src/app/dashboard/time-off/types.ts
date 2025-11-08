@@ -2,14 +2,6 @@ export type LeaveType = "PAID_TIME_OFF" | "SICK_LEAVE" | "UNPAID_LEAVE";
 
 export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
-export interface LeaveBalance {
-  id: string;
-  leaveType: LeaveType;
-  allocated: number;
-  used: number;
-  remaining: number;
-}
-
 export interface Leave {
   id: string;
   employeeId: string;

@@ -12,8 +12,6 @@ router.use(authenticateUser);
 type AttendanceStatus =
   | "PRESENT"
   | "ABSENT"
-  | "HALF_DAY"
-  | "LATE"
   | "ON_LEAVE"
   | "HOLIDAY"
   | "WEEKEND";
@@ -43,16 +41,10 @@ function calculateWorkingHoursFromSessions(
 
 function determineStatus(
   sessions: any[],
-  workingHours: number,
   isOnLeave: boolean = false
 ): AttendanceStatus {
   if (isOnLeave) return "ON_LEAVE";
   if (sessions.length === 0) return "ABSENT";
-  if (workingHours < 4) return "HALF_DAY";
-
-  const firstSession = sessions[0];
-  if (firstSession && firstSession.startTime.getHours() > 10) return "LATE";
-
   return "PRESENT";
 }
 
@@ -89,127 +81,96 @@ router.get(
         ),
       ]);
 
-      const sessionsByDate = workSessions.reduce((acc, session) => {
-        const dateKey = session.date.toISOString().split("T")[0];
-        if (dateKey) {
-          if (!acc[dateKey]) acc[dateKey] = [];
-          acc[dateKey].push(session);
-        }
-        return acc;
-      }, {} as Record<string, typeof workSessions>);
-
-      const leaveDates = new Set<string>();
-      approvedLeaves.forEach((leave) => {
-        const start = new Date(leave.startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(leave.endDate);
-        end.setHours(0, 0, 0, 0);
-
-        const current = new Date(start);
-        while (current <= end) {
-          const year = current.getFullYear();
-          const month = String(current.getMonth() + 1).padStart(2, "0");
-          const day = String(current.getDate()).padStart(2, "0");
-          leaveDates.add(`${year}-${month}-${day}`);
-          current.setDate(current.getDate() + 1);
-        }
-      });
-
-      const datesInMonth: Date[] = [];
-      for (
-        let d = new Date(startDate);
-        d <= endDate;
-        d.setDate(d.getDate() + 1)
-      ) {
-        datesInMonth.push(new Date(d));
-      }
-
       const now = new Date();
-      const attendances = datesInMonth.map((date) => {
-        const dateKey = date.toISOString().split("T")[0];
-        const sessions = (dateKey && sessionsByDate[dateKey]) || [];
-        const isOnLeave = dateKey ? leaveDates.has(dateKey) : false;
 
-        const workingHours = calculateWorkingHoursFromSessions(sessions, now);
-        const overtimeHours = Math.max(0, workingHours - 9);
-        const status = determineStatus(sessions, workingHours, isOnLeave);
-
-        let checkIn: Date | null = null;
-        let checkOut: Date | null = null;
-
-        if (sessions.length > 0) {
-          checkIn = sessions[0]?.startTime || null;
-          const lastSession = sessions[sessions.length - 1];
-          checkOut = lastSession?.endTime || null;
-        }
+      // Format sessions with computed data
+      const formattedSessions = workSessions.map((s) => {
+        const startTime = new Date(s.startTime);
+        const endTime = s.endTime
+          ? new Date(s.endTime)
+          : s.isActive
+          ? now
+          : startTime;
+        const breakMinutes = s.totalBreakTime
+          ? parseFloat(s.totalBreakTime.toString()) * 60
+          : 0;
+        const totalMinutes = Math.floor(
+          (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+        );
+        const workingMinutes = Math.max(0, totalMinutes - breakMinutes);
+        const hours = Math.floor(workingMinutes / 60);
+        const minutes = Math.floor(workingMinutes % 60);
 
         return {
-          id: dateKey || date.toISOString(),
-          date: date.toISOString(),
-          checkIn: checkIn?.toISOString() || null,
-          checkOut: checkOut?.toISOString() || null,
-          status,
-          workingHours: parseFloat(workingHours.toFixed(2)),
-          overtimeHours: parseFloat(overtimeHours.toFixed(2)),
-          notes: null,
-          sessions: sessions.map((s) => {
-            const startTime = new Date(s.startTime);
-            const endTime = s.endTime ? new Date(s.endTime) : now;
-            const breakMinutes = s.totalBreakTime
-              ? parseFloat(s.totalBreakTime.toString()) * 60
-              : 0;
-            const totalMinutes = Math.floor(
-              (endTime.getTime() - startTime.getTime()) / (1000 * 60)
-            );
-            const workingMinutes = Math.max(0, totalMinutes - breakMinutes);
-            const hours = Math.floor(workingMinutes / 60);
-            const minutes = Math.floor(workingMinutes % 60);
-
-            return {
-              id: s.id,
-              startTime: s.startTime.toISOString(),
-              endTime: s.endTime?.toISOString() || null,
-              isActive: s.isActive,
-              totalBreakTime: s.totalBreakTime
-                ? parseFloat(s.totalBreakTime.toString())
-                : 0,
-              workingHours: s.workingHours
-                ? parseFloat(s.workingHours.toString())
-                : null,
-              overtimeHours: s.overtimeHours
-                ? parseFloat(s.overtimeHours.toString())
-                : 0,
-              durationMinutes: workingMinutes,
-              durationFormatted: `${hours}h ${minutes}m`,
-            };
-          }),
+          id: s.id,
+          date: s.date.toISOString(),
+          startTime: s.startTime.toISOString(),
+          endTime: s.endTime?.toISOString() || null,
+          isActive: s.isActive,
+          totalBreakTime: s.totalBreakTime
+            ? parseFloat(s.totalBreakTime.toString())
+            : 0,
+          workingHours: s.isActive
+            ? parseFloat((workingMinutes / 60).toFixed(2))
+            : s.workingHours
+            ? parseFloat(s.workingHours.toString())
+            : 0,
+          overtimeHours: s.overtimeHours
+            ? parseFloat(s.overtimeHours.toString())
+            : 0,
+          durationMinutes: workingMinutes,
+          durationFormatted: `${hours}h ${minutes}m`,
         };
       });
 
+      // Calculate summary from actual sessions
+      const uniqueWorkDays = new Set(formattedSessions.map((s) => s.date)).size;
+
+      const totalWorkingHours = formattedSessions.reduce(
+        (sum, s) => sum + s.workingHours,
+        0
+      );
+
+      // Calculate total working days in month (excluding weekends and future dates)
+      const today = new Date();
+      let totalWorkingDaysInMonth = 0;
+      for (
+        let d = new Date(startDate);
+        d <= endDate && d <= today;
+        d.setUTCDate(d.getUTCDate() + 1)
+      ) {
+        const dayOfWeek = d.getUTCDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          // Not Sunday or Saturday
+          totalWorkingDaysInMonth++;
+        }
+      }
+
+      const totalAbsentDays =
+        totalWorkingDaysInMonth - uniqueWorkDays - approvedLeaves.length;
+
       const summary = {
-        totalWorkingDays: attendances.filter((a) =>
-          ["PRESENT", "LATE", "HALF_DAY"].includes(a.status)
-        ).length,
-        totalPresentDays: attendances.filter(
-          (a) => a.status === "PRESENT" || a.status === "LATE"
-        ).length,
-        totalAbsentDays: attendances.filter((a) => a.status === "ABSENT")
-          .length,
-        totalLeaveDays: attendances.filter((a) => a.status === "ON_LEAVE")
-          .length,
-        totalHalfDays: attendances.filter((a) => a.status === "HALF_DAY")
-          .length,
-        totalLateDays: attendances.filter((a) => a.status === "LATE").length,
-        totalWorkingHours: parseFloat(
-          attendances.reduce((sum, a) => sum + a.workingHours, 0).toFixed(2)
-        ),
+        totalWorkingDays: totalWorkingDaysInMonth,
+        totalPresentDays: uniqueWorkDays,
+        totalAbsentDays: Math.max(0, totalAbsentDays),
+        totalLeaveDays: approvedLeaves.length,
+        totalWorkingHours: parseFloat(totalWorkingHours.toFixed(2)),
         totalOvertimeHours: parseFloat(
-          attendances.reduce((sum, a) => sum + a.overtimeHours, 0).toFixed(2)
+          formattedSessions
+            .reduce((sum, s) => sum + s.overtimeHours, 0)
+            .toFixed(2)
         ),
       };
 
       res.json({
-        attendances,
+        sessions: formattedSessions,
+        leaves: approvedLeaves.map((leave) => ({
+          id: leave.id,
+          startDate: leave.startDate.toISOString(),
+          endDate: leave.endDate.toISOString(),
+          leaveType: leave.leaveType,
+          reason: leave.reason,
+        })),
         summary: {
           month: targetMonth,
           year: targetYear,
@@ -228,7 +189,6 @@ router.get(
   requirePermission("Attendance", "View"),
   async (req, res) => {
     try {
-
       const userId = (req as any).user.id;
       const employee = await employeeService.findByUserId(userId);
 
@@ -238,8 +198,18 @@ router.get(
 
       // Support date parameter, default to today
       const dateParam = req.query.date as string | undefined;
-      const targetDate = dateParam ? new Date(dateParam) : new Date();
-      targetDate.setHours(0, 0, 0, 0);
+      let targetDate: Date;
+
+      if (dateParam) {
+        targetDate = new Date(dateParam);
+        if (isNaN(targetDate.getTime())) {
+          return res.status(400).json({ error: "Invalid date format" });
+        }
+      } else {
+        targetDate = new Date();
+      }
+
+      targetDate.setUTCHours(0, 0, 0, 0);
 
       const allActiveEmployees = await employeeService.findActiveEmployees(
         employee.organizationId || undefined
@@ -290,7 +260,7 @@ router.get(
         const isOnLeave = leaves.length > 0;
 
         const workingHours = calculateWorkingHoursFromSessions(sessions, now);
-        const status = determineStatus(sessions, workingHours, isOnLeave);
+        const status = determineStatus(sessions, isOnLeave);
 
         let checkIn: Date | null = null;
         let checkOut: Date | null = null;
@@ -404,7 +374,7 @@ router.get(
       }
 
       const sessionsByDate = workSessions.reduce((acc, session) => {
-        const dateKey = session.date.toISOString().split("T")[0];
+        const dateKey = session.date.toISOString();
         if (dateKey) {
           if (!acc[dateKey]) acc[dateKey] = [];
           acc[dateKey].push(session);
@@ -415,17 +385,14 @@ router.get(
       const leaveDates = new Set<string>();
       approvedLeaves.forEach((leave) => {
         const start = new Date(leave.startDate);
-        start.setHours(0, 0, 0, 0);
+        start.setUTCHours(0, 0, 0, 0);
         const end = new Date(leave.endDate);
-        end.setHours(0, 0, 0, 0);
+        end.setUTCHours(0, 0, 0, 0);
 
         const current = new Date(start);
         while (current <= end) {
-          const year = current.getFullYear();
-          const month = String(current.getMonth() + 1).padStart(2, "0");
-          const day = String(current.getDate()).padStart(2, "0");
-          leaveDates.add(`${year}-${month}-${day}`);
-          current.setDate(current.getDate() + 1);
+          leaveDates.add(current.toISOString());
+          current.setUTCDate(current.getUTCDate() + 1);
         }
       });
 
@@ -433,20 +400,20 @@ router.get(
       for (
         let d = new Date(startDate);
         d <= endDate;
-        d.setDate(d.getDate() + 1)
+        d.setUTCDate(d.getUTCDate() + 1)
       ) {
         datesInMonth.push(new Date(d));
       }
 
       const now = new Date();
       const attendances = datesInMonth.map((date) => {
-        const dateKey = date.toISOString().split("T")[0];
+        const dateKey = date.toISOString();
         const sessions = (dateKey && sessionsByDate[dateKey]) || [];
         const isOnLeave = dateKey ? leaveDates.has(dateKey) : false;
 
         const workingHours = calculateWorkingHoursFromSessions(sessions, now);
         const overtimeHours = Math.max(0, workingHours - 9);
-        const status = determineStatus(sessions, workingHours, isOnLeave);
+        const status = determineStatus(sessions, isOnLeave);
 
         let checkIn: Date | null = null;
         let checkOut: Date | null = null;
@@ -470,19 +437,14 @@ router.get(
       });
 
       const summary = {
-        totalWorkingDays: attendances.filter((a) =>
-          ["PRESENT", "LATE", "HALF_DAY"].includes(a.status)
-        ).length,
-        totalPresentDays: attendances.filter(
-          (a) => a.status === "PRESENT" || a.status === "LATE"
-        ).length,
+        totalWorkingDays: attendances.filter((a) => a.status === "PRESENT")
+          .length,
+        totalPresentDays: attendances.filter((a) => a.status === "PRESENT")
+          .length,
         totalAbsentDays: attendances.filter((a) => a.status === "ABSENT")
           .length,
         totalLeaveDays: attendances.filter((a) => a.status === "ON_LEAVE")
           .length,
-        totalHalfDays: attendances.filter((a) => a.status === "HALF_DAY")
-          .length,
-        totalLateDays: attendances.filter((a) => a.status === "LATE").length,
         totalWorkingHours: parseFloat(
           attendances.reduce((sum, a) => sum + a.workingHours, 0).toFixed(2)
         ),

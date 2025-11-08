@@ -19,7 +19,9 @@ export const sessionService = {
   },
 
   async findSessionsByEmployeeAndDate(employeeId: string, date: Date) {
-    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const startOfDay = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
     
     return db.workSession.findMany({
       where: {

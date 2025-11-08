@@ -30,6 +30,7 @@ export function minutesToTime(minutes: number): string {
 
 /**
  * Format time string to HH:MM (24-hour format)
+ * Displays time in Nepal timezone (Asia/Kathmandu)
  */
 export function formatTime(timeString: string | null): string {
   if (!timeString) return "-";
@@ -38,11 +39,13 @@ export function formatTime(timeString: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Kathmandu",
   });
 }
 
 /**
  * Format date to readable string
+ * Displays date in Nepal timezone (Asia/Kathmandu)
  */
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -51,5 +54,6 @@ export function formatDate(dateString: string): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Kathmandu",
   });
 }

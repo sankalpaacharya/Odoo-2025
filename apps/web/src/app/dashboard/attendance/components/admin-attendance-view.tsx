@@ -37,6 +37,7 @@ import type { EmployeeAttendance } from "../types";
 
 import { StatsCards, type StatItem } from "@/components";
 import { cn } from "@/lib/utils";
+import { WorkSessionsDisplay } from "./work-sessions-display";
 
 const attendanceColumns: (
   expandedRows: Set<string>,
@@ -139,15 +140,7 @@ export function AdminAttendanceView() {
     toast.error("Failed to load today's attendance");
   }
 
-  // Normalize statuses (HALF_DAY and LATE -> PRESENT)
-  const normalizedAttendances = (response || []).map(
-    (record: EmployeeAttendance) => ({
-      ...record,
-      status: (record.status === "HALF_DAY" || record.status === "LATE"
-        ? "PRESENT"
-        : record.status) as typeof record.status,
-    })
-  );
+  const normalizedAttendances = response || [];
 
   // Apply all filters
   const filteredAttendances = normalizedAttendances.filter(
@@ -206,13 +199,13 @@ export function AdminAttendanceView() {
 
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 1);
+    newDate.setUTCDate(newDate.getUTCDate() - 1);
     setSelectedDate(newDate);
   };
 
   const goToNextDay = () => {
     const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 1);
+    newDate.setUTCDate(newDate.getUTCDate() + 1);
     setSelectedDate(newDate);
   };
 
@@ -232,13 +225,16 @@ export function AdminAttendanceView() {
     });
   };
 
-  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  const isToday =
+    selectedDate.toISOString().split("T")[0] ===
+    new Date().toISOString().split("T")[0];
 
   const dateDisplay = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Kathmandu",
   });
 
   if (isLoading) {
@@ -335,94 +331,19 @@ export function AdminAttendanceView() {
             emptyMessage="No employees found"
             isLoading={isLoading}
             loadingMessage="Loading attendance..."
+            expandedRows={expandedRows}
+            expandedContent={(record) => {
+              if (!record.sessions || record.sessions.length === 0) {
+                return null;
+              }
+              return (
+                <WorkSessionsDisplay
+                  sessions={record.sessions}
+                  title={`Work Sessions for ${record.employeeName}`}
+                />
+              );
+            }}
           />
-
-          {/* Expanded sessions content */}
-          {filteredAttendances.map((record) => {
-            if (
-              !expandedRows.has(record.employeeId) ||
-              !record.sessions ||
-              record.sessions.length === 0
-            ) {
-              return null;
-            }
-
-            return (
-              <div
-                key={`${record.employeeId}-expanded`}
-                className="border-t bg-muted/30 p-4"
-              >
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm mb-3">
-                    Work Sessions for {record.employeeName}
-                  </h4>
-                  <div className="space-y-2">
-                    {record.sessions.map((session, idx) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between p-3 bg-background rounded-md border"
-                      >
-                        <div className="flex items-center gap-6">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-muted-foreground">
-                              Session {idx + 1}
-                            </span>
-                            {session.isActive && (
-                              <Badge
-                                variant="default"
-                                className="text-xs bg-green-500"
-                              >
-                                <div className="flex items-center gap-1">
-                                  <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                  Active
-                                </div>
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex gap-3 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">
-                                Check In:{" "}
-                              </span>
-                              <span className="font-medium">
-                                {formatTime(session.startTime)}
-                              </span>
-                            </div>
-                            <span className="text-muted-foreground">→</span>
-                            <div>
-                              <span className="text-muted-foreground">
-                                Check Out:{" "}
-                              </span>
-                              <span className="font-medium">
-                                {session.endTime
-                                  ? formatTime(session.endTime)
-                                  : "In Progress"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          {session.totalBreakTime > 0 && (
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">
-                                Break:{" "}
-                              </span>
-                              <span className="font-medium">
-                                {formatHoursToTime(session.totalBreakTime)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="text-lg font-semibold text-primary">
-                            {session.durationFormatted}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </>

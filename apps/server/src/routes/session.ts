@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticateUser } from "../middleware/auth";
 import { sessionService } from "../services/session.service";
 import { employeeService } from "../services/employee.service";
+import { getNepalDate } from "../utils/timezone";
 
 const router: Router = Router();
 
@@ -68,11 +69,7 @@ router.post("/start", async (req, res) => {
     }
 
     const now = new Date();
-    const todayDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
+    const todayDate = getNepalDate(now);
 
     const newSession = await sessionService.createSession({
       employeeId: employee.id,
@@ -158,7 +155,7 @@ router.get("/today", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const today = new Date();
+    const today = getNepalDate();
     const sessions = await sessionService.findSessionsByEmployeeAndDate(
       employee.id,
       today
@@ -266,7 +263,7 @@ router.get("/today-hours", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const today = new Date();
+    const today = getNepalDate();
     const sessions = await sessionService.findSessionsByEmployeeAndDate(
       employee.id,
       today
