@@ -145,62 +145,60 @@ export function AdminAttendanceView() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Work Hours</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAttendances.length > 0 ? (
-                filteredAttendances.map((record: EmployeeAttendance) => (
-                  <TableRow key={record.employeeId}>
-                    <TableCell className="font-medium">
-                      {record.employeeCode}
-                    </TableCell>
-                    <TableCell>{record.employeeName}</TableCell>
-                    <TableCell>{record.department}</TableCell>
-                    <TableCell>{record.designation || "N/A"}</TableCell>
-                    <TableCell>{formatTime(record.checkIn)}</TableCell>
-                    <TableCell>{formatTime(record.checkOut)}</TableCell>
-                    <TableCell>
-                      {record.workingHours > 0
-                        ? `${record.workingHours.toFixed(2)}h`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(record.status)}>
-                        {formatStatus(record.status)}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center text-muted-foreground"
-                  >
-                    No employees found
+      <div className="rounded-lg">
+        <div className="py-4">
+          <h2 className="text-lg font-semibold">Today's Attendance</h2>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee Code</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead>Check In</TableHead>
+              <TableHead>Check Out</TableHead>
+              <TableHead>Work Hours</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAttendances.length > 0 ? (
+              filteredAttendances.map((record: EmployeeAttendance) => (
+                <TableRow key={record.employeeId}>
+                  <TableCell className="font-medium">
+                    {record.employeeCode}
+                  </TableCell>
+                  <TableCell>{record.employeeName}</TableCell>
+                  <TableCell>{record.department}</TableCell>
+                  <TableCell>{record.designation || "N/A"}</TableCell>
+                  <TableCell>{formatTime(record.checkIn)}</TableCell>
+                  <TableCell>{formatTime(record.checkOut)}</TableCell>
+                  <TableCell>
+                    {record.workingHours > 0
+                      ? `${record.workingHours.toFixed(2)}h`
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusColor(record.status)}>
+                      {formatStatus(record.status)}
+                    </Badge>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="text-center text-muted-foreground"
+                >
+                  No employees found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </>
   );
 }
