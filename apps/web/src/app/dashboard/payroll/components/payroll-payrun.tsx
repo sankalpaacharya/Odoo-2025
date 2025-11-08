@@ -25,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
@@ -85,10 +92,10 @@ export function PayrollPayrun() {
   );
   const [payrun, setPayrun] = useState<Payrun | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch payrun when component mounts or when month/year changes
   useEffect(() => {
     fetchPayrun();
   }, [selectedMonth, selectedYear]);
@@ -101,7 +108,6 @@ export function PayrollPayrun() {
       );
       setPayrun(data);
     } catch (error: any) {
-      // Payrun doesn't exist yet, that's okay
       setPayrun(null);
     } finally {
       setIsLoading(false);
@@ -130,30 +136,7 @@ export function PayrollPayrun() {
     }
   };
 
-  const handleValidatePayrun = async () => {
-    if (!payrun) return;
-
-    setIsValidating(true);
-    try {
-      const data = await apiClient<Payrun>(
-        `/api/payroll/payrun/${payrun.id}/validate`,
-        {
-          method: "POST",
-        }
-      );
-      setPayrun(data);
-      toast.success("Payrun validated successfully");
-    } catch (error: any) {
-      console.error("Error validating payrun:", error);
-      toast.error("Failed to validate payrun", {
-        description: error.message,
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  const handleMarkAsDone = async () => {
+  const handleApprovePayrun = async () => {
     if (!payrun) return;
 
     setIsMarkingDone(true);
@@ -165,10 +148,10 @@ export function PayrollPayrun() {
         }
       );
       setPayrun(data);
-      toast.success("Payrun marked as done");
+      toast.success("Payrun approved successfully");
     } catch (error: any) {
-      console.error("Error marking payrun as done:", error);
-      toast.error("Failed to mark payrun as done", {
+      console.error("Error approving payrun:", error);
+      toast.error("Failed to approve payrun", {
         description: error.message,
       });
     } finally {
@@ -176,11 +159,16 @@ export function PayrollPayrun() {
     }
   };
 
+  const handlePayslipClick = (payslip: Payslip) => {
+    setSelectedPayslip(payslip);
+    setIsModalOpen(true);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -199,8 +187,6 @@ export function PayrollPayrun() {
   );
 
   const isDone = payrun?.status === "COMPLETED";
-  const isProcessing = payrun?.status === "PROCESSING";
-  const isDraft = payrun?.status === "DRAFT";
 
   const months = [
     { value: 1, label: "January" },
@@ -266,7 +252,7 @@ export function PayrollPayrun() {
         <div className="flex gap-2">
           <Button
             onClick={handleGeneratePayrun}
-            disabled={isLoading || (payrun !== null && isDraft)}
+            disabled={isLoading || payrun !== null}
           >
             {isLoading ? (
               <>
@@ -277,13 +263,9 @@ export function PayrollPayrun() {
               "Generate Payrun"
             )}
           </Button>
-          {payrun && isDraft && (
-            <Button
-              onClick={handleValidatePayrun}
-              disabled={isValidating}
-              variant="outline"
-            >
-              {isValidating ? "Validating..." : "Validate"}
+          {payrun && !isDone && (
+            <Button onClick={handleApprovePayrun} disabled={isMarkingDone}>
+              {isMarkingDone ? "Approving..." : "Approve"}
             </Button>
           )}
         </div>
@@ -331,21 +313,10 @@ export function PayrollPayrun() {
                 {isDone ? (
                   <Badge variant="success" className="gap-1">
                     <CheckCircle2 className="size-3" />
-                    Done
+                    Approved
                   </Badge>
-                ) : isProcessing ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default">Validated</Badge>
-                    <Button
-                      size="sm"
-                      onClick={handleMarkAsDone}
-                      disabled={isMarkingDone}
-                    >
-                      {isMarkingDone ? "Processing..." : "Done"}
-                    </Button>
-                  </div>
                 ) : (
-                  <Badge variant="secondary">Draft</Badge>
+                  <Badge variant="secondary">Pending Approval</Badge>
                 )}
               </div>
             </CardHeader>
@@ -389,7 +360,11 @@ export function PayrollPayrun() {
                 </TableHeader>
                 <TableBody>
                   {payslips.map((payslip) => (
-                    <TableRow key={payslip.id}>
+                    <TableRow
+                      key={payslip.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handlePayslipClick(payslip)}
+                    >
                       <TableCell className="font-medium">
                         {format(
                           new Date(payslip.year, payslip.month - 1),
@@ -421,13 +396,13 @@ export function PayrollPayrun() {
                       </TableCell>
                       <TableCell>
                         {payslip.status === "PAID" && (
-                          <Badge variant="success">Done</Badge>
+                          <Badge variant="success">Approved</Badge>
                         )}
                         {payslip.status === "PROCESSED" && (
-                          <Badge variant="default">Validated</Badge>
+                          <Badge variant="default">Approved</Badge>
                         )}
                         {payslip.status === "PENDING" && (
-                          <Badge variant="secondary">Draft</Badge>
+                          <Badge variant="secondary">Pending</Badge>
                         )}
                         {payslip.status === "CANCELLED" && (
                           <Badge variant="destructive">Cancelled</Badge>
@@ -474,6 +449,249 @@ export function PayrollPayrun() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Payslip Detail Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedPayslip && (
+                <div>
+                  <div className="text-xl">
+                    {selectedPayslip.employee.firstName}{" "}
+                    {selectedPayslip.employee.lastName}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-normal">
+                    Payrun{" "}
+                    {
+                      months.find((m) => m.value === selectedPayslip.month)
+                        ?.label
+                    }{" "}
+                    {selectedPayslip.year}
+                  </div>
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedPayslip && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">
+                    Salary Structure:
+                  </span>
+                  <span className="ml-2 font-medium">Regular Pay</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Period:</span>
+                  <span className="ml-2 font-medium">
+                    01{" "}
+                    {months
+                      .find((m) => m.value === selectedPayslip.month)
+                      ?.label.substring(0, 3)}{" "}
+                    To{" "}
+                    {new Date(
+                      selectedPayslip.year,
+                      selectedPayslip.month,
+                      0
+                    ).getDate()}{" "}
+                    {months
+                      .find((m) => m.value === selectedPayslip.month)
+                      ?.label.substring(0, 3)}
+                  </span>
+                </div>
+              </div>
+
+              <Tabs defaultValue="worked-days" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="worked-days">Worked Days</TabsTrigger>
+                  <TabsTrigger value="salary-computation">
+                    Salary Computation
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="worked-days" className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Days</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Attendance</TableCell>
+                        <TableCell className="text-right">
+                          {selectedPayslip.presentDays} (
+                          {selectedPayslip.workingDays} working days in week)
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.basicSalary) *
+                              (Number(selectedPayslip.presentDays) /
+                                selectedPayslip.workingDays)
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Paid Time off</TableCell>
+                        <TableCell className="text-right">
+                          {selectedPayslip.leaveDays} (
+                          {selectedPayslip.leaveDays} Paid leaves/Month)
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.basicSalary) *
+                              (Number(selectedPayslip.leaveDays) /
+                                selectedPayslip.workingDays)
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="font-medium border-t-2">
+                        <TableCell></TableCell>
+                        <TableCell className="text-right">
+                          {Number(selectedPayslip.presentDays) +
+                            Number(selectedPayslip.leaveDays)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(Number(selectedPayslip.basicSalary))}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                  <p className="text-sm text-muted-foreground">
+                    Salary is calculated based on the employee's monthly
+                    attendance. Paid leaves are included in the total payable
+                    days, while unpaid leaves are deducted from the salary.
+                  </p>
+                </TabsContent>
+
+                <TabsContent value="salary-computation" className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rule Name</TableHead>
+                        <TableHead className="text-right">Rate %</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">
+                          Basic Salary
+                        </TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(Number(selectedPayslip.basicSalary))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>House Rent Allowance</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.basicSalary) * 0.5
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Standard Allowance</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(4167)}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Performance Bonus</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.basicSalary) * 0.0833
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Leave Travel Allowance</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.basicSalary) * 0.0833
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Fixed Allowance</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Number(selectedPayslip.grossSalary) -
+                              Number(selectedPayslip.basicSalary) * 2.1666 -
+                              4167
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="font-medium border-t-2">
+                        <TableCell>Gross</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(Number(selectedPayslip.grossSalary))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="border-t">
+                        <TableCell>PF Employee</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right text-destructive">
+                          -{" "}
+                          {formatCurrency(Number(selectedPayslip.pfDeduction))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>PF Employer</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right text-destructive">
+                          -{" "}
+                          {formatCurrency(Number(selectedPayslip.pfDeduction))}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Professional Tax</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right text-destructive">
+                          -{" "}
+                          {formatCurrency(
+                            Number(selectedPayslip.professionalTax)
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="font-medium border-t-2">
+                        <TableCell>Net Amount</TableCell>
+                        <TableCell className="text-right">100</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(Number(selectedPayslip.netSalary))}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                  <p className="text-sm text-muted-foreground">
+                    Users can also view the payslip computation, which shows how
+                    the total amount is calculated from different salary heads,
+                    including allowances and deductions.
+                  </p>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                  Close
+                </Button>
+                <Button variant="outline">Print</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -40,6 +40,7 @@ export function TodayAttendanceRadial() {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "Asia/Kathmandu",
           })}
         </CardDescription>
       </CardHeader>
