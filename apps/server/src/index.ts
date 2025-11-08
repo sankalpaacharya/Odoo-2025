@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth";
 import sessionRoutes from "./routes/session";
 import leaveRoutes from "./routes/leave";
 import permissionsRoutes from "./routes/permissions";
+import usersRoutes from "./routes/users";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/permissions", permissionsRoutes);
+app.use("/api/users", usersRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
