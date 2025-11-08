@@ -300,7 +300,6 @@ export const leaveService = {
     startDate: Date,
     endDate: Date
   ) {
-    console.log(startDate);
     return db.leave.findMany({
       where: {
         employeeId,
