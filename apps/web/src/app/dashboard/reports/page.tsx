@@ -155,6 +155,13 @@ export default function ReportsPage() {
 
   const getProfileImageUrl = (profileImage: string | null | undefined) => {
     if (!profileImage) return null;
+    // If it's already a full URL, return it as is
+    if (
+      profileImage.startsWith("http://") ||
+      profileImage.startsWith("https://")
+    ) {
+      return profileImage;
+    }
     const API_URL =
       process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     return `${API_URL}${profileImage}`;
