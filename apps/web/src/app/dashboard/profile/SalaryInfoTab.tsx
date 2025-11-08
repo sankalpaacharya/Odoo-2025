@@ -48,6 +48,8 @@ interface SalaryFieldProps {
   unit?: string;
   description?: string;
   readOnly?: boolean;
+  readOnlyAmount?: boolean;
+  readOnlyPercentage?: boolean;
   componentId?: string;
   onDelete?: (id: string) => void;
   baseSalary?: number;
@@ -62,6 +64,8 @@ const SalaryField = memo(function SalaryField({
   unit = "₹ / month",
   description,
   readOnly = false,
+  readOnlyAmount,
+  readOnlyPercentage,
   componentId,
   onDelete,
   baseSalary,
@@ -72,6 +76,10 @@ const SalaryField = memo(function SalaryField({
   const [localPercentage, setLocalPercentage] = useState<string>("");
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   const [isEditingPercentage, setIsEditingPercentage] = useState(false);
+
+  // Determine effective readOnly states
+  const isAmountReadOnly = readOnlyAmount ?? readOnly;
+  const isPercentageReadOnly = readOnlyPercentage ?? readOnly;
 
   const displayAmount = isEditingAmount
     ? localAmount
@@ -90,11 +98,14 @@ const SalaryField = memo(function SalaryField({
 
   const handleAmountBlur = () => {
     setIsEditingAmount(false);
+    if (!onChange) {
+      return;
+    }
     if (!localAmount || localAmount === "") {
       return;
     }
     const numValue = Number.parseFloat(localAmount);
-    if (isNaN(numValue) || !onChange) {
+    if (isNaN(numValue)) {
       return;
     }
     if (baseSalary && baseSalary > 0 && percentage !== undefined) {
@@ -110,6 +121,9 @@ const SalaryField = memo(function SalaryField({
   };
 
   const handleAmountFocus = () => {
+    if (isAmountReadOnly || !onChange) {
+      return;
+    }
     setIsEditingAmount(true);
     setLocalAmount(amount.toString());
   };
@@ -120,11 +134,14 @@ const SalaryField = memo(function SalaryField({
 
   const handlePercentageBlur = () => {
     setIsEditingPercentage(false);
+    if (!onChange) {
+      return;
+    }
     if (!localPercentage || localPercentage === "") {
       return;
     }
     const numValue = Number.parseFloat(localPercentage);
-    if (isNaN(numValue) || !onChange) {
+    if (isNaN(numValue)) {
       return;
     }
     if (baseSalary && baseSalary > 0) {
@@ -136,6 +153,9 @@ const SalaryField = memo(function SalaryField({
   };
 
   const handlePercentageFocus = () => {
+    if (isPercentageReadOnly || !onChange) {
+      return;
+    }
     setIsEditingPercentage(true);
     setLocalPercentage(percentage?.toString() || "0");
   };
@@ -152,7 +172,7 @@ const SalaryField = memo(function SalaryField({
           )}
         </Label>
         <div className="flex items-center gap-2">
-          {!readOnly && onDelete && componentId && (
+          {!isAmountReadOnly && onDelete && componentId && (
             <Button
               variant="ghost"
               size="sm"
@@ -172,7 +192,7 @@ const SalaryField = memo(function SalaryField({
             onChange={(e) => handleAmountChange(e.target.value)}
             onFocus={handleAmountFocus}
             onBlur={handleAmountBlur}
-            readOnly={readOnly}
+            readOnly={isAmountReadOnly}
             className={`h-10 ${
               isModified
                 ? "border-orange-500 dark:border-orange-400"
@@ -191,7 +211,7 @@ const SalaryField = memo(function SalaryField({
               onChange={(e) => handlePercentageChange(e.target.value)}
               onFocus={handlePercentageFocus}
               onBlur={handlePercentageBlur}
-              readOnly={readOnly}
+              readOnly={isPercentageReadOnly}
               className={`h-10 ${
                 isModified
                   ? "border-orange-500 dark:border-orange-400"
@@ -418,8 +438,7 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
     };
   }, [profile.salary.components, basicSalary, monthlyWage, changes.components]);
 
-  // PF is 12% of Basic Salary
-  const pfPercentage = 12;
+  // PF calculation
   const pfEmployeeContribution = useMemo(
     () => changes.pfContribution ?? basicSalary * 0.12,
     [changes.pfContribution, basicSalary]
@@ -427,6 +446,10 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
   const pfEmployerContribution = useMemo(
     () => changes.pfContribution ?? basicSalary * 0.12,
     [changes.pfContribution, basicSalary]
+  );
+  const pfPercentage = useMemo(
+    () => (pfEmployeeContribution / basicSalary) * 100,
+    [pfEmployeeContribution, basicSalary]
   );
 
   // Professional Tax defaults to 200
@@ -747,45 +770,110 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
               amount={components.houseRentAllowance}
               percentage={components.hraPercentage}
               description="HRA is 50% of the basic salary"
-              readOnly={true}
+              readOnlyAmount={true}
+              readOnlyPercentage={!canEdit}
               componentId={components.hra?.id}
+              onDelete={canEdit ? handleDeleteComponent : undefined}
               baseSalary={basicSalary}
+              onChange={
+                canEdit && components.hra
+                  ? (amt, pct) =>
+                      handleComponentChange(components.hra!.id, amt, pct)
+                  : undefined
+              }
+              isModified={
+                components.hra
+                  ? changes.components[components.hra.id] !== undefined
+                  : false
+              }
             />
             <SalaryField
               title="Standard Allowance"
               amount={components.standardAllowance}
               percentage={components.standardAllowancePercentage}
               description="Fixed amount of ₹4,167 per month"
-              readOnly={true}
+              readOnlyAmount={!canEdit}
+              readOnlyPercentage={!canEdit}
               componentId={components.sa?.id}
+              onDelete={canEdit ? handleDeleteComponent : undefined}
               baseSalary={monthlyWage}
+              onChange={
+                canEdit && components.sa
+                  ? (amt, pct) =>
+                      handleComponentChange(components.sa!.id, amt, pct)
+                  : undefined
+              }
+              isModified={
+                components.sa
+                  ? changes.components[components.sa.id] !== undefined
+                  : false
+              }
             />
             <SalaryField
               title="Performance Bonus"
               amount={components.performanceBonus}
               percentage={components.performanceBonusPercentage}
               description="Performance bonus is 8.33% of the basic salary"
-              readOnly={true}
+              readOnlyAmount={true}
+              readOnlyPercentage={!canEdit}
               componentId={components.pb?.id}
+              onDelete={canEdit ? handleDeleteComponent : undefined}
               baseSalary={basicSalary}
+              onChange={
+                canEdit && components.pb
+                  ? (amt, pct) =>
+                      handleComponentChange(components.pb!.id, amt, pct)
+                  : undefined
+              }
+              isModified={
+                components.pb
+                  ? changes.components[components.pb.id] !== undefined
+                  : false
+              }
             />
             <SalaryField
               title="Leave Travel Allowance"
               amount={components.leaveTravelAllowance}
               percentage={components.leaveTravelPercentage}
               description="LTA is 8.333% of the basic salary"
-              readOnly={true}
+              readOnlyAmount={true}
+              readOnlyPercentage={!canEdit}
               componentId={components.lta?.id}
+              onDelete={canEdit ? handleDeleteComponent : undefined}
               baseSalary={basicSalary}
+              onChange={
+                canEdit && components.lta
+                  ? (amt, pct) =>
+                      handleComponentChange(components.lta!.id, amt, pct)
+                  : undefined
+              }
+              isModified={
+                components.lta
+                  ? changes.components[components.lta.id] !== undefined
+                  : false
+              }
             />
             <SalaryField
               title="Fixed Allowance"
               amount={components.fixedAllowance}
               percentage={components.fixedAllowancePercentage}
               description="Fixed allowance = Monthly Wage - (Basic + HRA + Standard + Performance Bonus + LTA)"
-              readOnly={true}
+              readOnlyAmount={true}
+              readOnlyPercentage={!canEdit}
               componentId={components.fa?.id}
+              onDelete={canEdit ? handleDeleteComponent : undefined}
               baseSalary={monthlyWage}
+              onChange={
+                canEdit && components.fa
+                  ? (amt, pct) =>
+                      handleComponentChange(components.fa!.id, amt, pct)
+                  : undefined
+              }
+              isModified={
+                components.fa
+                  ? changes.components[components.fa.id] !== undefined
+                  : false
+              }
             />
 
             {/* Custom components */}
@@ -845,14 +933,17 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
                 amount={pfEmployeeContribution}
                 percentage={pfPercentage}
                 description="Employee PF contribution is 12% of basic salary"
-                readOnly={true}
+                readOnlyAmount={true}
+                readOnlyPercentage={!canEdit}
                 baseSalary={basicSalary}
+                onChange={canEdit ? handlePFChange : undefined}
+                isModified={changes.pfContribution !== undefined}
               />
               <SalaryField
                 title="Employer"
                 amount={pfEmployerContribution}
                 percentage={pfPercentage}
-                description="Employer PF contribution is 12% of basic salary"
+                description="Employer PF contribution matches employee contribution"
                 readOnly={true}
                 baseSalary={basicSalary}
               />
