@@ -107,14 +107,17 @@ export function Sidebar() {
   return (
     <SidebarUI collapsible="icon" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-3 group-data-[collapsible=icon]:justify-center">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold text-lg">W</span>
+        <div className="flex items-center gap-2 px-2 py-3 justify-between">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <span className="text-primary-foreground font-bold">W</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-semibold text-base">WorkZen</span>
+              <span className="text-xs text-muted-foreground">HR Platform</span>
+            </div>
           </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="font-semibold text-base">WorkZen</span>
-            <span className="text-xs text-muted-foreground">HR Platform</span>
-          </div>
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
 
