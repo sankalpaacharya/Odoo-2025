@@ -5,6 +5,8 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  Table as TableIcon,
+  CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -29,15 +31,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatHoursToTime, formatTime } from "@/lib/time-utils";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
-import { useTodayAttendance } from "../hooks";
+import { useTodayAttendance, useMonthlyCalendar } from "../hooks";
 import type { EmployeeAttendance } from "../types";
 
 import { StatsCards, type StatItem } from "@/components";
 import { cn } from "@/lib/utils";
 import { WorkSessionsDisplay } from "./work-sessions-display";
+import { AdminCalendarView } from "./admin-calendar-view";
 
 const attendanceColumns: (
   expandedRows: Set<string>,
@@ -134,7 +138,14 @@ export function AdminAttendanceView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("table");
+
   const { data: response, isLoading, error } = useTodayAttendance(selectedDate);
+
+  const month = selectedDate.getUTCMonth() + 1;
+  const year = selectedDate.getUTCFullYear();
+  const { data: calendarData, isLoading: isCalendarLoading } =
+    useMonthlyCalendar(month, year);
 
   if (error) {
     toast.error("Failed to load today's attendance");
@@ -213,6 +224,26 @@ export function AdminAttendanceView() {
     setSelectedDate(new Date());
   };
 
+  const goToPreviousMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setUTCMonth(newDate.getUTCMonth() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setUTCMonth(newDate.getUTCMonth() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToCurrentMonth = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isCurrentMonth =
+    selectedDate.getUTCMonth() === new Date().getUTCMonth() &&
+    selectedDate.getUTCFullYear() === new Date().getUTCFullYear();
+
   const toggleRow = (employeeId: string) => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
@@ -241,111 +272,205 @@ export function AdminAttendanceView() {
     return <Loader />;
   }
 
+  const isTableView = activeTab === "table";
+
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousDay}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "min-w-[300px] justify-center font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? (
-                  format(selectedDate, "EEEE, MMMM d, yyyy")
-                ) : (
-                  <span>Pick a date</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                selected={selectedDate}
-                onSelect={(date: Date | undefined) =>
-                  date && setSelectedDate(date)
-                }
-                mode="single"
-                className="rounded-md border shadow-sm"
-                captionLayout="dropdown"
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Button variant="outline" size="icon" onClick={goToNextDay}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {!isToday && (
-            <Button variant="outline" onClick={goToToday}>
-              Today
+        {isTableView ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[300px] justify-center font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "EEEE, MMMM d, yyyy")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  selected={selectedDate}
+                  onSelect={(date: Date | undefined) =>
+                    date && setSelectedDate(date)
+                  }
+                  mode="single"
+                  className="rounded-md border shadow-sm"
+                  captionLayout="dropdown"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button variant="outline" size="icon" onClick={goToNextDay}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isToday && (
+              <Button variant="outline" onClick={goToToday}>
+                Today
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[200px] justify-center font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "MMMM yyyy")
+                  ) : (
+                    <span>Pick a month</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  className="rounded-md border shadow-sm"
+                  captionLayout="dropdown"
+                  selected={selectedDate}
+                  onSelect={(date: Date | undefined) =>
+                    date && setSelectedDate(date)
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button variant="outline" size="icon" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isCurrentMonth && (
+              <Button variant="outline" onClick={goToCurrentMonth}>
+                Current Month
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search employees..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+      {isTableView && (
+        <div className="flex items-center gap-4 mb-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search employees..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="present">Present</SelectItem>
+              <SelectItem value="absent">Absent</SelectItem>
+              <SelectItem value="on_leave">On Leave</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="present">Present</SelectItem>
-            <SelectItem value="absent">Absent</SelectItem>
-            <SelectItem value="on_leave">On Leave</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      )}
 
       <StatsCards data={statsData} />
 
-      <div className="rounded-lg">
-        <div className="py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Attendance Records</h2>
-          <span className="text-sm text-muted-foreground">
-            Showing {filteredAttendances.length} of {totalEmployees} employees
-          </span>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="table" className="flex items-center gap-2">
+            <TableIcon className="h-4 w-4" />
+            Daily View
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Monthly Calendar
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="border rounded-lg">
-          <DataTable
-            data={filteredAttendances}
-            columns={attendanceColumns(expandedRows, toggleRow)}
-            keyExtractor={(record) => record.employeeId}
-            emptyMessage="No employees found"
-            isLoading={isLoading}
-            loadingMessage="Loading attendance..."
-            expandedRows={expandedRows}
-            expandedContent={(record) => {
-              if (!record.sessions || record.sessions.length === 0) {
-                return null;
-              }
-              return (
-                <WorkSessionsDisplay
-                  sessions={record.sessions}
-                  title={`Work Sessions for ${record.employeeName}`}
-                />
-              );
-            }}
-          />
-        </div>
-      </div>
+        <TabsContent value="table" className="mt-6">
+          <div className="rounded-lg">
+            <div className="py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Attendance Records</h2>
+              <span className="text-sm text-muted-foreground">
+                Showing {filteredAttendances.length} of {totalEmployees}{" "}
+                employees
+              </span>
+            </div>
+
+            <div className="border rounded-lg">
+              <DataTable
+                data={filteredAttendances}
+                columns={attendanceColumns(expandedRows, toggleRow)}
+                keyExtractor={(record) => record.employeeId}
+                emptyMessage="No employees found"
+                isLoading={isLoading}
+                loadingMessage="Loading attendance..."
+                expandedRows={expandedRows}
+                expandedContent={(record) => {
+                  if (!record.sessions || record.sessions.length === 0) {
+                    return null;
+                  }
+                  return (
+                    <WorkSessionsDisplay
+                      sessions={record.sessions}
+                      title={`Work Sessions for ${record.employeeName}`}
+                    />
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-6">
+          <div className="rounded-lg">
+            <div className="py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">
+                Monthly Attendance Overview
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {format(selectedDate, "MMMM yyyy")}
+              </span>
+            </div>
+
+            {isCalendarLoading ? (
+              <Loader />
+            ) : calendarData && calendarData.days ? (
+              <AdminCalendarView
+                selectedDate={selectedDate}
+                calendarData={calendarData.days}
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No calendar data available
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

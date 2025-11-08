@@ -69,3 +69,18 @@ export interface EmployeeAttendance {
   activeSessionStart: string | null;
   sessions?: WorkSessionInfo[];
 }
+
+export interface CalendarDayData {
+  date: string;
+  presentCount: number;
+  absentCount: number;
+  leaveCount: number;
+  totalEmployees: number;
+  averageHours: number;
+}
+
+export interface MonthlyCalendarResponse {
+  month: number;
+  year: number;
+  days: CalendarDayData[];
+}
