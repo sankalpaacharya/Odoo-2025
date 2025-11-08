@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/collapsible";
 import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
-import { formatDate, formatTime, formatStatus, getStatusColor } from "../utils";
+import { formatStatus, getStatusColor } from "../utils";
+import { formatDate, formatTime, formatHoursToTime } from "@/lib/time-utils";
 import { toast } from "sonner";
 import type { AttendanceRecord } from "../types";
 import { useState } from "react";
@@ -146,7 +147,7 @@ export function EmployeeAttendanceView({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalWorkingHours.toFixed(1)}h
+              {formatHoursToTime(totalWorkingHours)}
             </div>
             <p className="text-xs text-muted-foreground">Logged this month</p>
           </CardContent>
@@ -160,7 +161,7 @@ export function EmployeeAttendanceView({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {totalOvertimeHours.toFixed(1)}h
+              {formatHoursToTime(totalOvertimeHours)}
             </div>
             <p className="text-xs text-muted-foreground">Extra hours worked</p>
           </CardContent>
@@ -232,8 +233,7 @@ export function EmployeeAttendanceView({
                           {record.workingHours > 0 ? (
                             <div className="flex flex-col">
                               <span className="font-semibold">
-                                {Math.floor(record.workingHours)}h{" "}
-                                {Math.floor((record.workingHours % 1) * 60)}m
+                                {formatHoursToTime(record.workingHours)}
                               </span>
                               {hasSessions && record.sessions && (
                                 <span className="text-xs text-muted-foreground">
@@ -248,11 +248,7 @@ export function EmployeeAttendanceView({
                         </TableCell>
                         <TableCell>
                           {record.overtimeHours > 0
-                            ? `${Math.floor(
-                                record.overtimeHours
-                              )}h ${Math.floor(
-                                (record.overtimeHours % 1) * 60
-                              )}m`
+                            ? formatHoursToTime(record.overtimeHours)
                             : "-"}
                         </TableCell>
                         <TableCell>
@@ -304,11 +300,9 @@ export function EmployeeAttendanceView({
                                       {session.totalBreakTime > 0 && (
                                         <span className="text-xs text-muted-foreground">
                                           Break:{" "}
-                                          {Math.floor(session.totalBreakTime)}h{" "}
-                                          {Math.floor(
-                                            (session.totalBreakTime % 1) * 60
+                                          {formatHoursToTime(
+                                            session.totalBreakTime
                                           )}
-                                          m
                                         </span>
                                       )}
                                       <span className="font-semibold text-primary">

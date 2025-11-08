@@ -5,26 +5,59 @@ import { authenticateUser } from "../middleware/auth";
 import { createEmployee } from "@my-better-t-app/auth/services/employee.service";
 import { generateEmployeeCode } from "@my-better-t-app/auth/utils/generate-employee-code";
 import { sendNewEmployeeEmail } from "../services/email.service";
+import { sessionService } from "../services/session.service";
 
 const router: RouterType = Router();
 
-// Helper function to map attendance status to UI status
-const mapAttendanceStatus = (dbStatus?: string): string => {
-  if (!dbStatus) return "absent";
+// Helper to calculate status from sessions and leaves
+const calculateEmployeeStatus = async (
+  employeeId: string,
+  sessions: any[],
+  today: Date
+): Promise<string> => {
+  // Check if employee has approved leave for today
+  const approvedLeave = await db.leave.findFirst({
+    where: {
+      employeeId,
+      status: "APPROVED",
+      startDate: { lte: today },
+      endDate: { gte: today },
+    },
+  });
 
-  switch (dbStatus) {
-    case "PRESENT":
-    case "LATE":
-    case "HALF_DAY":
-      return "present";
-    case "ON_LEAVE":
-      return "on_leave";
-    case "ABSENT":
-    case "HOLIDAY":
-    case "WEEKEND":
-    default:
-      return "absent";
+  if (approvedLeave) {
+    return "on_leave";
   }
+
+  if (sessions.length === 0) return "absent";
+
+  const now = new Date();
+  let totalMinutes = 0;
+  let hasActiveSession = false;
+
+  sessions.forEach((session) => {
+    if (session.isActive) {
+      hasActiveSession = true;
+      const sessionMinutes = Math.floor(
+        (now.getTime() - session.startTime.getTime()) / (1000 * 60)
+      );
+      const breakMinutes = session.totalBreakTime
+        ? parseFloat(session.totalBreakTime.toString()) * 60
+        : 0;
+      totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
+    } else if (session.workingHours) {
+      totalMinutes += parseFloat(session.workingHours.toString()) * 60;
+    }
+  });
+
+  const workingHours = totalMinutes / 60;
+
+  // If they have an active session or worked today, they're present
+  if (hasActiveSession || workingHours > 0) {
+    return "present";
+  }
+
+  return "absent";
 };
 
 router.use(authenticateUser);
@@ -111,23 +144,25 @@ router.get("/", async (req, res) => {
 
     // If user can't view all, return only their own data
     if (!canViewAll) {
-      // Get today's attendance for current employee
+      // Get today's sessions for current employee
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const todayAttendance = await db.attendance.findFirst({
-        where: {
-          employeeId: currentEmployee.id,
-          date: today,
-        },
-      });
+      const todaySessions = await sessionService.findSessionsByEmployeeAndDate(
+        currentEmployee.id,
+        today
+      );
 
       return res.json([
         {
           id: currentEmployee.id,
           name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
           role: currentEmployee.role.toLowerCase(),
-          status: mapAttendanceStatus(todayAttendance?.status),
+          status: await calculateEmployeeStatus(
+            currentEmployee.id,
+            todaySessions,
+            today
+          ),
           employeeCode: currentEmployee.employeeCode,
           department: currentEmployee.department,
           designation: currentEmployee.designation,
@@ -158,33 +193,38 @@ router.get("/", async (req, res) => {
       },
     });
 
-    // Get today's attendance for all employees
+    // Get today's sessions for all employees
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const attendances = await db.attendance.findMany({
-      where: {
-        date: today,
-        employeeId: {
-          in: employees.map((e) => e.id),
-        },
-      },
-    });
+    const allSessionsToday = await Promise.all(
+      employees.map((emp) =>
+        sessionService.findSessionsByEmployeeAndDate(emp.id, today)
+      )
+    );
 
-    // Create a map of employee ID to attendance status
-    const attendanceMap = new Map(attendances.map((a) => [a.employeeId, a.status]));
+    // Create a map of employee ID to sessions
+    const sessionsMap = new Map(
+      employees.map((emp, idx) => [emp.id, allSessionsToday[idx] || []])
+    );
 
     // Format the response
-    const formattedEmployees = employees.map((emp) => ({
-      id: emp.id,
-      name: `${emp.firstName} ${emp.lastName}`,
-      role: emp.role.toLowerCase(),
-      status: mapAttendanceStatus(attendanceMap.get(emp.id)),
-      employeeCode: emp.employeeCode,
-      department: emp.department,
-      designation: emp.designation,
-      employmentStatus: emp.employmentStatus,
-    }));
+    const formattedEmployees = await Promise.all(
+      employees.map(async (emp) => {
+        const sessions = sessionsMap.get(emp.id) || [];
+
+        return {
+          id: emp.id,
+          name: `${emp.firstName} ${emp.lastName}`,
+          role: emp.role.toLowerCase(),
+          status: await calculateEmployeeStatus(emp.id, sessions, today),
+          employeeCode: emp.employeeCode,
+          department: emp.department,
+          designation: emp.designation,
+          employmentStatus: emp.employmentStatus,
+        };
+      })
+    );
 
     res.json(formattedEmployees);
   } catch (error) {

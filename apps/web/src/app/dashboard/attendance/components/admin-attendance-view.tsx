@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -22,12 +23,14 @@ import {
 } from "@/components/ui/select";
 import Loader from "@/components/loader";
 import { useTodayAttendance } from "../hooks";
-import { formatTime, formatStatus, getStatusColor } from "../utils";
+import { formatStatus, getStatusColor } from "../utils";
+import { formatTime, formatHoursToTime } from "@/lib/time-utils";
 import { toast } from "sonner";
 import type { EmployeeAttendance } from "../types";
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const { data: attendances = [], isLoading, error } = useTodayAttendance();
 
   if (error) {
@@ -52,12 +55,57 @@ export function AdminAttendanceView() {
     (e: EmployeeAttendance) => e.status === "ABSENT"
   ).length;
 
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const dateDisplay = selectedDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   if (isLoading) {
     return <Loader />;
   }
 
   return (
     <>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-[300px] justify-center">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{dateDisplay}</span>
+          </div>
+          <Button variant="outline" size="icon" onClick={goToNextDay}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          {!isToday && (
+            <Button variant="outline" onClick={goToToday}>
+              Today
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -161,6 +209,7 @@ export function AdminAttendanceView() {
                 <TableHead>Check Out</TableHead>
                 <TableHead>Work Hours</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Active</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,11 +222,18 @@ export function AdminAttendanceView() {
                     <TableCell>{record.employeeName}</TableCell>
                     <TableCell>{record.department}</TableCell>
                     <TableCell>{record.designation || "N/A"}</TableCell>
-                    <TableCell>{formatTime(record.checkIn)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {record.isCurrentlyActive && (
+                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                        {formatTime(record.checkIn)}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatTime(record.checkOut)}</TableCell>
                     <TableCell>
                       {record.workingHours > 0
-                        ? `${record.workingHours.toFixed(2)}h`
+                        ? formatHoursToTime(record.workingHours)
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -185,12 +241,27 @@ export function AdminAttendanceView() {
                         {formatStatus(record.status)}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {record.isCurrentlyActive ? (
+                        <Badge
+                          variant="default"
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                            Working
+                          </div>
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="text-center text-muted-foreground"
                   >
                     No employees found

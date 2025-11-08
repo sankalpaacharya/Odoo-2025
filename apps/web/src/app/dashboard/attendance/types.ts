@@ -59,5 +59,6 @@ export interface EmployeeAttendance {
   checkOut: string | null;
   workingHours: number;
   status: AttendanceStatus;
-  isActive: boolean;
+  isCurrentlyActive: boolean;
+  activeSessionStart: string | null;
 }
