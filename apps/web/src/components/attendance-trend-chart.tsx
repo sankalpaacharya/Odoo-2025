@@ -13,20 +13,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-const chartData = [
-  { month: "Jan", attendance: 92 },
-  { month: "Feb", attendance: 89 },
-  { month: "Mar", attendance: 94 },
-  { month: "Apr", attendance: 91 },
-  { month: "May", attendance: 88 },
-  { month: "Jun", attendance: 95 },
-  { month: "Jul", attendance: 93 },
-  { month: "Aug", attendance: 90 },
-  { month: "Sep", attendance: 96 },
-  { month: "Oct", attendance: 94 },
-  { month: "Nov", attendance: 92 },
-];
+import { useMonthlyAttendanceTrend } from "@/app/dashboard/hooks";
+import Loader from "./loader";
 
 const chartConfig = {
   attendance: {
@@ -36,6 +24,24 @@ const chartConfig = {
 };
 
 export function AttendanceTrendChart() {
+  const { data: chartData, isLoading } = useMonthlyAttendanceTrend();
+
+  if (isLoading || !chartData) {
+    return (
+      <Card className="w-full h-full">
+        <CardHeader>
+          <CardTitle>Monthly Attendance Trend</CardTitle>
+          <CardDescription>
+            Overall attendance rate over the last 11 months
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[350px]">
+          <Loader />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full h-full">
       <CardHeader>
@@ -72,7 +78,7 @@ export function AttendanceTrendChart() {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              domain={[80, 100]}
+              domain={[0, 100]}
               tickFormatter={(value) => `${value}%`}
             />
             <ChartTooltip

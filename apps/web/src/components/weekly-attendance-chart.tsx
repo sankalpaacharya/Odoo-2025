@@ -15,14 +15,8 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
-
-const chartData = [
-  { day: "Mon", present: 142, absent: 8, late: 12 },
-  { day: "Tue", present: 145, absent: 5, late: 8 },
-  { day: "Wed", present: 138, absent: 10, late: 14 },
-  { day: "Thu", present: 148, absent: 6, late: 6 },
-  { day: "Fri", present: 135, absent: 12, late: 15 },
-];
+import { useWeeklyAttendance } from "@/app/dashboard/hooks";
+import Loader from "./loader";
 
 const chartConfig = {
   present: {
@@ -40,6 +34,24 @@ const chartConfig = {
 };
 
 export function WeeklyAttendanceChart() {
+  const { data: chartData, isLoading } = useWeeklyAttendance();
+
+  if (isLoading || !chartData) {
+    return (
+      <Card className="w-full h-full">
+        <CardHeader>
+          <CardTitle>Weekly Attendance Overview</CardTitle>
+          <CardDescription>
+            Daily attendance breakdown for this week
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[350px]">
+          <Loader />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full h-full">
       <CardHeader>

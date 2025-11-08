@@ -13,16 +13,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-
-const chartData = [
-  { department: "Engineering", headcount: 48 },
-  { department: "Sales", headcount: 32 },
-  { department: "Marketing", headcount: 24 },
-  { department: "Operations", headcount: 28 },
-  { department: "Finance", headcount: 12 },
-  { department: "HR", headcount: 8 },
-  { department: "Support", headcount: 18 },
-];
+import { useDepartmentHeadcount } from "@/app/dashboard/hooks";
+import Loader from "./loader";
 
 const chartConfig = {
   headcount: {
@@ -32,6 +24,24 @@ const chartConfig = {
 };
 
 export function DepartmentHeadcountChart() {
+  const { data: chartData, isLoading } = useDepartmentHeadcount();
+
+  if (isLoading || !chartData) {
+    return (
+      <Card className="w-full h-full">
+        <CardHeader>
+          <CardTitle>Department Headcount</CardTitle>
+          <CardDescription>
+            Employee distribution across departments
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[350px]">
+          <Loader />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full h-full">
       <CardHeader>
