@@ -23,8 +23,6 @@ export const sessionService = {
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1)
     );
 
-    console.log(date, endOfDay);
-
     return db.workSession.findMany({
       where: {
         employeeId,
