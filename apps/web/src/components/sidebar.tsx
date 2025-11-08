@@ -1,35 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Users,
-  Calendar,
-  Clock,
-  Wallet,
-  FileText,
-  Settings,
-  LayoutDashboard,
-  LogOut,
-  User,
-  ChevronsUpDown,
-  Sun,
-  Moon,
-  Monitor,
-} from "lucide-react";
-import type { Route } from "next";
-import {
-  Sidebar as SidebarUI,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { SidebarStatus } from "@/components/sidebar-status";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,8 +19,9 @@ import {
   SidebarTrigger,
   Sidebar as SidebarUI,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
+import { usePermissions } from "@/hooks/use-permissions";
 import { apiClient } from "@/lib/api-client";
+import { authClient } from "@/lib/auth-client";
 import {
   Calendar,
   ChevronsUpDown,
@@ -69,11 +41,7 @@ import type { Route } from "next";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { Role } from "../../../../packages/db/prisma/generated/enums";
 import { useEffect, useState } from "react";
-import { SidebarStatus } from "@/components/sidebar-status";
-import { usePermissions } from "@/hooks/use-permissions";
-import { useTheme } from "next-themes";
 
 type NavigationItem = {
   name: string;
