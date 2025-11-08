@@ -1,37 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import {
-  Users,
-  Calendar,
-  Clock,
-  Wallet,
-  FileText,
-  Settings,
-  LayoutDashboard,
-  LogOut,
-  User,
-  ChevronsUpDown,
-} from "lucide-react";
-import type { Route } from "next";
-import {
-  Sidebar as SidebarUI,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarProvider,
-  SidebarSeparator,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar";
-import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { SidebarStatus } from "@/components/sidebar-status";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +9,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarStatus } from "@/components/sidebar-status";
+import {
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  Sidebar as SidebarUI,
+} from "@/components/ui/sidebar";
+import { authClient } from "@/lib/auth-client";
+import {
+  Calendar,
+  ChevronsUpDown,
+  Clock,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  User,
+  Users,
+  Wallet,
+} from "lucide-react";
+import type { Route } from "next";
+import { useTheme } from "next-themes";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type { Role } from "../../../../packages/db/prisma/generated/enums";
 
 type NavigationItem = {
   name: string;
@@ -93,6 +92,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
+  const { theme, setTheme } = useTheme();
   const user = (session as any)?.user as any;
 
   const userInitials = user?.name
@@ -187,6 +187,31 @@ export function Sidebar() {
                 >
                   <User className="h-4 w-4 mr-2" />
                   My Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                  Theme
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => setTheme("light")}
+                  className={theme === "light" ? "bg-accent" : ""}
+                >
+                  <Sun className="h-4 w-4 mr-2" />
+                  Light
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme("dark")}
+                  className={theme === "dark" ? "bg-accent" : ""}
+                >
+                  <Moon className="h-4 w-4 mr-2" />
+                  Dark
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme("system")}
+                  className={theme === "system" ? "bg-accent" : ""}
+                >
+                  <Monitor className="h-4 w-4 mr-2" />
+                  System
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
