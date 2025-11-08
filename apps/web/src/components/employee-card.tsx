@@ -1,12 +1,8 @@
 "use client";
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane } from "lucide-react";
+import { getImageUrl } from "@/lib/image-utils";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -15,11 +11,13 @@ export default function EmployeeCard({
   name,
   role,
   status,
+  profileImage,
 }: {
   id: string;
   name: string;
   role?: string;
   status: Status;
+  profileImage?: string | null;
 }) {
   const statusNode = (() => {
     switch (status) {
@@ -48,6 +46,14 @@ export default function EmployeeCard({
     }
   })();
 
+  const imageUrl = getImageUrl(profileImage);
+  const initials = name
+    .split(" ")
+    .map((s) => (s ? s[0] : ""))
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <Card className="relative min-h-[120px] hover:shadow-md transition-shadow">
       {/* top-right status */}
@@ -55,21 +61,16 @@ export default function EmployeeCard({
 
       <CardHeader>
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 shrink-0 rounded-md bg-muted/40 flex items-center justify-center text-2xl text-muted-foreground font-semibold">
-            {name
-              .split(" ")
-              .map((s) => (s ? s[0] : ""))
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
-          </div>
+          {imageUrl ? (
+            <img src={imageUrl} alt={name} className="h-14 w-14 shrink-0 rounded-md object-cover" />
+          ) : (
+            <div className="h-14 w-14 shrink-0 rounded-md bg-muted/40 flex items-center justify-center text-2xl text-muted-foreground font-semibold">
+              {initials}
+            </div>
+          )}
           <div>
             <CardTitle>{name}</CardTitle>
-            {role && (
-              <CardDescription className="capitalize">
-                {role.replace(/_/g, " ")}
-              </CardDescription>
-            )}
+            {role && <CardDescription className="capitalize">{role.replace(/_/g, " ")}</CardDescription>}
           </div>
         </div>
       </CardHeader>

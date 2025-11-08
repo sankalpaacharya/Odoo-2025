@@ -21,6 +21,9 @@ const STATUS_STYLES = {
     "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-transparent hover:bg-amber-500/20",
   ABSENT:
     "bg-red-500/10 text-red-700 dark:text-red-400 border-transparent hover:bg-red-500/20",
+  LATE: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-transparent hover:bg-orange-500/20",
+  HALF_DAY:
+    "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent hover:bg-blue-500/20",
   HOLIDAY:
     "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-transparent hover:bg-purple-500/20",
   WEEKEND:
@@ -41,6 +44,8 @@ const STATUS_LABELS = {
   ABSENT: "Absent",
   HOLIDAY: "Holiday",
   WEEKEND: "Weekend",
+  LATE: "Late",
+  HALF_DAY: "Half Day",
   PENDING: "Pending",
   APPROVED: "Approved",
   REJECTED: "Rejected",
@@ -59,13 +64,20 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   return <Badge className={cn(style)}>{label}</Badge>;
 }
 
-// Helper component for employee avatar initials
+import { getImageUrl } from "@/lib/image-utils";
+
+// Helper component for employee avatar initials or image
 interface EmployeeAvatarProps {
   name: string;
   size?: "sm" | "md" | "lg";
+  profileImage?: string | null;
 }
 
-export function EmployeeAvatar({ name, size = "md" }: EmployeeAvatarProps) {
+export function EmployeeAvatar({
+  name,
+  size = "md",
+  profileImage,
+}: EmployeeAvatarProps) {
   const sizeClasses = {
     sm: "size-8 text-sm",
     md: "size-10 text-base",
@@ -78,6 +90,18 @@ export function EmployeeAvatar({ name, size = "md" }: EmployeeAvatarProps) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  const imageUrl = getImageUrl(profileImage);
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        className={`${sizeClasses[size]} shrink-0 rounded-full object-cover`}
+      />
+    );
+  }
 
   return (
     <div

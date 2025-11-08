@@ -2,6 +2,19 @@ export type Gender = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
 export type ComponentType = "EARNING" | "DEDUCTION" | "BENEFIT";
 export type Role = "ADMIN" | "EMPLOYEE" | "HR_OFFICER" | "PAYROLL_OFFICER";
 
+export interface Skill {
+  id?: string;
+  name: string;
+  level?: string;
+}
+
+export interface Certification {
+  id?: string;
+  name: string;
+  issuer?: string;
+  date?: string;
+}
+
 export interface SalaryComponent {
   id: string;
   name: string;
@@ -57,6 +70,8 @@ export interface ProfileData {
   about: string | null;
   jobLove: string | null;
   interests: string | null;
+  skills: Skill[] | null;
+  certifications: Certification[] | null;
 
   // Bank Details
   accountNumber: string | null;
@@ -111,6 +126,8 @@ export interface UpdateProfilePayload {
   about?: string | null;
   jobLove?: string | null;
   interests?: string | null;
+  skills?: Skill[] | null;
+  certifications?: Certification[] | null;
 }
 
 export interface UpdateSalaryPayload {

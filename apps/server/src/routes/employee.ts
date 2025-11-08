@@ -11,11 +11,7 @@ import { sessionService } from "../services/session.service";
 const router: RouterType = Router();
 
 // Helper to calculate status from sessions and leaves
-const calculateEmployeeStatus = async (
-  employeeId: string,
-  sessions: any[],
-  today: Date
-): Promise<string> => {
+const calculateEmployeeStatus = async (employeeId: string, sessions: any[], today: Date): Promise<string> => {
   // Check if employee has approved leave for today
   const approvedLeave = await db.leave.findFirst({
     where: {
@@ -39,12 +35,8 @@ const calculateEmployeeStatus = async (
   sessions.forEach((session) => {
     if (session.isActive) {
       hasActiveSession = true;
-      const sessionMinutes = Math.floor(
-        (now.getTime() - session.startTime.getTime()) / (1000 * 60)
-      );
-      const breakMinutes = session.totalBreakTime
-        ? parseFloat(session.totalBreakTime.toString()) * 60
-        : 0;
+      const sessionMinutes = Math.floor((now.getTime() - session.startTime.getTime()) / (1000 * 60));
+      const breakMinutes = session.totalBreakTime ? parseFloat(session.totalBreakTime.toString()) * 60 : 0;
       totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
     } else if (session.workingHours) {
       totalMinutes += parseFloat(session.workingHours.toString()) * 60;
@@ -81,6 +73,7 @@ router.get("/me", async (req, res) => {
         dateOfJoining: true,
         employmentStatus: true,
         phone: true,
+        profileImage: true,
         user: {
           select: {
             email: true,
@@ -108,6 +101,7 @@ router.get("/me", async (req, res) => {
       phone: employee.phone,
       email: employee.user.email,
       image: employee.user.image,
+      profileImage: employee.profileImage,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch employee" });
@@ -149,21 +143,14 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const todaySessions = await sessionService.findSessionsByEmployeeAndDate(
-        currentEmployee.id,
-        today
-      );
+      const todaySessions = await sessionService.findSessionsByEmployeeAndDate(currentEmployee.id, today);
 
       return res.json([
         {
           id: currentEmployee.id,
           name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
           role: currentEmployee.role.toLowerCase(),
-          status: await calculateEmployeeStatus(
-            currentEmployee.id,
-            todaySessions,
-            today
-          ),
+          status: await calculateEmployeeStatus(currentEmployee.id, todaySessions, today),
           employeeCode: currentEmployee.employeeCode,
           department: currentEmployee.department,
           designation: currentEmployee.designation,
@@ -188,6 +175,7 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
         designation: true,
         employmentStatus: true,
         organizationId: true,
+        profileImage: true,
       },
       orderBy: {
         firstName: "asc",
@@ -198,16 +186,10 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const allSessionsToday = await Promise.all(
-      employees.map((emp) =>
-        sessionService.findSessionsByEmployeeAndDate(emp.id, today)
-      )
-    );
+    const allSessionsToday = await Promise.all(employees.map((emp) => sessionService.findSessionsByEmployeeAndDate(emp.id, today)));
 
     // Create a map of employee ID to sessions
-    const sessionsMap = new Map(
-      employees.map((emp, idx) => [emp.id, allSessionsToday[idx] || []])
-    );
+    const sessionsMap = new Map(employees.map((emp, idx) => [emp.id, allSessionsToday[idx] || []]));
 
     // Format the response
     const formattedEmployees = await Promise.all(
@@ -223,6 +205,7 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
           department: emp.department,
           designation: emp.designation,
           employmentStatus: emp.employmentStatus,
+          profileImage: emp.profileImage,
         };
       })
     );
