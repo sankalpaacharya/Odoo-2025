@@ -22,5 +22,17 @@ export function getStatusColor(
 }
 
 export function formatStatus(status: AttendanceStatus): string {
+  // Normalize HALF_DAY and LATE to PRESENT
+  if (status === "HALF_DAY" || status === "LATE") {
+    return "PRESENT";
+  }
   return status.replace(/_/g, " ");
+}
+
+export function normalizeStatus(status: AttendanceStatus): AttendanceStatus {
+  // Normalize HALF_DAY and LATE to PRESENT
+  if (status === "HALF_DAY" || status === "LATE") {
+    return "PRESENT";
+  }
+  return status;
 }
