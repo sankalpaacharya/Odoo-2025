@@ -29,6 +29,8 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   isLoading?: boolean;
   loadingMessage?: string;
+  expandedContent?: (item: T) => React.ReactNode;
+  expandedRows?: Set<string>;
 }
 
 type SortDirection = "asc" | "desc";
@@ -40,6 +42,8 @@ export function DataTable<T extends Record<string, any>>({
   emptyMessage = "No data available",
   isLoading = false,
   loadingMessage = "Loading...",
+  expandedContent,
+  expandedRows,
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -118,17 +122,31 @@ export function DataTable<T extends Record<string, any>>({
               </TableCell>
             </TableRow>
           ) : (
-            sortedData.map((item) => (
-              <TableRow key={keyExtractor(item)}>
-                {columns.map((column) => (
-                  <TableCell key={column.key} className={column.className}>
-                    {column.render
-                      ? column.render(item)
-                      : String(item[column.key] ?? "—")}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            sortedData.map((item) => {
+              const itemKey = keyExtractor(item);
+              const isExpanded = expandedRows?.has(itemKey);
+
+              return (
+                <>
+                  <TableRow key={itemKey}>
+                    {columns.map((column) => (
+                      <TableCell key={column.key} className={column.className}>
+                        {column.render
+                          ? column.render(item)
+                          : String(item[column.key] ?? "—")}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {isExpanded && expandedContent && (
+                    <TableRow key={`${itemKey}-expanded`}>
+                      <TableCell colSpan={columns.length} className="p-0">
+                        {expandedContent(item)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              );
+            })
           )}
         </TableBody>
       </Table>

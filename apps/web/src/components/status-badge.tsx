@@ -5,8 +5,6 @@ type EmployeeStatus = "present" | "on_leave" | "absent";
 type AttendanceStatus =
   | "PRESENT"
   | "ABSENT"
-  | "HALF_DAY"
-  | "LATE"
   | "ON_LEAVE"
   | "HOLIDAY"
   | "WEEKEND";
@@ -23,9 +21,6 @@ const STATUS_STYLES = {
     "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-transparent hover:bg-amber-500/20",
   ABSENT:
     "bg-red-500/10 text-red-700 dark:text-red-400 border-transparent hover:bg-red-500/20",
-  LATE: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-transparent hover:bg-orange-500/20",
-  HALF_DAY:
-    "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent hover:bg-blue-500/20",
   HOLIDAY:
     "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-transparent hover:bg-purple-500/20",
   WEEKEND:
@@ -44,8 +39,6 @@ const STATUS_LABELS = {
   PRESENT: "Present",
   ON_LEAVE: "On Leave",
   ABSENT: "Absent",
-  LATE: "Late",
-  HALF_DAY: "Half Day",
   HOLIDAY: "Holiday",
   WEEKEND: "Weekend",
   PENDING: "Pending",

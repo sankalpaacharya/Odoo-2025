@@ -15,7 +15,7 @@ export function useMyAttendance(month: number, year: number) {
 }
 
 export function useTodayAttendance(date?: Date) {
-  const dateStr = date ? date.toISOString().split("T")[0] : undefined;
+  const dateStr = date ? date.toISOString() : undefined;
   return useQuery({
     queryKey: ["attendance", "today", dateStr],
     queryFn: () => {

@@ -1,8 +1,6 @@
 export type AttendanceStatus =
   | "PRESENT"
   | "ABSENT"
-  | "HALF_DAY"
-  | "LATE"
   | "ON_LEAVE"
   | "HOLIDAY"
   | "WEEKEND";
@@ -21,10 +19,11 @@ export interface AttendanceRecord {
 
 export interface WorkSessionInfo {
   id: string;
+  date: string;
   startTime: string;
   endTime: string | null;
   isActive: boolean;
-  workingHours: number | null;
+  workingHours: number;
   overtimeHours: number;
   totalBreakTime: number;
   durationMinutes: number;
@@ -38,14 +37,21 @@ export interface AttendanceSummary {
   totalPresentDays: number;
   totalAbsentDays: number;
   totalLeaveDays: number;
-  totalHalfDays: number;
-  totalLateDays: number;
   totalWorkingHours: number;
   totalOvertimeHours: number;
 }
 
+export interface LeaveInfo {
+  id: string;
+  startDate: string;
+  endDate: string;
+  leaveType: string;
+  reason: string | null;
+}
+
 export interface MyAttendanceResponse {
-  attendances: AttendanceRecord[];
+  sessions: WorkSessionInfo[];
+  leaves: LeaveInfo[];
   summary: AttendanceSummary;
 }
 

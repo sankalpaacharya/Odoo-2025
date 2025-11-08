@@ -117,7 +117,7 @@ model WorkSession {
     employeeId String
     employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    date      DateTime  @db.Date
+    date      DateTime  
     startTime DateTime
     endTime   DateTime?
     isActive  Boolean   @default(true)
