@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useReactToPrint } from "react-to-print";
 import {
   Card,
   CardContent,
@@ -34,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { format } from "date-fns";
@@ -55,9 +56,12 @@ interface Payslip {
   employee: Employee;
   month: number;
   year: number;
+  totalWorkingDays: number;
   workingDays: number;
   presentDays: number;
   absentDays: number;
+  paidLeaveDays: number;
+  unpaidLeaveDays: number;
   leaveDays: number;
   overtimeHours: number;
   basicSalary: number;
@@ -67,6 +71,7 @@ interface Payslip {
   netSalary: number;
   pfDeduction: number;
   professionalTax: number;
+  lopDeduction: number;
   otherDeductions: number;
   status: "PENDING" | "PROCESSED" | "PAID" | "CANCELLED";
   paidAt: string | null;
@@ -94,6 +99,21 @@ export function PayrollPayrun() {
   const monthParam = searchParams.get("month");
   const yearParam = searchParams.get("year");
 
+  const months = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" },
+  ];
+
   const [selectedMonth, setSelectedMonth] = useState<number>(
     monthParam ? parseInt(monthParam) : currentDate.getMonth() + 1
   );
@@ -108,6 +128,16 @@ export function PayrollPayrun() {
   );
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: selectedPayslip
+      ? `Payslip_${selectedPayslip.employee.employeeCode}_${
+          months.find((m) => m.value === selectedPayslip.month)?.label
+        }_${selectedPayslip.year}`
+      : "Payslip",
+  });
 
   useEffect(() => {
     // Update from URL params if they change
@@ -247,6 +277,327 @@ export function PayrollPayrun() {
     }).format(amount);
   };
 
+  // Print component - renders without tabs for better printing
+  const PrintablePayslip = ({ payslip }: { payslip: Payslip }) => {
+    if (!payslip) return null;
+
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center border-b pb-6">
+          <h1 className="text-2xl font-bold mb-2">Payslip</h1>
+          <p className="text-lg">
+            {months.find((m) => m.value === payslip.month)?.label}{" "}
+            {payslip.year}
+          </p>
+        </div>
+
+        {/* Employee Information */}
+        <div className="grid grid-cols-2 gap-4 border-b pb-6">
+          <div>
+            <h2 className="font-semibold text-lg mb-3">Employee Details</h2>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Name:</span>{" "}
+                {payslip.employee.firstName} {payslip.employee.lastName}
+              </div>
+              <div>
+                <span className="font-medium">Employee Code:</span>{" "}
+                {payslip.employee.employeeCode}
+              </div>
+              <div>
+                <span className="font-medium">Department:</span>{" "}
+                {payslip.employee.department}
+              </div>
+              <div>
+                <span className="font-medium">Designation:</span>{" "}
+                {payslip.employee.designation}
+              </div>
+            </div>
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg mb-3">Pay Period</h2>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="font-medium">Salary Structure:</span> Regular
+                Pay
+              </div>
+              <div>
+                <span className="font-medium">Period:</span> 01{" "}
+                {months
+                  .find((m) => m.value === payslip.month)
+                  ?.label.substring(0, 3)}{" "}
+                To {new Date(payslip.year, payslip.month, 0).getDate()}{" "}
+                {months
+                  .find((m) => m.value === payslip.month)
+                  ?.label.substring(0, 3)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Worked Days Section */}
+        <div>
+          <h2 className="font-semibold text-lg mb-4">Attendance Summary</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Days</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="font-medium">
+                  Total Working Days
+                </TableCell>
+                <TableCell className="text-right">
+                  {payslip.totalWorkingDays}
+                </TableCell>
+                <TableCell className="text-right">-</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Present Days</TableCell>
+                <TableCell className="text-right">
+                  {Number(payslip.presentDays)}
+                </TableCell>
+                <TableCell className="text-right">-</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Paid Leave Days</TableCell>
+                <TableCell className="text-right">
+                  {Number(payslip.paidLeaveDays)}
+                </TableCell>
+                <TableCell className="text-right">-</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Unpaid Leave Days</TableCell>
+                <TableCell className="text-right text-destructive">
+                  {Number(payslip.unpaidLeaveDays)}
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -
+                  {formatCurrency(
+                    (Number(payslip.grossSalary) / payslip.totalWorkingDays) *
+                      Number(payslip.unpaidLeaveDays)
+                  )}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Absent Days</TableCell>
+                <TableCell className="text-right text-destructive">
+                  {Number(payslip.absentDays)}
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -
+                  {formatCurrency(
+                    (Number(payslip.grossSalary) / payslip.totalWorkingDays) *
+                      Number(payslip.absentDays)
+                  )}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell className="font-medium">
+                  Total LOP Deduction
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {Number(payslip.absentDays) + Number(payslip.unpaidLeaveDays)}{" "}
+                  days
+                </TableCell>
+                <TableCell className="text-right font-medium text-destructive">
+                  -{formatCurrency(Number(payslip.lopDeduction))}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium">Payable Days</TableCell>
+                <TableCell className="text-right font-medium">
+                  {Number(payslip.presentDays) + Number(payslip.paidLeaveDays)}{" "}
+                  / {payslip.totalWorkingDays}
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {formatCurrency(
+                    Number(payslip.grossSalary) - Number(payslip.lopDeduction)
+                  )}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+          <p className="text-sm text-muted-foreground mt-4">
+            Salary is calculated using Loss of Pay (LOP) method. Base gross
+            salary is ₹{Number(payslip.grossSalary).toLocaleString()} for{" "}
+            {payslip.totalWorkingDays} working days. Absent days and unpaid
+            leaves are deducted at ₹
+            {(Number(payslip.grossSalary) / payslip.totalWorkingDays).toFixed(
+              2
+            )}{" "}
+            per day.
+          </p>
+        </div>
+
+        {/* Salary Computation Section */}
+        <div className="page-break-before">
+          <h2 className="font-semibold text-lg mb-4">Salary Computation</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Component</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow className="bg-muted/50">
+                <TableCell className="font-medium" colSpan={2}>
+                  Earnings
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">
+                  Basic Salary (50% of CTC)
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(Number(payslip.basicSalary))}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">
+                  House Rent Allowance (50% of Basic)
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(Number(payslip.basicSalary) * 0.5)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">Standard Allowance</TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(4167)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">
+                  Performance Bonus (8.33% of Basic)
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(Number(payslip.basicSalary) * 0.0833)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">
+                  Leave Travel Allowance (8.33% of Basic)
+                </TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(Number(payslip.basicSalary) * 0.0833)}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6">Fixed Allowance</TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(
+                    Math.max(
+                      0,
+                      Number(payslip.grossSalary) -
+                        Number(payslip.basicSalary) * 2.1666 -
+                        4167
+                    )
+                  )}
+                </TableCell>
+              </TableRow>
+              <TableRow className="font-medium">
+                <TableCell>Gross Salary</TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(Number(payslip.grossSalary))}
+                </TableCell>
+              </TableRow>
+              <TableRow className="bg-muted/50">
+                <TableCell className="font-medium" colSpan={2}>
+                  Deductions
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6 text-destructive">
+                  Loss of Pay (LOP)
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -{formatCurrency(Number(payslip.lopDeduction))}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6 text-destructive">
+                  PF Employee Contribution (12% of Basic)
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -{formatCurrency(Number(payslip.pfDeduction))}
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="pl-6 text-destructive">
+                  Professional Tax
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -{formatCurrency(Number(payslip.professionalTax))}
+                </TableCell>
+              </TableRow>
+              {Number(payslip.otherDeductions) > 0 && (
+                <TableRow>
+                  <TableCell className="pl-6 text-destructive">
+                    Other Deductions
+                  </TableCell>
+                  <TableCell className="text-right text-destructive">
+                    -{formatCurrency(Number(payslip.otherDeductions))}
+                  </TableCell>
+                </TableRow>
+              )}
+              <TableRow className="font-medium">
+                <TableCell className="text-destructive">
+                  Total Deductions
+                </TableCell>
+                <TableCell className="text-right text-destructive">
+                  -{formatCurrency(Number(payslip.totalDeductions))}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell className="font-bold text-base">
+                  Net Salary
+                </TableCell>
+                <TableCell className="text-right font-bold text-base">
+                  {formatCurrency(Number(payslip.netSalary))}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+          <div className="text-sm text-muted-foreground space-y-1 mt-4">
+            <p>
+              <span className="font-medium">Note:</span> LOP deduction is
+              calculated as (Gross Salary ÷ Working Days) × (Absent Days +
+              Unpaid Leave Days)
+            </p>
+            <p>
+              Per Day Rate: ₹
+              {(Number(payslip.grossSalary) / payslip.totalWorkingDays).toFixed(
+                2
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-muted-foreground border-t pt-6 mt-8">
+          <p>
+            This is a computer-generated payslip and does not require a
+            signature.
+          </p>
+          <p className="mt-1">
+            Generated on {format(new Date(), "dd MMM yyyy 'at' hh:mm a")}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const updateUrlParams = (month: number, year: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("month", month.toString());
@@ -281,21 +632,6 @@ export function PayrollPayrun() {
   );
 
   const isDone = payrun?.status === "COMPLETED";
-
-  const months = [
-    { value: 1, label: "January" },
-    { value: 2, label: "February" },
-    { value: 3, label: "March" },
-    { value: 4, label: "April" },
-    { value: 5, label: "May" },
-    { value: 6, label: "June" },
-    { value: 7, label: "July" },
-    { value: 8, label: "August" },
-    { value: 9, label: "September" },
-    { value: 10, label: "October" },
-    { value: 11, label: "November" },
-    { value: 12, label: "December" },
-  ];
 
   const years = Array.from(
     { length: 11 },
@@ -643,7 +979,7 @@ export function PayrollPayrun() {
       {/* Payslip Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="print-hide">
             <DialogTitle>
               {selectedPayslip && (
                 <div>
@@ -665,230 +1001,388 @@ export function PayrollPayrun() {
           </DialogHeader>
 
           {selectedPayslip && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">
-                    Salary Structure:
-                  </span>
-                  <span className="ml-2 font-medium">Regular Pay</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Period:</span>
-                  <span className="ml-2 font-medium">
-                    01{" "}
-                    {months
-                      .find((m) => m.value === selectedPayslip.month)
-                      ?.label.substring(0, 3)}{" "}
-                    To{" "}
-                    {new Date(
-                      selectedPayslip.year,
-                      selectedPayslip.month,
-                      0
-                    ).getDate()}{" "}
-                    {months
-                      .find((m) => m.value === selectedPayslip.month)
-                      ?.label.substring(0, 3)}
-                  </span>
+            <>
+              {/* Hidden print content - uses PrintablePayslip component */}
+              <div className="hidden print:block">
+                <div ref={printRef}>
+                  <PrintablePayslip payslip={selectedPayslip} />
                 </div>
               </div>
 
-              <Tabs defaultValue="worked-days" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="worked-days">Worked Days</TabsTrigger>
-                  <TabsTrigger value="salary-computation">
-                    Salary Computation
-                  </TabsTrigger>
-                </TabsList>
+              {/* Screen view content - uses tabbed interface */}
+              <div className="space-y-6 print:hidden">
+                {/* Print-only header */}
+                <div className="hidden">
+                  <div className="text-center border-b-2 border-gray-300 pb-4 mb-4">
+                    <h1 className="text-2xl font-bold">PAYSLIP</h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                      For the month of{" "}
+                      {
+                        months.find((m) => m.value === selectedPayslip.month)
+                          ?.label
+                      }{" "}
+                      {selectedPayslip.year}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                    <div>
+                      <p className="font-semibold">Employee Name:</p>
+                      <p>
+                        {selectedPayslip.employee.firstName}{" "}
+                        {selectedPayslip.employee.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Employee Code:</p>
+                      <p>{selectedPayslip.employee.employeeCode}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Department:</p>
+                      <p>{selectedPayslip.employee.department}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Designation:</p>
+                      <p>{selectedPayslip.employee.designation}</p>
+                    </div>
+                  </div>
+                </div>
 
-                <TabsContent value="worked-days" className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Days</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Attendance</TableCell>
-                        <TableCell className="text-right">
-                          {selectedPayslip.presentDays} (
-                          {selectedPayslip.workingDays} working days in week)
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.basicSalary) *
-                              (Number(selectedPayslip.presentDays) /
-                                selectedPayslip.workingDays)
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Paid Time off</TableCell>
-                        <TableCell className="text-right">
-                          {selectedPayslip.leaveDays} (
-                          {selectedPayslip.leaveDays} Paid leaves/Month)
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.basicSalary) *
-                              (Number(selectedPayslip.leaveDays) /
-                                selectedPayslip.workingDays)
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow>
-                        <TableCell></TableCell>
-                        <TableCell className="text-right font-medium">
-                          {Number(selectedPayslip.presentDays) +
-                            Number(selectedPayslip.leaveDays)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Number(selectedPayslip.basicSalary))}
-                        </TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  </Table>
-                  <p className="text-sm text-muted-foreground">
-                    Salary is calculated based on the employee's monthly
-                    attendance. Paid leaves are included in the total payable
-                    days, while unpaid leaves are deducted from the salary.
-                  </p>
-                </TabsContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">
+                      Salary Structure:
+                    </span>
+                    <span className="ml-2 font-medium">Regular Pay</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Period:</span>
+                    <span className="ml-2 font-medium">
+                      01{" "}
+                      {months
+                        .find((m) => m.value === selectedPayslip.month)
+                        ?.label.substring(0, 3)}{" "}
+                      To{" "}
+                      {new Date(
+                        selectedPayslip.year,
+                        selectedPayslip.month,
+                        0
+                      ).getDate()}{" "}
+                      {months
+                        .find((m) => m.value === selectedPayslip.month)
+                        ?.label.substring(0, 3)}
+                    </span>
+                  </div>
+                </div>
 
-                <TabsContent value="salary-computation" className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Rule Name</TableHead>
-                        <TableHead className="text-right">Rate %</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Basic Salary
-                        </TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(Number(selectedPayslip.basicSalary))}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>House Rent Allowance</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.basicSalary) * 0.5
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Standard Allowance</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(4167)}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Performance Bonus</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.basicSalary) * 0.0833
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Leave Travel Allowance</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.basicSalary) * 0.0833
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Fixed Allowance</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(
-                            Number(selectedPayslip.grossSalary) -
-                              Number(selectedPayslip.basicSalary) * 2.1666 -
-                              4167
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>PF Employee</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right text-destructive">
-                          -{" "}
-                          {formatCurrency(Number(selectedPayslip.pfDeduction))}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>PF Employer</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right text-destructive">
-                          -{" "}
-                          {formatCurrency(Number(selectedPayslip.pfDeduction))}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Professional Tax</TableCell>
-                        <TableCell className="text-right">100</TableCell>
-                        <TableCell className="text-right text-destructive">
-                          -{" "}
-                          {formatCurrency(
-                            Number(selectedPayslip.professionalTax)
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow>
-                        <TableCell className="font-medium">Gross</TableCell>
-                        <TableCell className="text-right font-medium">
-                          100
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Number(selectedPayslip.grossSalary))}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">
-                          Net Amount
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          100
-                        </TableCell>
-                        <TableCell className="text-right font-bold">
-                          {formatCurrency(Number(selectedPayslip.netSalary))}
-                        </TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  </Table>
-                  <p className="text-sm text-muted-foreground">
-                    Users can also view the payslip computation, which shows how
-                    the total amount is calculated from different salary heads,
-                    including allowances and deductions.
-                  </p>
-                </TabsContent>
-              </Tabs>
+                <Tabs defaultValue="worked-days" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 print-hide">
+                    <TabsTrigger value="worked-days">Worked Days</TabsTrigger>
+                    <TabsTrigger value="salary-computation">
+                      Salary Computation
+                    </TabsTrigger>
+                  </TabsList>
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Close
-                </Button>
-                <Button variant="outline">Print</Button>
+                  <TabsContent value="worked-days" className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Days</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium">
+                            Total Working Days
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {selectedPayslip.totalWorkingDays}
+                          </TableCell>
+                          <TableCell className="text-right">-</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Present Days</TableCell>
+                          <TableCell className="text-right">
+                            {Number(selectedPayslip.presentDays)}
+                          </TableCell>
+                          <TableCell className="text-right">-</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Paid Leave Days</TableCell>
+                          <TableCell className="text-right">
+                            {Number(selectedPayslip.paidLeaveDays)}
+                          </TableCell>
+                          <TableCell className="text-right">-</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Unpaid Leave Days</TableCell>
+                          <TableCell className="text-right text-destructive">
+                            {Number(selectedPayslip.unpaidLeaveDays)}
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              (Number(selectedPayslip.grossSalary) /
+                                selectedPayslip.totalWorkingDays) *
+                                Number(selectedPayslip.unpaidLeaveDays)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Absent Days</TableCell>
+                          <TableCell className="text-right text-destructive">
+                            {Number(selectedPayslip.absentDays)}
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              (Number(selectedPayslip.grossSalary) /
+                                selectedPayslip.totalWorkingDays) *
+                                Number(selectedPayslip.absentDays)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow>
+                          <TableCell className="font-medium">
+                            Total LOP Deduction
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {Number(selectedPayslip.absentDays) +
+                              Number(selectedPayslip.unpaidLeaveDays)}{" "}
+                            days
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-destructive">
+                            -
+                            {formatCurrency(
+                              Number(selectedPayslip.lopDeduction)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium">
+                            Payable Days
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {Number(selectedPayslip.presentDays) +
+                              Number(selectedPayslip.paidLeaveDays)}{" "}
+                            / {selectedPayslip.totalWorkingDays}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(
+                              Number(selectedPayslip.grossSalary) -
+                                Number(selectedPayslip.lopDeduction)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                    <p className="text-sm text-muted-foreground">
+                      Salary is calculated using Loss of Pay (LOP) method. Base
+                      gross salary is ₹
+                      {Number(selectedPayslip.grossSalary).toLocaleString()} for{" "}
+                      {selectedPayslip.totalWorkingDays} working days. Absent
+                      days and unpaid leaves are deducted at ₹
+                      {(
+                        Number(selectedPayslip.grossSalary) /
+                        selectedPayslip.totalWorkingDays
+                      ).toFixed(2)}{" "}
+                      per day.
+                    </p>
+                  </TabsContent>
+
+                  <TabsContent value="salary-computation" className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Component</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-medium" colSpan={2}>
+                            Earnings
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            Basic Salary (50% of CTC)
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Number(selectedPayslip.basicSalary)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            House Rent Allowance (50% of Basic)
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Number(selectedPayslip.basicSalary) * 0.5
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            Standard Allowance
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(4167)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            Performance Bonus (8.33% of Basic)
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Number(selectedPayslip.basicSalary) * 0.0833
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            Leave Travel Allowance (8.33% of Basic)
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Number(selectedPayslip.basicSalary) * 0.0833
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6">
+                            Fixed Allowance
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Math.max(
+                                0,
+                                Number(selectedPayslip.grossSalary) -
+                                  Number(selectedPayslip.basicSalary) * 2.1666 -
+                                  4167
+                              )
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className="font-medium">
+                          <TableCell>Gross Salary</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              Number(selectedPayslip.grossSalary)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-medium" colSpan={2}>
+                            Deductions
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6 text-destructive">
+                            Loss of Pay (LOP)
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              Number(selectedPayslip.lopDeduction)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6 text-destructive">
+                            PF Employee Contribution (12% of Basic)
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              Number(selectedPayslip.pfDeduction)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="pl-6 text-destructive">
+                            Professional Tax
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              Number(selectedPayslip.professionalTax)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {Number(selectedPayslip.otherDeductions) > 0 && (
+                          <TableRow>
+                            <TableCell className="pl-6 text-destructive">
+                              Other Deductions
+                            </TableCell>
+                            <TableCell className="text-right text-destructive">
+                              -
+                              {formatCurrency(
+                                Number(selectedPayslip.otherDeductions)
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        <TableRow className="font-medium">
+                          <TableCell className="text-destructive">
+                            Total Deductions
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            -
+                            {formatCurrency(
+                              Number(selectedPayslip.totalDeductions)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow>
+                          <TableCell className="font-bold text-base">
+                            Net Salary
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-base">
+                            {formatCurrency(Number(selectedPayslip.netSalary))}
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>
+                        <span className="font-medium">Note:</span> LOP deduction
+                        is calculated as (Gross Salary ÷ Working Days) × (Absent
+                        Days + Unpaid Leave Days)
+                      </p>
+                      <p>
+                        Per Day Rate: ₹
+                        {(
+                          Number(selectedPayslip.grossSalary) /
+                          selectedPayslip.totalWorkingDays
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button variant="outline" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
