@@ -1,17 +1,15 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { authClient } from "@/lib/auth-client";
+"use client";
 
-export default async function TimeOffPage() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
+import { useEmployee } from "@/lib/employee-context";
+import { EmployeeTimeOffView } from "./components/employee-time-off-view";
+import { AdminTimeOffView } from "./components/admin-time-off-view";
+import Loader from "@/components/loader";
 
-  if (!session?.user) {
-    redirect("/login");
+export default function TimeOffPage() {
+  const { isAdmin, isLoading } = useEmployee();
+
+  if (isLoading) {
+    return <Loader />;
   }
 
   return (
@@ -19,9 +17,13 @@ export default async function TimeOffPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Time Off</h1>
         <p className="text-muted-foreground">
-          Manage leave requests and balances
+          {isAdmin
+            ? "Manage employee leave requests and approvals"
+            : "Request time off and view your leave balances"}
         </p>
       </div>
+
+      {isAdmin ? <AdminTimeOffView /> : <EmployeeTimeOffView />}
     </div>
   );
 }
