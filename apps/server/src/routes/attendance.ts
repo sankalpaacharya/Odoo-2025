@@ -469,4 +469,122 @@ router.get(
   }
 );
 
+router.get(
+  "/monthly-calendar",
+  requirePermission("Attendance", "View"),
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const { month, year } = req.query;
+
+      const employee = await employeeService.findByUserId(userId);
+      if (!employee || !(await employeeService.isAdmin(userId))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const targetMonth = month
+        ? parseInt(month as string)
+        : new Date().getMonth() + 1;
+      const targetYear = year
+        ? parseInt(year as string)
+        : new Date().getFullYear();
+
+      const startDate = new Date(targetYear, targetMonth - 1, 1);
+      startDate.setUTCHours(0, 0, 0, 0);
+      const endDate = new Date(targetYear, targetMonth, 0);
+      endDate.setUTCHours(23, 59, 59, 999);
+
+      const allActiveEmployees = await employeeService.findActiveEmployees(
+        employee.organizationId || undefined
+      );
+
+      const [allSessions, allLeaves] = await Promise.all([
+        Promise.all(
+          allActiveEmployees.map((emp) =>
+            sessionService.findSessionsByDateRange(emp.id, startDate, endDate)
+          )
+        ),
+        Promise.all(
+          allActiveEmployees.map((emp) =>
+            leaveService.findApprovedLeavesByDateRange(
+              emp.id,
+              startDate,
+              endDate
+            )
+          )
+        ),
+      ]);
+
+      const datesInMonth: Date[] = [];
+      for (
+        let d = new Date(startDate);
+        d <= endDate;
+        d.setUTCDate(d.getUTCDate() + 1)
+      ) {
+        const dayOfWeek = d.getUTCDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          datesInMonth.push(new Date(d));
+        }
+      }
+
+      const calendarData = datesInMonth.map((date) => {
+        const dateKey = date.toISOString().split("T")[0] || "";
+        let presentCount = 0;
+        let absentCount = 0;
+        let leaveCount = 0;
+        let totalHours = 0;
+
+        allActiveEmployees.forEach((_emp, idx) => {
+          const empSessions = (allSessions[idx] || []).filter(
+            (s) => s.date.toISOString().split("T")[0] === dateKey
+          );
+          const empLeaves = (allLeaves[idx] || []).filter((leave) => {
+            const leaveStartKey =
+              new Date(leave.startDate).toISOString().split("T")[0] || "";
+            const leaveEndKey =
+              new Date(leave.endDate).toISOString().split("T")[0] || "";
+            return dateKey >= leaveStartKey && dateKey <= leaveEndKey;
+          });
+
+          const isOnLeave = empLeaves.length > 0;
+          const hasSession = empSessions.length > 0;
+
+          if (isOnLeave) {
+            leaveCount++;
+          } else if (hasSession) {
+            presentCount++;
+            const hours = calculateWorkingHoursFromSessions(empSessions);
+            totalHours += hours;
+          } else {
+            absentCount++;
+          }
+        });
+
+        const avgHours =
+          presentCount > 0
+            ? parseFloat((totalHours / presentCount).toFixed(2))
+            : 0;
+
+        return {
+          date: date.toISOString(),
+          presentCount,
+          absentCount,
+          leaveCount,
+          totalEmployees: allActiveEmployees.length,
+          averageHours: avgHours,
+        };
+      });
+
+      res.json({
+        month: targetMonth,
+        year: targetYear,
+        days: calendarData,
+      });
+    } catch (error) {
+      console.error("Error fetching monthly calendar:", error);
+      res.status(500).json({ error: "Failed to fetch monthly calendar" });
+    }
+  }
+);
+
 export default router;

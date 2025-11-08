@@ -5,6 +5,8 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   ChevronDown,
+  Table as TableIcon,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
 import { formatTime, formatHoursToTime } from "@/lib/time-utils";
@@ -26,6 +29,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { StatsCards, type StatItem } from "@/components";
 import { StatusBadge } from "@/components/status-badge";
 import { WorkSessionsDisplay } from "./work-sessions-display";
+import { AttendanceCalendarView } from "./attendance-calendar-view";
 
 const attendanceColumns: (
   expandedRows: Set<string>,
@@ -118,6 +122,7 @@ const attendanceColumns: (
 export function EmployeeAttendanceView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("table");
 
   const month = selectedDate.getUTCMonth() + 1;
   const year = selectedDate.getUTCFullYear();
@@ -367,41 +372,73 @@ export function EmployeeAttendanceView() {
 
       <StatsCards data={statsData} />
 
-      <div className="rounded-lg">
-        <div className="py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Attendance Records</h2>
-          <span className="text-sm text-muted-foreground">
-            {format(selectedDate, "MMMM yyyy")} - {filteredAttendances.length}{" "}
-            {filteredAttendances.length === 1 ? "record" : "records"}
-          </span>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="table" className="flex items-center gap-2">
+            <TableIcon className="h-4 w-4" />
+            Table View
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Calendar View
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="border rounded-lg">
-          <DataTable
-            data={filteredAttendances}
-            columns={attendanceColumns(expandedRows, toggleRow)}
-            keyExtractor={(record) => record.id}
-            emptyMessage="No attendance records found"
-            isLoading={isLoading}
-            loadingMessage="Loading attendance..."
-            expandedRows={expandedRows}
-            expandedContent={(record) => {
-              if (!record.sessions || record.sessions.length === 0) {
-                return null;
-              }
-              return (
-                <WorkSessionsDisplay
-                  sessions={record.sessions}
-                  title={`Work Sessions for ${format(
-                    new Date(record.date),
-                    "dd MMM yyyy"
-                  )}`}
-                />
-              );
-            }}
-          />
-        </div>
-      </div>
+        <TabsContent value="table" className="mt-6">
+          <div className="rounded-lg">
+            <div className="py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Attendance Records</h2>
+              <span className="text-sm text-muted-foreground">
+                {format(selectedDate, "MMMM yyyy")} -{" "}
+                {filteredAttendances.length}{" "}
+                {filteredAttendances.length === 1 ? "record" : "records"}
+              </span>
+            </div>
+
+            <div className="border rounded-lg">
+              <DataTable
+                data={filteredAttendances}
+                columns={attendanceColumns(expandedRows, toggleRow)}
+                keyExtractor={(record) => record.id}
+                emptyMessage="No attendance records found"
+                isLoading={isLoading}
+                loadingMessage="Loading attendance..."
+                expandedRows={expandedRows}
+                expandedContent={(record) => {
+                  if (!record.sessions || record.sessions.length === 0) {
+                    return null;
+                  }
+                  return (
+                    <WorkSessionsDisplay
+                      sessions={record.sessions}
+                      title={`Work Sessions for ${format(
+                        new Date(record.date),
+                        "dd MMM yyyy"
+                      )}`}
+                    />
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-6">
+          <div className="rounded-lg">
+            <div className="py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Monthly Calendar</h2>
+              <span className="text-sm text-muted-foreground">
+                {format(selectedDate, "MMMM yyyy")}
+              </span>
+            </div>
+
+            <AttendanceCalendarView
+              selectedDate={selectedDate}
+              attendanceRecords={filteredAttendances}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }
