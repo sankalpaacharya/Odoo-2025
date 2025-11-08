@@ -21,68 +21,28 @@ import {
 } from "../utils";
 import { NewLeaveRequestDialog } from "./new-leave-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
-import type { Leave, LeaveBalance } from "../types";
-
-const mockLeaveBalances: LeaveBalance[] = [
-  { id: "1", leaveType: "CASUAL", allocated: 12, used: 3, remaining: 9 },
-  { id: "2", leaveType: "SICK", allocated: 7, used: 2, remaining: 5 },
-  { id: "3", leaveType: "EARNED", allocated: 15, used: 0, remaining: 15 },
-];
-
-const mockLeaves: Leave[] = [
-  {
-    id: "1",
-    employeeId: "emp1",
-    leaveType: "CASUAL",
-    startDate: "2025-10-15",
-    endDate: "2025-10-17",
-    totalDays: 3,
-    reason: "Family function",
-    status: "APPROVED",
-    approvedBy: "HR001",
-    approvedAt: "2025-10-10T10:30:00Z",
-    rejectionReason: null,
-    createdAt: "2025-10-08T09:00:00Z",
-  },
-  {
-    id: "2",
-    employeeId: "emp1",
-    leaveType: "SICK",
-    startDate: "2025-09-20",
-    endDate: "2025-09-21",
-    totalDays: 2,
-    reason: "Fever and cold",
-    status: "APPROVED",
-    approvedBy: "HR001",
-    approvedAt: "2025-09-19T15:00:00Z",
-    rejectionReason: null,
-    createdAt: "2025-09-19T08:30:00Z",
-  },
-  {
-    id: "3",
-    employeeId: "emp1",
-    leaveType: "CASUAL",
-    startDate: "2025-11-25",
-    endDate: "2025-11-27",
-    totalDays: 3,
-    reason: "Personal work",
-    status: "PENDING",
-    approvedBy: null,
-    approvedAt: null,
-    rejectionReason: null,
-    createdAt: "2025-11-05T10:00:00Z",
-  },
-];
+import { useMyLeaves, useMyLeaveBalances } from "../hooks";
+import type { Leave } from "../types";
+import Loader from "@/components/loader";
 
 export function EmployeeTimeOffView() {
   const [newLeaveDialogOpen, setNewLeaveDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
 
+  const currentYear = new Date().getFullYear();
+  const { data: leaveBalances, isLoading: isLoadingBalances } =
+    useMyLeaveBalances(currentYear);
+  const { data: leaves, isLoading: isLoadingLeaves } = useMyLeaves();
+
   const handleRowClick = (leave: Leave) => {
     setSelectedLeave(leave);
     setDetailsDialogOpen(true);
   };
+
+  if (isLoadingBalances || isLoadingLeaves) {
+    return <Loader />;
+  }
 
   return (
     <>
@@ -90,7 +50,7 @@ export function EmployeeTimeOffView() {
         <div>
           <h2 className="text-xl font-semibold">Leave Balance</h2>
           <p className="text-sm text-muted-foreground">
-            Your available leave balances for 2025
+            Your available leave balances for {currentYear}
           </p>
         </div>
         <Button onClick={() => setNewLeaveDialogOpen(true)}>
@@ -100,39 +60,47 @@ export function EmployeeTimeOffView() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {mockLeaveBalances.map((balance) => (
-          <Card key={balance.id}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
-                {formatLeaveType(balance.leaveType)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Allocated
-                  </span>
-                  <span className="text-sm font-medium">
-                    {balance.allocated} days
-                  </span>
+        {leaveBalances && leaveBalances.length > 0 ? (
+          leaveBalances.map((balance) => (
+            <Card key={balance.id}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">
+                  {formatLeaveType(balance.leaveType)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Allocated
+                    </span>
+                    <span className="text-sm font-medium">
+                      {balance.allocated} days
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Used</span>
+                    <span className="text-sm font-medium text-amber-600">
+                      {balance.used} days
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-sm font-medium">Remaining</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {balance.remaining}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Used</span>
-                  <span className="text-sm font-medium text-amber-600">
-                    {balance.used} days
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t pt-2">
-                  <span className="text-sm font-medium">Remaining</span>
-                  <span className="text-xl font-bold text-green-600">
-                    {balance.remaining}
-                  </span>
-                </div>
-              </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card className="col-span-3">
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No leave balances found. Contact HR to set up your leave balances.
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
 
       <Card>
@@ -152,8 +120,8 @@ export function EmployeeTimeOffView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockLeaves.length > 0 ? (
-                mockLeaves.map((leave) => (
+              {leaves && leaves.length > 0 ? (
+                leaves.map((leave) => (
                   <TableRow
                     key={leave.id}
                     className="cursor-pointer hover:bg-muted/50"

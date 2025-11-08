@@ -13,80 +13,49 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  useActiveSession,
+  useStartSession,
+  useStopSession,
+} from "@/app/dashboard/attendance/session-hooks";
+import { toast } from "sonner";
 
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
-  const [attendance, setAttendance] = useState<{ status: string; checkInAt?: string; checkOutAt?: string } | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
 
-  // derive a stable user id for attendance keys early so hooks have a stable order
+  const { data: activeSessionData, isLoading: isLoadingSession } =
+    useActiveSession();
+  const startSessionMutation = useStartSession();
+  const stopSessionMutation = useStopSession();
+
   const user = (session as any)?.user as any;
-  const userId = user?.id ?? user?.email ?? user?.name ?? "unknown";
 
-  function readAttendance(userId: string) {
-    try {
-      const raw = localStorage.getItem(`attendance:${userId}`);
-      if (!raw) return null;
-      return JSON.parse(raw) as { status: string; checkInAt?: string; checkOutAt?: string };
-    } catch (e) {
-      return null;
-    }
-  }
+  const handleCheckInOut = async () => {
+    if (startSessionMutation.isPending || stopSessionMutation.isPending) return;
 
-  function writeAttendance(userId: string, payload: { status: string; checkInAt?: string; checkOutAt?: string }) {
-    try {
-      localStorage.setItem(`attendance:${userId}`, JSON.stringify(payload));
+    const hasActiveSession = activeSessionData?.hasActiveSession;
+
+    if (hasActiveSession) {
       try {
-        window.dispatchEvent(new CustomEvent("attendance-updated", { detail: { userId } }));
-      } catch (e) {
+        await stopSessionMutation.mutateAsync();
+        toast.success("Checked out successfully");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to check out");
       }
-    } catch (e) {
-    }
-  }
-
-  useEffect(() => {
-    if (!session) {
-      setAttendance(null);
-      return;
-    }
-
-    // hydrate attendance state
-    try {
-      const stored = readAttendance(userId);
-      setAttendance(stored);
-    } catch (e) {
-      setAttendance(null);
-    }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === `attendance:${userId}`) {
-        const stored = readAttendance(userId);
-        setAttendance(stored);
-      }
-    };
-
-    const onCustom = (e: Event) => {
+    } else {
       try {
-        const ce = e as CustomEvent<{ userId?: string }>;
-        if (ce?.detail?.userId && ce.detail.userId !== userId) return;
-      } catch (err) {
-        // ignore
+        await startSessionMutation.mutateAsync();
+        toast.success("Checked in successfully");
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to check in");
       }
-      const stored = readAttendance(userId);
-      setAttendance(stored);
-    };
+    }
+  };
 
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("attendance-updated", onCustom as EventListener);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("attendance-updated", onCustom as EventListener);
-    };
-  }, [userId, session]);
-
-  if (isPending) {
+  if (isPending || isLoadingSession) {
     return <Skeleton className="h-9 w-24" />;
   }
 
@@ -98,71 +67,63 @@ export default function UserMenu() {
     );
   }
 
+  const hasActiveSession = activeSessionData?.hasActiveSession;
+  const sessionStartTime = activeSessionData?.session?.startTime;
+  const isCheckedIn = hasActiveSession && sessionStartTime;
+
+  const tooltipText = isCheckedIn
+    ? `Checked in since ${new Date(sessionStartTime).toLocaleTimeString()}`
+    : "Not checked in";
+
   return (
     <div className="flex items-center gap-2">
-      {/* Attendance toggle icon/button beside avatar */}
       <div className="relative flex items-center">
-        {(() => {
-          const isPresent = attendance?.status === "present";
-          const isAbsent = attendance?.status === "absent";
-          const tooltipText = isPresent
-            ? `Checked in since ${attendance?.checkInAt ? new Date(attendance.checkInAt).toLocaleTimeString() : "--"}`
-            : isAbsent
-            ? attendance?.checkOutAt
-              ? `Checked out at ${new Date(attendance.checkOutAt).toLocaleTimeString()}`
-              : "Checked out"
-            : "Not checked in";
+        <div className="relative flex flex-col items-center group">
+          <button
+            aria-label={tooltipText}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            onFocus={() => setShowTooltip(true)}
+            onBlur={() => setShowTooltip(false)}
+            onClick={handleCheckInOut}
+            disabled={
+              startSessionMutation.isPending || stopSessionMutation.isPending
+            }
+            className={`relative flex items-center justify-center h-10 w-10 rounded-full focus:outline-none transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isCheckedIn ? "" : "hover:scale-105"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`absolute rounded-full transition-opacity duration-300 ${
+                isCheckedIn
+                  ? "h-10 w-10 bg-emerald-500/20 animate-pulse"
+                  : "h-8 w-8"
+              }`}
+            />
 
-          return (
-            <div className="relative flex flex-col items-center group">
-              <button
-                aria-label={tooltipText}
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
-                onFocus={() => setShowTooltip(true)}
-                onBlur={() => setShowTooltip(false)}
-                onClick={() => {
-                  if (isPresent) {
-                    const payload = { status: "absent", checkOutAt: new Date().toISOString() };
-                    writeAttendance(userId, payload);
-                    setAttendance(payload);
-                  } else {
-                    const payload = { status: "present", checkInAt: new Date().toISOString() };
-                    writeAttendance(userId, payload);
-                    setAttendance(payload);
-                  }
-                }}
-                className={`relative flex items-center justify-center h-10 w-10 rounded-full focus:outline-none transition-transform active:scale-95 ${
-                  isPresent ? "" : "hover:scale-105"
-                }`}>
-                <span
-                  aria-hidden
-                  className={`absolute rounded-full transition-opacity duration-300 ${
-                    isPresent ? "h-10 w-10 bg-emerald-500/20 animate-pulse" : "h-8 w-8"
-                  }`}
-                />
+            <span
+              aria-hidden
+              className={`relative inline-block h-4 w-4 rounded-full transition-colors duration-200 ${
+                isCheckedIn ? "bg-emerald-500 shadow-md" : "bg-gray-400"
+              }`}
+            />
+          </button>
 
-                <span
-                  aria-hidden
-                  className={`relative inline-block h-4 w-4 rounded-full transition-colors duration-200 ${
-                    isPresent ? "bg-emerald-500 shadow-md" : isAbsent ? "bg-amber-400 shadow-sm" : "bg-gray-400"
-                  }`}
-                />
-              </button>
-
-              {showTooltip && isPresent && (
-                <div className="absolute top-full mt-1 text-xs text-muted-foreground whitespace-nowrap">
-                  Since {attendance?.checkInAt ? new Date(attendance.checkInAt).toLocaleTimeString() : "--"}
-                </div>
-              )}
+          {showTooltip && isCheckedIn && (
+            <div className="absolute top-full mt-1 text-xs text-muted-foreground whitespace-nowrap">
+              Since {new Date(sessionStartTime).toLocaleTimeString()}
             </div>
-          );
-        })()}
+          )}
+        </div>
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="rounded-full h-9 w-9 flex items-center justify-center">
+          <Button
+            variant="outline"
+            className="rounded-full h-9 w-9 flex items-center justify-center"
+          >
             {user.name
               .split(" ")
               .map((s: string) => (s ? s[0] : ""))
@@ -175,7 +136,10 @@ export default function UserMenu() {
           <DropdownMenuSeparator />
 
           <DropdownMenuItem>
-            <Button variant="ghost" onClick={() => (window.location.href = "/dashboard/profile")}>
+            <Button
+              variant="ghost"
+              onClick={() => (window.location.href = "/dashboard/profile")}
+            >
               My Profile
             </Button>
           </DropdownMenuItem>
@@ -193,7 +157,8 @@ export default function UserMenu() {
                     },
                   },
                 });
-              }}>
+              }}
+            >
               Sign Out
             </Button>
           </DropdownMenuItem>

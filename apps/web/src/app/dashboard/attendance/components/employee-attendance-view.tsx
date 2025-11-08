@@ -33,7 +33,7 @@ export function EmployeeAttendanceView({
   const year = currentMonth.getFullYear();
 
   const {
-    data: attendances = [],
+    data: attendanceData,
     isLoading,
     error,
   } = useMyAttendance(month, year);
@@ -42,37 +42,20 @@ export function EmployeeAttendanceView({
     toast.error("Failed to load attendance records");
   }
 
+  const attendances = attendanceData?.attendances || [];
+  const summary = attendanceData?.summary;
+
   const monthYear = currentMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
 
-  const totalWorkingDays = attendances.filter(
-    (r: AttendanceRecord) => r.status !== "HOLIDAY" && r.status !== "WEEKEND"
-  ).length;
-
-  const presentDays = attendances.filter(
-    (r: AttendanceRecord) => r.status === "PRESENT" || r.status === "LATE"
-  ).length;
-
-  const halfDays = attendances.filter(
-    (r: AttendanceRecord) => r.status === "HALF_DAY"
-  ).length;
-
-  const leaveDays = attendances.filter(
-    (r: AttendanceRecord) => r.status === "ON_LEAVE"
-  ).length;
-
-  const totalWorkingHours = attendances.reduce(
-    (sum: number, r: AttendanceRecord) => sum + (r.workingHours || 0),
-    0
-  );
-
-  const totalOvertimeHours = attendances.reduce(
-    (sum: number, r: AttendanceRecord) => sum + (r.overtimeHours || 0),
-    0
-  );
-
+  const totalWorkingDays = summary?.totalWorkingDays || 0;
+  const presentDays = summary?.totalPresentDays || 0;
+  const halfDays = summary?.totalHalfDays || 0;
+  const leaveDays = summary?.totalLeaveDays || 0;
+  const totalWorkingHours = summary?.totalWorkingHours || 0;
+  const totalOvertimeHours = summary?.totalOvertimeHours || 0;
   const payableDays = presentDays + halfDays * 0.5;
 
   if (isLoading) {

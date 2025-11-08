@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Upload, X } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatLeaveType } from "../utils";
+import { useCreateLeaveRequest } from "../hooks";
+import { useEmployee } from "@/lib/employee-context";
+import { toast } from "sonner";
 import type { LeaveType } from "../types";
 
 interface NewLeaveRequestDialogProps {
@@ -41,30 +44,48 @@ export function NewLeaveRequestDialog({
   open,
   onOpenChange,
 }: NewLeaveRequestDialogProps) {
-  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const { isAdmin } = useEmployee();
+  const [employeeId, setEmployeeId] = useState("");
   const [leaveType, setLeaveType] = useState<LeaveType | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [allocation, setAllocation] = useState("");
-  const [note, setNote] = useState("");
-  const [attachment, setAttachment] = useState<File | null>(null);
+  const [reason, setReason] = useState("");
 
-  const handleSubmit = () => {
-    console.log({
-      selectedEmployee,
-      leaveType,
-      startDate,
-      endDate,
-      allocation,
-      note,
-      attachment,
-    });
-    onOpenChange(false);
-  };
+  const createLeave = useCreateLeaveRequest();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAttachment(e.target.files[0]);
+  const handleSubmit = async () => {
+    if (!leaveType || !startDate || !endDate || !reason.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (isAdmin && !employeeId) {
+      toast.error("Please select an employee");
+      return;
+    }
+
+    try {
+      await createLeave.mutateAsync({
+        employeeId: isAdmin ? employeeId : undefined,
+        leaveType,
+        startDate,
+        endDate,
+        reason,
+      });
+
+      toast.success("Leave request created successfully");
+      setEmployeeId("");
+      setLeaveType("");
+      setStartDate("");
+      setEndDate("");
+      setReason("");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create leave request"
+      );
     }
   };
 
@@ -86,31 +107,29 @@ export function NewLeaveRequestDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="employee">Employee</Label>
-            <Select
-              value={selectedEmployee}
-              onValueChange={setSelectedEmployee}
-            >
-              <SelectTrigger id="employee">
-                <SelectValue placeholder="[Employee]" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="emp1">John Doe</SelectItem>
-                <SelectItem value="emp2">Jane Smith</SelectItem>
-                <SelectItem value="emp3">Bob Johnson</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {isAdmin && (
+            <div className="space-y-2">
+              <Label htmlFor="employee">Employee ID</Label>
+              <Input
+                id="employee"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                placeholder="Enter employee ID"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to create for yourself
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="leave-type">Time off Type</Label>
+            <Label htmlFor="leave-type">Time off Type *</Label>
             <Select
               value={leaveType}
               onValueChange={(value) => setLeaveType(value as LeaveType)}
             >
               <SelectTrigger id="leave-type">
-                <SelectValue placeholder="[Paid time off]" />
+                <SelectValue placeholder="Select leave type" />
               </SelectTrigger>
               <SelectContent>
                 {leaveTypes.map((type) => (
@@ -124,29 +143,25 @@ export function NewLeaveRequestDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start-date">Validity Period</Label>
+              <Label htmlFor="start-date">Start Date *</Label>
               <div className="relative">
                 <Input
                   id="start-date"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  placeholder="May 13"
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date" className="text-transparent">
-                To
-              </Label>
+              <Label htmlFor="end-date">End Date *</Label>
               <div className="relative">
                 <Input
                   id="end-date"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  placeholder="May 14"
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
@@ -154,71 +169,31 @@ export function NewLeaveRequestDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="allocation">Allocation</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="allocation"
-                type="number"
-                value={allocation}
-                onChange={(e) => setAllocation(e.target.value)}
-                placeholder="01.00"
-                className="flex-1"
-              />
-              <span className="text-sm text-muted-foreground">Days</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="note">Note</Label>
+            <Label htmlFor="reason">Reason *</Label>
             <Textarea
-              id="note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Add a note..."
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Explain the reason for leave..."
               className="min-h-[80px] resize-none"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="attachment">Attachment</Label>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => document.getElementById("file-upload")?.click()}
-                className="gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Upload
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              {attachment && (
-                <span className="text-sm text-muted-foreground truncate">
-                  {attachment.name}
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground">
-                (For sick leave certificate)
-              </span>
-            </div>
-          </div>
-
           <div className="flex gap-2 pt-4">
-            <Button onClick={handleSubmit} className="flex-1">
-              Submit
+            <Button
+              onClick={handleSubmit}
+              disabled={createLeave.isPending}
+              className="flex-1"
+            >
+              {createLeave.isPending ? "Submitting..." : "Submit"}
             </Button>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={createLeave.isPending}
               className="flex-1"
             >
-              Discard
+              Cancel
             </Button>
           </div>
         </div>

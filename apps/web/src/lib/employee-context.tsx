@@ -33,6 +33,13 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
     employee?.role === "HR_OFFICER" ||
     employee?.role === "PAYROLL_OFFICER";
 
+      console.log(
+        "EmployeeProvider - employee:",
+        employee,
+        "isAdmin:",
+        isAdmin
+      );
+
   return (
     <EmployeeContext.Provider value={{ employee, isLoading, isAdmin }}>
       {children}

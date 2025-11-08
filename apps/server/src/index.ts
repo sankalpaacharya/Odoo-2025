@@ -6,6 +6,8 @@ import { auth } from "@my-better-t-app/auth";
 import attendanceRoutes from "./routes/attendance";
 import employeeRoutes from "./routes/employee";
 import authRoutes from "./routes/auth";
+import sessionRoutes from "./routes/session";
+import leaveRoutes from "./routes/leave";
 
 const app = express();
 
@@ -25,13 +27,14 @@ app.get("/", (_req, res) => {
 });
 
 // Better Auth handler - handles all authentication endpoints
-app.all("/api/auth/*splat", toNodeHandler(auth)); 
-
+app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // API Routes
 app.use("/api", authRoutes);
+app.use("/api/session", sessionRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/employees", employeeRoutes);
+app.use("/api/leaves", leaveRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
