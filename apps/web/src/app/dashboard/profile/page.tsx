@@ -96,7 +96,8 @@ export default function ProfilePage() {
                   title="Upload profile photo"
                   onClick={handleImageClick}
                   disabled={isUploading}
-                  className="group relative h-36 w-36 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="group relative h-36 w-36 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   {getProfileImageUrl(profile.profileImage, profile.image) ? (
                     <>
                       <img
@@ -131,17 +132,31 @@ export default function ProfilePage() {
                       const names = value.split(" ");
                       await handleFieldSave("firstName", names[0] || "");
                       if (names.length > 1) {
-                        await handleFieldSave("lastName", names.slice(1).join(" "));
+                        await handleFieldSave(
+                          "lastName",
+                          names.slice(1).join(" ")
+                        );
                       }
                     }}
                     placeholder="Enter your full name"
                   />
 
-                  <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
+                  <EditableField
+                    label="Login ID"
+                    value={profile.employeeCode}
+                    onSave={async () => {}}
+                    readOnly
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
+                  <EditableField
+                    label="Email"
+                    value={profile.email}
+                    type="email"
+                    onSave={async () => {}}
+                    readOnly
+                  />
 
                   <EditableField
                     label="Mobile"
@@ -152,7 +167,12 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <EditableField label="Company" value={profile.organization?.companyName || "No Company"} onSave={async () => {}} readOnly />
+                <EditableField
+                  label="Company"
+                  value={profile.organization?.companyName || "No Company"}
+                  onSave={async () => {}}
+                  readOnly
+                />
               </div>
             </div>
           </CardContent>
@@ -175,13 +195,24 @@ export default function ProfilePage() {
             </TabsContent>
 
             <TabsContent value="salary" className="mt-8">
+              {profile.currentUserRole === "EMPLOYEE" && (
+                <div className="mb-4 p-4 bg-muted/50 border border-border rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Note:</span> Salary
+                    information is read-only. Only administrators and payroll
+                    officers can modify salary details.
+                  </p>
+                </div>
+              )}
               <SalaryInfoTab profile={profile} />
             </TabsContent>
 
             <TabsContent value="security">
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-muted-foreground">Security settings content goes here...</p>
+                  <p className="text-muted-foreground">
+                    Security settings content goes here...
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>

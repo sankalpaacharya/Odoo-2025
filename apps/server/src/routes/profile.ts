@@ -50,9 +50,39 @@ router.use(authenticateUser);
 router.get("/", async (req, res) => {
   try {
     const userId = (req as any).user.id;
+    const targetEmployeeId = req.query.employeeId as string | undefined;
+
+    // Get current user's employee record
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, role: true },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    // Check if requesting another employee's profile
+    const isViewingOtherProfile =
+      targetEmployeeId && targetEmployeeId !== currentEmployee.id;
+
+    // If viewing other profile, check permissions
+    if (isViewingOtherProfile) {
+      const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
+      if (!allowedRoles.includes(currentEmployee.role)) {
+        return res
+          .status(403)
+          .json({
+            error:
+              "You don't have permission to view other employees' profiles",
+          });
+      }
+    }
+
+    const employeeIdToFetch = targetEmployeeId || currentEmployee.id;
 
     const employee = await db.employee.findUnique({
-      where: { userId },
+      where: { id: employeeIdToFetch },
       select: {
         id: true,
         employeeCode: true,
@@ -195,7 +225,7 @@ router.get("/", async (req, res) => {
           }
         : null,
 
-      // Salary Information
+      // Salary Information - Only include if user has permission
       salary: {
         basicSalary: employee.basicSalary.toString(),
         pfContribution: employee.pfContribution.toString(),
@@ -210,6 +240,12 @@ router.get("/", async (req, res) => {
           description: comp.description,
         })),
       },
+
+      // Include role info for permission checks on frontend
+      currentUserRole: currentEmployee.role,
+      canEditSalary: ["ADMIN", "PAYROLL_OFFICER"].includes(
+        currentEmployee.role
+      ),
     };
 
     res.json(profileData);
@@ -348,21 +384,30 @@ router.put("/salary", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
+    const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res.status(403).json({ error: "You don't have permission to update salary information" });
+      return res
+        .status(403)
+        .json({
+          error: "You don't have permission to update salary information",
+        });
     }
 
     // Get target employee ID from query param or use current user
-    const targetEmployeeId = (req.query.employeeId as string) || currentEmployee.id;
+    const targetEmployeeId =
+      (req.query.employeeId as string) || currentEmployee.id;
 
     // Update salary data
     const updatedEmployee = await db.employee.update({
       where: { id: targetEmployeeId },
       data: {
         ...(basicSalary !== undefined && { basicSalary: Number(basicSalary) }),
-        ...(pfContribution !== undefined && { pfContribution: Number(pfContribution) }),
-        ...(professionalTax !== undefined && { professionalTax: Number(professionalTax) }),
+        ...(pfContribution !== undefined && {
+          pfContribution: Number(pfContribution),
+        }),
+        ...(professionalTax !== undefined && {
+          professionalTax: Number(professionalTax),
+        }),
       },
       select: {
         id: true,
@@ -491,11 +536,75 @@ router.post("/upload-image", upload.single("profileImage"), async (req, res) => 
   }
 });
 
-// Add or update salary component (Admin/HR/Payroll only)
+// Upload profile image
+router.post("/upload-image", upload.single("profileImage"), async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Generate the URL path using the helper function
+    const imagePath = getUploadUrl(req.file.filename, "profile");
+
+    // Find employee first
+    const employee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, profileImage: true },
+    });
+
+    if (!employee) {
+      // Delete uploaded file if employee not found
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    // Delete old profile image if exists
+    if (employee.profileImage) {
+      try {
+        const oldImagePath = getUploadPath(employee.profileImage);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      } catch (err) {
+        console.warn("Failed to delete old profile image:", err);
+        // Continue anyway - don't fail the upload if we can't delete the old image
+      }
+    }
+
+    // Update employee profile image
+    await db.employee.update({
+      where: { id: employee.id },
+      data: { profileImage: imagePath },
+    });
+
+    res.json({
+      success: true,
+      profileImage: imagePath,
+    });
+  } catch (error) {
+    console.error("Error uploading profile image:", error);
+    // Delete uploaded file on error
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: "Failed to upload profile image" });
+  }
+});
+
 router.post("/salary-components", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { employeeId, name, type, amount, isPercentage, isRecurring, description } = req.body;
+    const {
+      employeeId,
+      name,
+      type,
+      amount,
+      isPercentage,
+      isRecurring,
+      description,
+    } = req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({
@@ -507,9 +616,13 @@ router.post("/salary-components", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
+    const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res.status(403).json({ error: "You don't have permission to manage salary components" });
+      return res
+        .status(403)
+        .json({
+          error: "You don't have permission to manage salary components",
+        });
     }
 
     const targetEmployeeId = employeeId || currentEmployee.id;
@@ -536,6 +649,95 @@ router.post("/salary-components", async (req, res) => {
   } catch (error) {
     console.error("Error creating salary component:", error);
     res.status(500).json({ error: "Failed to create salary component" });
+  }
+});
+
+// Update salary component (Admin/Payroll only)
+router.put("/salary-components/:componentId", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { componentId } = req.params;
+    const { name, type, amount, isPercentage, isRecurring, description } =
+      req.body;
+
+    // Check if user has permission
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, role: true },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
+    if (!allowedRoles.includes(currentEmployee.role)) {
+      return res
+        .status(403)
+        .json({
+          error: "You don't have permission to update salary components",
+        });
+    }
+
+    const component = await db.salaryComponent.update({
+      where: { id: componentId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(type !== undefined && { type }),
+        ...(amount !== undefined && { amount: Number(amount) }),
+        ...(isPercentage !== undefined && { isPercentage }),
+        ...(isRecurring !== undefined && { isRecurring }),
+        ...(description !== undefined && { description }),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...component,
+        amount: component.amount.toString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error updating salary component:", error);
+    res.status(500).json({ error: "Failed to update salary component" });
+  }
+});
+
+// Delete salary component (Admin/Payroll only)
+router.delete("/salary-components/:componentId", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { componentId } = req.params;
+
+    // Check if user has permission
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, role: true },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
+    if (!allowedRoles.includes(currentEmployee.role)) {
+      return res
+        .status(403)
+        .json({
+          error: "You don't have permission to delete salary components",
+        });
+    }
+
+    await db.salaryComponent.update({
+      where: { id: componentId },
+      data: { isActive: false },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting salary component:", error);
+    res.status(500).json({ error: "Failed to delete salary component" });
   }
 });
 

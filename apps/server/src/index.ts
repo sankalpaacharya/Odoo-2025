@@ -13,6 +13,7 @@ import permissionsRoutes from "./routes/permissions";
 import usersRoutes from "./routes/users";
 import organizationRoutes from "./routes/organization";
 import profileRoutes from "./routes/profile";
+import payrollRoutes from "./routes/payroll";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/permissions", permissionsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/organization", organizationRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/payroll", payrollRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

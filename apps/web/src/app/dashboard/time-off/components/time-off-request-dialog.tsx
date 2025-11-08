@@ -11,7 +11,13 @@ import {
   format,
   addBusinessDays,
 } from "date-fns";
-import { Calendar, X, ChevronsUpDown, Check, Upload } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  X,
+  ChevronsUpDown,
+  Check,
+  Upload,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -49,8 +56,8 @@ interface TimeOffRequestDialogProps {
 interface TimeOffFormData {
   employeeId: string;
   timeOffType: string;
-  startDate: string;
-  endDate: string;
+  startDate: Date | undefined;
+  endDate: Date | undefined;
   reason: string;
   attachment?: FileList;
 }
@@ -64,17 +71,21 @@ const timeOffTypes: LeaveType[] = [
 const timeOffSchema = yup.object({
   employeeId: yup.string().required("Employee is required"),
   timeOffType: yup.string().required("Time off type is required"),
-  startDate: yup.string().required("Start date is required"),
+  startDate: yup
+    .date()
+    .required("Start date is required")
+    .typeError("Start date is required"),
   endDate: yup
-    .string()
+    .date()
     .required("End date is required")
+    .typeError("End date is required")
     .test(
       "is-after-start",
       "End date must be after start date",
       function (value) {
         const { startDate } = this.parent;
         if (!startDate || !value) return true;
-        return new Date(value) >= new Date(startDate);
+        return value >= startDate;
       }
     ),
   reason: yup
@@ -107,8 +118,8 @@ export function TimeOffRequestDialog({
     defaultValues: {
       employeeId: "",
       timeOffType: "",
-      startDate: "",
-      endDate: "",
+      startDate: undefined,
+      endDate: undefined,
       reason: "",
     },
   });
@@ -161,11 +172,11 @@ export function TimeOffRequestDialog({
     switch (option) {
       case "today":
         start = today;
-        end = start;
+        end = today;
         break;
       case "tomorrow":
         start = addDays(today, 1);
-        end = start;
+        end = addDays(today, 1);
         break;
       case "next-3":
         start = getNextBusinessDay(today);
@@ -182,17 +193,22 @@ export function TimeOffRequestDialog({
         end = today;
     }
 
-    setValue("startDate", format(start, "yyyy-MM-dd"));
-    setValue("endDate", format(end, "yyyy-MM-dd"));
+    setValue("startDate", start, { shouldValidate: true });
+    setValue("endDate", end, { shouldValidate: true });
   };
 
   const onSubmit = async (data: TimeOffFormData) => {
     try {
+      if (!data.startDate || !data.endDate) {
+        toast.error("Please select start and end dates");
+        return;
+      }
+
       const response = await createTimeOff.mutateAsync({
         employeeId: isAdmin ? data.employeeId : undefined,
         leaveType: data.timeOffType as LeaveType,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
         reason: data.reason,
         attachment: data.attachment?.[0],
       });
@@ -215,8 +231,6 @@ export function TimeOffRequestDialog({
       );
     }
   };
-
-  const getTodayDate = () => format(new Date(), "yyyy-MM-dd");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -425,15 +439,35 @@ export function TimeOffRequestDialog({
               render={({ field }) => (
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Start Date *</Label>
-                  <div className="relative">
-                    <Input
-                      id="start-date"
-                      type="date"
-                      {...field}
-                      min={getTodayDate()}
-                      className="pr-10"
-                    />
-                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {errors.startDate && (
                     <p className="text-xs text-red-500">
                       {errors.startDate.message}
@@ -448,15 +482,42 @@ export function TimeOffRequestDialog({
               render={({ field }) => (
                 <div className="space-y-2">
                   <Label htmlFor="end-date">End Date *</Label>
-                  <div className="relative">
-                    <Input
-                      id="end-date"
-                      type="date"
-                      {...field}
-                      min={watch("startDate") || getTodayDate()}
-                      className="pr-10"
-                    />
-                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => {
+                          const startDate = watch("startDate");
+                          const today = new Date(
+                            new Date().setHours(0, 0, 0, 0)
+                          );
+                          if (startDate) {
+                            return date < startDate || date < today;
+                          }
+                          return date < today;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {errors.endDate && (
                     <p className="text-xs text-red-500">
                       {errors.endDate.message}

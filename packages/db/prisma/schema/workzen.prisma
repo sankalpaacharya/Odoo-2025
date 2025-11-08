@@ -165,8 +165,8 @@ model Leave {
     employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
     leaveType  LeaveType
-    startDate  DateTime    @db.Date
-    endDate    DateTime    @db.Date
+    startDate  DateTime    
+    endDate    DateTime    
     totalDays  Decimal     @db.Decimal(5, 2)
     reason     String
     attachment String?

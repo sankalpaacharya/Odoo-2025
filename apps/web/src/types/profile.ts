@@ -96,6 +96,10 @@ export interface ProfileData {
 
   // Salary Information
   salary: Salary;
+
+  // Permission flags
+  currentUserRole?: Role;
+  canEditSalary?: boolean;
 }
 
 export interface UpdateProfilePayload {
