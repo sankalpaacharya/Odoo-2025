@@ -348,10 +348,20 @@ export const payrollService = {
       throw new Error("Payrun not found");
     }
 
-    if (payrun.status !== "PROCESSING") {
-      throw new Error("Payrun must be validated first");
+    if (payrun.status === "COMPLETED") {
+      throw new Error("Payrun is already completed");
     }
 
+    // First, mark all pending payslips as PROCESSED
+    await db.payslip.updateMany({
+      where: {
+        payrunId,
+        status: "PENDING",
+      },
+      data: { status: "PROCESSED" },
+    });
+
+    // Then mark all payslips as PAID and complete the payrun
     await db.$transaction([
       db.payslip.updateMany({
         where: { payrunId },
@@ -364,6 +374,84 @@ export const payrollService = {
     ]);
 
     return this.getPayrunWithPayslips(payrun.month, payrun.year);
+  },
+
+  async approvePayslip(payslipId: string) {
+    const payslip = await db.payslip.findUnique({
+      where: { id: payslipId },
+      include: {
+        payrun: true,
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            department: true,
+            designation: true,
+          },
+        },
+      },
+    });
+
+    if (!payslip) {
+      throw new Error("Payslip not found");
+    }
+
+    if (payslip.payrun.status === "COMPLETED") {
+      throw new Error("Cannot approve payslip in a completed payrun");
+    }
+
+    if (payslip.status === "PROCESSED" || payslip.status === "PAID") {
+      throw new Error("Payslip is already approved");
+    }
+
+    if (payslip.status === "CANCELLED") {
+      throw new Error("Cannot approve a cancelled payslip");
+    }
+
+    const updatedPayslip = await db.payslip.update({
+      where: { id: payslipId },
+      data: { status: "PROCESSED" },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeCode: true,
+            firstName: true,
+            lastName: true,
+            department: true,
+            designation: true,
+          },
+        },
+      },
+    });
+
+    // Check if all payslips in the payrun are now approved (PROCESSED or PAID)
+    const allPayslips = await db.payslip.findMany({
+      where: { payrunId: payslip.payrunId },
+      select: { status: true },
+    });
+
+    const allApproved = allPayslips.every(
+      (p) => p.status === "PROCESSED" || p.status === "PAID"
+    );
+
+    // If all payslips are approved, automatically complete the payrun
+    if (allApproved && payslip.payrun.status === "PROCESSING") {
+      await db.$transaction([
+        db.payslip.updateMany({
+          where: { payrunId: payslip.payrunId },
+          data: { status: "PAID", paidAt: new Date() },
+        }),
+        db.payrun.update({
+          where: { id: payslip.payrunId },
+          data: { status: "COMPLETED" },
+        }),
+      ]);
+    }
+
+    return updatedPayslip;
   },
 
   async getPayslipsByEmployee(employeeId: string, year?: number) {
@@ -502,5 +590,113 @@ export const payrollService = {
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: limit,
     });
+  },
+
+  async getPayrollStatistics(
+    organizationId?: string,
+    view: "monthly" | "annually" = "monthly"
+  ) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    if (view === "monthly") {
+      // Get last 6 months of data
+      const monthsToFetch = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(currentYear, currentMonth - 1 - i, 1);
+        monthsToFetch.push({
+          month: date.getMonth() + 1,
+          year: date.getFullYear(),
+        });
+      }
+
+      const payruns = await db.payrun.findMany({
+        where: {
+          OR: monthsToFetch.map((m) => ({
+            month: m.month,
+            year: m.year,
+          })),
+        },
+        include: {
+          payslips: {
+            select: {
+              employeeId: true,
+              netSalary: true,
+            },
+          },
+        },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      });
+
+      const MONTH_NAMES = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      return monthsToFetch.map((m) => {
+        const payrun = payruns.find(
+          (p) => p.month === m.month && p.year === m.year
+        );
+        const cost = payrun ? parseFloat(payrun.totalAmount.toString()) : 0;
+        const count = payrun ? payrun.payslips.length : 0;
+
+        return {
+          month: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
+          cost: Math.round(cost),
+          count,
+        };
+      });
+    } else {
+      // Get last 6 years of data
+      const yearsToFetch = [];
+      for (let i = 5; i >= 0; i--) {
+        yearsToFetch.push(currentYear - i);
+      }
+
+      const payruns = await db.payrun.findMany({
+        where: {
+          year: { in: yearsToFetch },
+        },
+        include: {
+          payslips: {
+            select: {
+              employeeId: true,
+            },
+          },
+        },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      });
+
+      return yearsToFetch.map((year) => {
+        const yearPayruns = payruns.filter((p) => p.year === year);
+        const cost = yearPayruns.reduce(
+          (sum, p) => sum + parseFloat(p.totalAmount.toString()),
+          0
+        );
+
+        // Get unique employee count across all months in the year
+        const uniqueEmployees = new Set(
+          yearPayruns.flatMap((p) => p.payslips.map((ps) => ps.employeeId))
+        );
+        const count = uniqueEmployees.size;
+
+        return {
+          month: year.toString(),
+          cost: Math.round(cost),
+          count,
+        };
+      });
+    }
   },
 };

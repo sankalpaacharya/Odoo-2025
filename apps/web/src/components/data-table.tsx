@@ -32,6 +32,7 @@ interface DataTableProps<T> {
   expandedContent?: (item: T) => React.ReactNode;
   expandedRows?: Set<string>;
   footer?: React.ReactNode;
+  onRowClick?: (item: T) => void;
 }
 
 type SortDirection = "asc" | "desc";
@@ -46,6 +47,7 @@ export function DataTable<T extends Record<string, any>>({
   expandedContent,
   expandedRows,
   footer,
+  onRowClick,
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -130,7 +132,13 @@ export function DataTable<T extends Record<string, any>>({
 
               return (
                 <>
-                  <TableRow key={itemKey}>
+                  <TableRow
+                    key={itemKey}
+                    onClick={() => onRowClick?.(item)}
+                    className={
+                      onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
+                    }
+                  >
                     {columns.map((column) => (
                       <TableCell key={column.key} className={column.className}>
                         {column.render

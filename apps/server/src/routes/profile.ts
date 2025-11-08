@@ -921,4 +921,193 @@ router.delete("/salary-components/:componentId", async (req, res) => {
   }
 });
 
+// Get salary report data for an employee
+router.get("/salary-report/:employeeId", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { employeeId } = req.params;
+    const year = req.query.year
+      ? parseInt(req.query.year as string)
+      : new Date().getFullYear();
+
+    // Check if user has permission
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, role: true },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
+    if (
+      !allowedRoles.includes(currentEmployee.role) &&
+      currentEmployee.id !== employeeId
+    ) {
+      return res.status(403).json({
+        error: "You don't have permission to view salary reports",
+      });
+    }
+
+    const employee = await db.employee.findUnique({
+      where: { id: employeeId },
+      select: {
+        firstName: true,
+        lastName: true,
+        designation: true,
+        dateOfJoining: true,
+        basicSalary: true,
+        hraPercentage: true,
+        standardAllowanceAmount: true,
+        performanceBonusPercentage: true,
+        leaveTravelPercentage: true,
+        pfPercentage: true,
+        professionalTax: true,
+        organization: {
+          select: {
+            companyName: true,
+          },
+        },
+        salaryComponents: {
+          where: {
+            isActive: true,
+          },
+          select: {
+            name: true,
+            type: true,
+            amount: true,
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const monthlyWage = parseFloat(employee.basicSalary.toString());
+    const basicSalary = monthlyWage * 0.5;
+
+    // Calculate earnings
+    const hraPercentage = parseFloat(employee.hraPercentage.toString());
+    const houseRentAllowance = (basicSalary * hraPercentage) / 100;
+
+    const standardAllowance = parseFloat(
+      employee.standardAllowanceAmount.toString()
+    );
+
+    const performanceBonusPercentage = parseFloat(
+      employee.performanceBonusPercentage.toString()
+    );
+    const performanceBonus = (basicSalary * performanceBonusPercentage) / 100;
+
+    const leaveTravelPercentage = parseFloat(
+      employee.leaveTravelPercentage.toString()
+    );
+    const leaveTravelAllowance = (basicSalary * leaveTravelPercentage) / 100;
+
+    const totalPredefinedComponents =
+      basicSalary +
+      houseRentAllowance +
+      standardAllowance +
+      performanceBonus +
+      leaveTravelAllowance;
+
+    const fixedAllowance = Math.max(0, monthlyWage - totalPredefinedComponents);
+
+    const earnings = [
+      {
+        name: "Basic Salary",
+        monthlyAmount: basicSalary,
+        yearlyAmount: basicSalary * 12,
+      },
+      {
+        name: "House Rent Allowance",
+        monthlyAmount: houseRentAllowance,
+        yearlyAmount: houseRentAllowance * 12,
+      },
+      {
+        name: "Standard Allowance",
+        monthlyAmount: standardAllowance,
+        yearlyAmount: standardAllowance * 12,
+      },
+      {
+        name: "Performance Bonus",
+        monthlyAmount: performanceBonus,
+        yearlyAmount: performanceBonus * 12,
+      },
+      {
+        name: "Leave Travel Allowance",
+        monthlyAmount: leaveTravelAllowance,
+        yearlyAmount: leaveTravelAllowance * 12,
+      },
+      {
+        name: "Fixed Allowance",
+        monthlyAmount: fixedAllowance,
+        yearlyAmount: fixedAllowance * 12,
+      },
+    ];
+
+    // Add custom earnings
+    employee.salaryComponents
+      .filter((c) => c.type === "EARNING")
+      .forEach((comp) => {
+        const amount = parseFloat(comp.amount.toString());
+        earnings.push({
+          name: comp.name,
+          monthlyAmount: amount,
+          yearlyAmount: amount * 12,
+        });
+      });
+
+    // Calculate deductions
+    const pfPercentage = parseFloat(employee.pfPercentage.toString());
+    const pfDeduction = (basicSalary * pfPercentage) / 100;
+    const professionalTax = parseFloat(employee.professionalTax.toString());
+
+    const deductions = [
+      {
+        name: "PF Deduction",
+        monthlyAmount: pfDeduction,
+        yearlyAmount: pfDeduction * 12,
+      },
+      {
+        name: "Professional Tax",
+        monthlyAmount: professionalTax,
+        yearlyAmount: professionalTax * 12,
+      },
+    ];
+
+    // Add custom deductions
+    employee.salaryComponents
+      .filter((c) => c.type === "DEDUCTION")
+      .forEach((comp) => {
+        const amount = parseFloat(comp.amount.toString());
+        deductions.push({
+          name: comp.name,
+          monthlyAmount: amount,
+          yearlyAmount: amount * 12,
+        });
+      });
+
+    const reportData = {
+      companyName: employee.organization?.companyName || "Company Name",
+      employeeName: `${employee.firstName} ${employee.lastName}`,
+      designation: employee.designation || "N/A",
+      dateOfJoining: new Date(employee.dateOfJoining).toLocaleDateString(
+        "en-GB"
+      ),
+      salaryEffectiveFrom: `01/01/${year}`,
+      earnings,
+      deductions,
+    };
+
+    res.json(reportData);
+  } catch (error) {
+    console.error("Error fetching salary report:", error);
+    res.status(500).json({ error: "Failed to fetch salary report" });
+  }
+});
+
 export default router;
