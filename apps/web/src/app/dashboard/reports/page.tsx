@@ -1,19 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Loader2,
-  Download,
-  FileText,
-  Check,
-  ChevronsUpDown,
-  Printer,
-} from "lucide-react";
-import { useReactToPrint } from "react-to-print";
-import { apiClient } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -42,6 +29,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, Loader2, Printer } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -71,6 +63,23 @@ interface SalaryReportData {
   salaryEffectiveFrom: string;
   earnings: SalaryComponent[];
   deductions: SalaryComponent[];
+}
+
+interface PendingCounts {
+  pendingPayslips: number;
+  processingPayruns: number;
+}
+
+interface Payrun {
+  id: string;
+  month: number;
+  year: number;
+  status: string;
+  totalAmount: number;
+  processedAt: string | null;
+  _count: {
+    payslips: number;
+  };
 }
 
 async function fetchEmployees(): Promise<Employee[]> {
@@ -173,6 +182,25 @@ export default function ReportsPage() {
   };
 
   const totals = calculateTotals();
+
+  const MONTH_NAMES = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const formatPayrunMonth = (month: number, year: number) => {
+    return `${MONTH_NAMES[month - 1]} ${year}`;
+  };
 
   return (
     <div className="space-y-6">

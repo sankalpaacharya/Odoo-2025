@@ -20,7 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { AlertCircle, TrendingUp } from "lucide-react";
+import { AlertCircle, FileText, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Bar,
@@ -33,6 +33,7 @@ import {
 } from "recharts";
 import { apiClient } from "@/lib/api-client";
 import { PayrollWarningModal } from "./payroll-warning-modal";
+import Link from "next/link";
 
 interface Warning {
   id: string;
@@ -58,6 +59,7 @@ interface PayrollStatistic {
   month: string;
   cost: number;
   count: number;
+  isPending?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -172,7 +174,6 @@ export function PayrollDashboard() {
       />
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Warning Panel */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -195,13 +196,11 @@ export function PayrollDashboard() {
                 <Button
                   key={warning.id}
                   variant="ghost"
-                  className="w-fit justify-start text-left h-auto px-3"
+                  className="flex w-fit justify-start text-left h-auto py-1 transition-colors hover:cursor-pointer hover:underline text-blue-600 hover:text-blue-600 hover:bg-transparent px-0!"
                   onClick={() => handleWarningClick(warning)}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-600 hover:underline">
-                      {warning.count} {warning.message}
-                    </span>
+                  <div className="flex items-center gap-2 text-sm">
+                    {warning.count} {warning.message}
                   </div>
                 </Button>
               ))
@@ -209,40 +208,35 @@ export function PayrollDashboard() {
           </CardContent>
         </Card>
 
-        {/* Payrun Panel */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="size-5" />
-              Payrun
+              <FileText className="size-5" />
+              Recent Pay Runs
             </CardTitle>
-            <CardDescription>Recent pay runs</CardDescription>
+            <CardDescription>Latest payroll processing history</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-1">
-              {isLoadingPayruns ? (
-                <p className="text-sm text-muted-foreground">
-                  Loading payruns...
-                </p>
-              ) : recentPayruns.length === 0 ? (
+              {recentPayruns.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No recent payruns found.
                 </p>
               ) : (
                 recentPayruns.map((payrun) => (
-                  <Button
+                  <Link
                     key={payrun.id}
-                    variant="ghost"
-                    className="w-fit justify-start text-left h-auto px-3"
+                    href={`/dashboard/payroll?tab=payrun&month=${payrun.month}&year=${payrun.year}`}
+                    className="flex w-full justify-start text-left h-auto py-1 transition-colors hover:cursor-pointer hover:underline text-blue-600"
                   >
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium text-blue-600 hover:underline">
+                      <span className="text-sm font-medium">
                         Payrun for{" "}
                         {formatPayrunMonth(payrun.month, payrun.year)} (
                         {payrun._count.payslips} Payslips)
                       </span>
                     </div>
-                  </Button>
+                  </Link>
                 ))
               )}
             </div>
@@ -343,7 +337,48 @@ export function PayrollDashboard() {
                 />
                 <ChartTooltip
                   cursor={true}
-                  content={<ChartTooltipContent indicator="dashed" />}
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+
+                    const data = payload[0].payload;
+                    const isPending = data?.isPending;
+
+                    return (
+                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="grid gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-[0.70rem] uppercase text-muted-foreground">
+                              {data.month}
+                              {isPending && (
+                                <span className="ml-2 text-orange-600 font-medium">
+                                  (Pending)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          {payload.map((entry: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <div
+                                className="h-2.5 w-2.5 rounded-[2px]"
+                                style={{ backgroundColor: entry.color }}
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                {entry.name}:
+                              </span>
+                              <span className="text-sm font-medium">
+                                {entry.name === "Employer Cost"
+                                  ? `₹${entry.value.toLocaleString("en-IN")}`
+                                  : entry.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
                 <ChartLegend content={<ChartLegendContent />} />
                 <Bar
@@ -361,6 +396,22 @@ export function PayrollDashboard() {
                         stroke="var(--chart-1)"
                         strokeDasharray={4}
                         strokeDashoffset={4}
+                      />
+                    );
+                  }}
+                  shape={(props: any) => {
+                    const { x, y, width, height, index } = props;
+                    const data = payrollStatistics[index];
+                    const isPending = data?.isPending;
+
+                    return (
+                      <Rectangle
+                        {...props}
+                        fill={isPending ? "transparent" : "var(--chart-1)"}
+                        fillOpacity={isPending ? 0 : 1}
+                        stroke="var(--chart-1)"
+                        strokeWidth={2}
+                        strokeDasharray={isPending ? "4 4" : "0"}
                       />
                     );
                   }}
@@ -390,6 +441,22 @@ export function PayrollDashboard() {
                       />
                     );
                   }}
+                  shape={(props: any) => {
+                    const { x, y, width, height, index } = props;
+                    const data = payrollStatistics[index];
+                    const isPending = data?.isPending;
+
+                    return (
+                      <Rectangle
+                        {...props}
+                        fill={isPending ? "transparent" : "var(--chart-2)"}
+                        fillOpacity={isPending ? 0 : 1}
+                        stroke="var(--chart-2)"
+                        strokeWidth={2}
+                        strokeDasharray={isPending ? "4 4" : "0"}
+                      />
+                    );
+                  }}
                 >
                   <LabelList
                     position="top"
@@ -408,9 +475,20 @@ export function PayrollDashboard() {
             {employerCostView === "monthly" ? "6 months" : "6 years"}
           </div>
           {payrollStatistics.length > 0 && (
-            <div className="text-muted-foreground leading-none">
-              Active period: {payrollStatistics[currentMonthIndex]?.month}
-            </div>
+            <>
+              <div className="text-muted-foreground leading-none">
+                Active period: {payrollStatistics[currentMonthIndex]?.month}
+              </div>
+              {payrollStatistics.some((stat) => stat.isPending) && (
+                <div className="flex items-center gap-1.5 text-muted-foreground leading-none">
+                  <div
+                    className="h-3 w-3 rounded border-2 border-current"
+                    style={{ borderStyle: "dashed" }}
+                  />
+                  <span>Dotted outline indicates pending payrun</span>
+                </div>
+              )}
+            </>
           )}
         </CardFooter>
       </Card>

@@ -569,7 +569,7 @@ export const payrollService = {
     return warnings;
   },
 
-  async getRecentPayruns(organizationId?: string, limit: number = 5) {
+  async getRecentPayruns(limit: number = 5) {
     return db.payrun.findMany({
       where: {
         status: { in: ["COMPLETED", "PROCESSING"] },
@@ -592,10 +592,7 @@ export const payrollService = {
     });
   },
 
-  async getPayrollStatistics(
-    organizationId?: string,
-    view: "monthly" | "annually" = "monthly"
-  ) {
+  async getPayrollStatistics(view: "monthly" | "annually" = "monthly") {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
@@ -650,11 +647,13 @@ export const payrollService = {
         );
         const cost = payrun ? parseFloat(payrun.totalAmount.toString()) : 0;
         const count = payrun ? payrun.payslips.length : 0;
+        const isPending = payrun?.status === "PROCESSING";
 
         return {
           month: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
           cost: Math.round(cost),
           count,
+          isPending,
         };
       });
     } else {
@@ -690,13 +689,36 @@ export const payrollService = {
           yearPayruns.flatMap((p) => p.payslips.map((ps) => ps.employeeId))
         );
         const count = uniqueEmployees.size;
+        const isPending = yearPayruns.some((p) => p.status === "PROCESSING");
 
         return {
           month: year.toString(),
           cost: Math.round(cost),
           count,
+          isPending,
         };
       });
     }
+  },
+
+  async getPendingPayslipsCounts(organizationId?: string) {
+    // Get pending payslips count
+    const pendingPayslips = await db.payslip.count({
+      where: {
+        status: "PENDING",
+      },
+    });
+
+    // Get processing payruns count
+    const processingPayruns = await db.payrun.count({
+      where: {
+        status: "PROCESSING",
+      },
+    });
+
+    return {
+      pendingPayslips,
+      processingPayruns,
+    };
   },
 };

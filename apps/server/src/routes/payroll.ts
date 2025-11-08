@@ -217,6 +217,26 @@ router.get("/statistics", async (req, res) => {
   }
 });
 
+router.get("/pending-count", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee || !(await employeeService.isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const counts = await payrollService.getPendingPayslipsCounts(
+      employee.organizationId || undefined
+    );
+
+    res.json(counts);
+  } catch (error) {
+    console.error("Error fetching pending payslips count:", error);
+    res.status(500).json({ error: "Failed to fetch pending payslips count" });
+  }
+});
+
 router.post("/payslip/:payslipId/approve", async (req, res) => {
   try {
     const userId = (req as any).user.id;
