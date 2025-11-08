@@ -3,6 +3,7 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane } from "lucide-react";
 import { getImageUrl } from "@/lib/image-utils";
+import { useRouter } from "next/navigation";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -19,6 +20,7 @@ export default function EmployeeCard({
   status: Status;
   profileImage?: string | null;
 }) {
+  const router = useRouter();
   const statusNode = (() => {
     switch (status) {
       case "present":
@@ -55,7 +57,9 @@ export default function EmployeeCard({
     .toUpperCase();
 
   return (
-    <Card className="relative min-h-[120px] hover:shadow-md transition-shadow">
+    <Card
+      className="relative min-h-[120px] hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => router.push(`/dashboard/employees/${id}`)}>
       {/* top-right status */}
       <div className="absolute right-3 top-3">{statusNode}</div>
 

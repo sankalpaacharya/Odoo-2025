@@ -6,9 +6,10 @@ import { useUpdateProfile } from "@/hooks/useProfile";
 
 interface PrivateInfoTabProps {
   profile: ProfileData;
+  readOnly?: boolean;
 }
 
-export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
+export default function PrivateInfoTab({ profile, readOnly = false }: PrivateInfoTabProps) {
   const updateProfile = useUpdateProfile();
 
   const handleFieldSave = async (field: string, value: string) => {
@@ -27,6 +28,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           type="date"
           onSave={(value) => handleFieldSave("dateOfBirth", value)}
           placeholder="Select date of birth"
+          readOnly={readOnly}
         />
 
         <EditableField
@@ -34,16 +36,24 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           value={profile.address || ""}
           onSave={(value) => handleFieldSave("address", value)}
           placeholder="Enter your address"
+          readOnly={readOnly}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <EditableField label="City" value={profile.city || ""} onSave={(value) => handleFieldSave("city", value)} placeholder="Enter your city" />
+          <EditableField
+            label="City"
+            value={profile.city || ""}
+            onSave={(value) => handleFieldSave("city", value)}
+            placeholder="Enter your city"
+            readOnly={readOnly}
+          />
 
           <EditableField
             label="State"
             value={profile.state || ""}
             onSave={(value) => handleFieldSave("state", value)}
             placeholder="Enter your state"
+            readOnly={readOnly}
           />
         </div>
 
@@ -52,6 +62,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           value={profile.country || ""}
           onSave={(value) => handleFieldSave("country", value)}
           placeholder="Enter your country"
+          readOnly={readOnly}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -78,6 +89,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           value={profile.accountNumber || ""}
           onSave={(value) => handleFieldSave("accountNumber", value)}
           placeholder="Enter account number"
+          readOnly={readOnly}
         />
 
         <EditableField
@@ -85,6 +97,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           value={profile.bankName || ""}
           onSave={(value) => handleFieldSave("bankName", value)}
           placeholder="Enter bank name"
+          readOnly={readOnly}
         />
 
         <EditableField
@@ -92,6 +105,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
           value={profile.ifscCode || ""}
           onSave={(value) => handleFieldSave("ifscCode", value)}
           placeholder="Enter IFSC code"
+          readOnly={readOnly}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,6 +114,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
             value={profile.panNumber || ""}
             onSave={(value) => handleFieldSave("panNumber", value)}
             placeholder="Enter PAN number"
+            readOnly={readOnly}
           />
 
           <EditableField
@@ -107,6 +122,7 @@ export default function PrivateInfoTab({ profile }: PrivateInfoTabProps) {
             value={profile.uanNumber || ""}
             onSave={(value) => handleFieldSave("uanNumber", value)}
             placeholder="Enter UAN number"
+            readOnly={readOnly}
           />
         </div>
 

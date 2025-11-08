@@ -173,7 +173,7 @@ export function PayrollDashboard() {
             </CardTitle>
             <CardDescription>Employee setup issues</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="flex flex-col">
             {isLoadingWarnings ? (
               <p className="text-sm text-muted-foreground">
                 Loading warnings...
@@ -187,7 +187,7 @@ export function PayrollDashboard() {
                 <Button
                   key={warning.id}
                   variant="ghost"
-                  className="w-full justify-start text-left h-auto py-2 px-3"
+                  className="w-fit justify-start text-left h-auto px-3"
                   onClick={() => handleWarningClick(warning)}
                 >
                   <div className="flex items-center gap-2">
@@ -210,31 +210,34 @@ export function PayrollDashboard() {
             </CardTitle>
             <CardDescription>Recent pay runs</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {isLoadingPayruns ? (
-              <p className="text-sm text-muted-foreground">
-                Loading payruns...
-              </p>
-            ) : recentPayruns.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recent payruns found.
-              </p>
-            ) : (
-              recentPayruns.map((payrun) => (
-                <Button
-                  key={payrun.id}
-                  variant="ghost"
-                  className="w-full justify-start text-left h-auto py-2 px-3"
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium text-blue-600 hover:underline">
-                      Payrun for {formatPayrunMonth(payrun.month, payrun.year)}{" "}
-                      ({payrun._count.payslips} Payslips)
-                    </span>
-                  </div>
-                </Button>
-              ))
-            )}
+          <CardContent>
+            <div className="flex flex-col gap-1">
+              {isLoadingPayruns ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading payruns...
+                </p>
+              ) : recentPayruns.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No recent payruns found.
+                </p>
+              ) : (
+                recentPayruns.map((payrun) => (
+                  <Button
+                    key={payrun.id}
+                    variant="ghost"
+                    className="w-fit justify-start text-left h-auto px-3"
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium text-blue-600 hover:underline">
+                        Payrun for{" "}
+                        {formatPayrunMonth(payrun.month, payrun.year)} (
+                        {payrun._count.payslips} Payslips)
+                      </span>
+                    </div>
+                  </Button>
+                ))
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

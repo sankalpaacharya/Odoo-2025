@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
-export default function ResumeTab({ profile }: { profile: ProfileData }) {
+export default function ResumeTab({ profile, readOnly = false }: { profile: ProfileData; readOnly?: boolean }) {
   const updateProfile = useUpdateProfile();
   const [isSkillDialogOpen, setIsSkillDialogOpen] = useState(false);
   const [isCertDialogOpen, setIsCertDialogOpen] = useState(false);
@@ -186,57 +186,66 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
         <EditableSection
           title="About"
           actionButton={
-            <Button
-              onClick={handleSaveAbout}
-              disabled={aboutText === profile.about || isSavingAbout}
-              size="sm"
-              variant={aboutText !== profile.about ? "default" : "outline"}>
-              {isSavingAbout ? "Saving..." : "Save"}
-            </Button>
+            !readOnly ? (
+              <Button
+                onClick={handleSaveAbout}
+                disabled={aboutText === profile.about || isSavingAbout}
+                size="sm"
+                variant={aboutText !== profile.about ? "default" : "outline"}>
+                {isSavingAbout ? "Saving..." : "Save"}
+              </Button>
+            ) : undefined
           }>
           <textarea
             value={aboutText}
-            onChange={(e) => setAboutText(e.target.value)}
+            onChange={(e) => !readOnly && setAboutText(e.target.value)}
             placeholder="Tell us about yourself..."
-            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            readOnly={readOnly}
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           />
         </EditableSection>
 
         <EditableSection
           title="What I love about my job"
           actionButton={
-            <Button
-              onClick={handleSaveJobLove}
-              disabled={jobLoveText === profile.jobLove || isSavingJobLove}
-              size="sm"
-              variant={jobLoveText !== profile.jobLove ? "default" : "outline"}>
-              {isSavingJobLove ? "Saving..." : "Save"}
-            </Button>
+            !readOnly ? (
+              <Button
+                onClick={handleSaveJobLove}
+                disabled={jobLoveText === profile.jobLove || isSavingJobLove}
+                size="sm"
+                variant={jobLoveText !== profile.jobLove ? "default" : "outline"}>
+                {isSavingJobLove ? "Saving..." : "Save"}
+              </Button>
+            ) : undefined
           }>
           <textarea
             value={jobLoveText}
-            onChange={(e) => setJobLoveText(e.target.value)}
+            onChange={(e) => !readOnly && setJobLoveText(e.target.value)}
             placeholder="Share what you love about your work..."
-            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            readOnly={readOnly}
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           />
         </EditableSection>
 
         <EditableSection
           title="My interests and hobbies"
           actionButton={
-            <Button
-              onClick={handleSaveInterests}
-              disabled={interestsText === profile.interests || isSavingInterests}
-              size="sm"
-              variant={interestsText !== profile.interests ? "default" : "outline"}>
-              {isSavingInterests ? "Saving..." : "Save"}
-            </Button>
+            !readOnly ? (
+              <Button
+                onClick={handleSaveInterests}
+                disabled={interestsText === profile.interests || isSavingInterests}
+                size="sm"
+                variant={interestsText !== profile.interests ? "default" : "outline"}>
+                {isSavingInterests ? "Saving..." : "Save"}
+              </Button>
+            ) : undefined
           }>
           <textarea
             value={interestsText}
-            onChange={(e) => setInterestsText(e.target.value)}
+            onChange={(e) => !readOnly && setInterestsText(e.target.value)}
             placeholder="Tell us about your interests and hobbies..."
-            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            readOnly={readOnly}
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           />
         </EditableSection>
       </div>
@@ -246,50 +255,52 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
         <EditableSection
           title="Skills"
           actionButton={
-            <Dialog
-              open={isSkillDialogOpen}
-              onOpenChange={(open) => {
-                setIsSkillDialogOpen(open);
-                if (!open) {
-                  setSkillForm({ name: "", level: "" });
-                  setEditingSkillIndex(null);
-                }
-              }}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Skill
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingSkillIndex !== null ? "Edit Skill" : "Add Skill"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="skill-name">Skill Name *</Label>
-                    <Input
-                      id="skill-name"
-                      value={skillForm.name}
-                      onChange={(e) => setSkillForm({ ...skillForm, name: e.target.value })}
-                      placeholder="e.g., React, Python, Project Management"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="skill-level">Level (Optional)</Label>
-                    <Input
-                      id="skill-level"
-                      value={skillForm.level}
-                      onChange={(e) => setSkillForm({ ...skillForm, level: e.target.value })}
-                      placeholder="e.g., Expert, Intermediate, Beginner"
-                    />
-                  </div>
-                  <Button onClick={handleAddSkill} className="w-full">
-                    {editingSkillIndex !== null ? "Update Skill" : "Add Skill"}
+            !readOnly ? (
+              <Dialog
+                open={isSkillDialogOpen}
+                onOpenChange={(open) => {
+                  setIsSkillDialogOpen(open);
+                  if (!open) {
+                    setSkillForm({ name: "", level: "" });
+                    setEditingSkillIndex(null);
+                  }
+                }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Skill
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingSkillIndex !== null ? "Edit Skill" : "Add Skill"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="skill-name">Skill Name *</Label>
+                      <Input
+                        id="skill-name"
+                        value={skillForm.name}
+                        onChange={(e) => setSkillForm({ ...skillForm, name: e.target.value })}
+                        placeholder="e.g., React, Python, Project Management"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="skill-level">Level (Optional)</Label>
+                      <Input
+                        id="skill-level"
+                        value={skillForm.level}
+                        onChange={(e) => setSkillForm({ ...skillForm, level: e.target.value })}
+                        placeholder="e.g., Expert, Intermediate, Beginner"
+                      />
+                    </div>
+                    <Button onClick={handleAddSkill} className="w-full">
+                      {editingSkillIndex !== null ? "Update Skill" : "Add Skill"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : undefined
           }>
           <div className="h-[200px] overflow-y-auto">
             {profile.skills && profile.skills.length > 0 ? (
@@ -300,14 +311,16 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
                       {skill.name}
                       {skill.level && <span className="text-muted-foreground ml-1">• {skill.level}</span>}
                     </span>
-                    <div className="flex gap-1">
-                      <button onClick={() => handleEditSkill(index)} className="hover:text-primary transition-colors" title="Edit skill">
-                        <Edit2 className="h-3 w-3" />
-                      </button>
-                      <button onClick={() => handleDeleteSkill(index)} className="hover:text-destructive transition-colors" title="Delete skill">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEditSkill(index)} className="hover:text-primary transition-colors" title="Edit skill">
+                          <Edit2 className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => handleDeleteSkill(index)} className="hover:text-destructive transition-colors" title="Delete skill">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </Badge>
                 ))}
               </div>
@@ -320,54 +333,56 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
         <EditableSection
           title="Certifications"
           actionButton={
-            <Dialog
-              open={isCertDialogOpen}
-              onOpenChange={(open) => {
-                setIsCertDialogOpen(open);
-                if (!open) {
-                  setCertForm({ name: "", issuer: "", date: "" });
-                  setEditingCertIndex(null);
-                }
-              }}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Certification
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingCertIndex !== null ? "Edit Certification" : "Add Certification"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="cert-name">Certification Name *</Label>
-                    <Input
-                      id="cert-name"
-                      value={certForm.name}
-                      onChange={(e) => setCertForm({ ...certForm, name: e.target.value })}
-                      placeholder="e.g., AWS Certified Solutions Architect"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cert-issuer">Issuing Organization (Optional)</Label>
-                    <Input
-                      id="cert-issuer"
-                      value={certForm.issuer}
-                      onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })}
-                      placeholder="e.g., Amazon Web Services"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cert-date">Date Obtained (Optional)</Label>
-                    <Input id="cert-date" type="date" value={certForm.date} onChange={(e) => setCertForm({ ...certForm, date: e.target.value })} />
-                  </div>
-                  <Button onClick={handleAddCertification} className="w-full">
-                    {editingCertIndex !== null ? "Update Certification" : "Add Certification"}
+            !readOnly ? (
+              <Dialog
+                open={isCertDialogOpen}
+                onOpenChange={(open) => {
+                  setIsCertDialogOpen(open);
+                  if (!open) {
+                    setCertForm({ name: "", issuer: "", date: "" });
+                    setEditingCertIndex(null);
+                  }
+                }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Certification
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingCertIndex !== null ? "Edit Certification" : "Add Certification"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="cert-name">Certification Name *</Label>
+                      <Input
+                        id="cert-name"
+                        value={certForm.name}
+                        onChange={(e) => setCertForm({ ...certForm, name: e.target.value })}
+                        placeholder="e.g., AWS Certified Solutions Architect"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cert-issuer">Issuing Organization (Optional)</Label>
+                      <Input
+                        id="cert-issuer"
+                        value={certForm.issuer}
+                        onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })}
+                        placeholder="e.g., Amazon Web Services"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cert-date">Date Obtained (Optional)</Label>
+                      <Input id="cert-date" type="date" value={certForm.date} onChange={(e) => setCertForm({ ...certForm, date: e.target.value })} />
+                    </div>
+                    <Button onClick={handleAddCertification} className="w-full">
+                      {editingCertIndex !== null ? "Update Certification" : "Add Certification"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : undefined
           }>
           <div className="h-[200px] overflow-y-auto">
             {profile.certifications && profile.certifications.length > 0 ? (
@@ -379,14 +394,20 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
                       {cert.issuer && <p className="text-sm text-muted-foreground">{cert.issuer}</p>}
                       {cert.date && <p className="text-xs text-muted-foreground mt-1">{new Date(cert.date).toLocaleDateString()}</p>}
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditCertification(index)} className="h-8 w-8">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteCertification(index)} className="h-8 w-8 hover:text-destructive">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditCertification(index)} className="h-8 w-8">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteCertification(index)}
+                          className="h-8 w-8 hover:text-destructive">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

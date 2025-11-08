@@ -239,7 +239,7 @@ model Payrun {
   periodStart DateTime @db.Date
   periodEnd   DateTime @db.Date
 
-  status      PayrunStatus @default(DRAFT)
+  status      PayrunStatus @default(PROCESSING)
   totalAmount Decimal      @default(0) @db.Decimal(14, 2)
 
   processedBy String?
