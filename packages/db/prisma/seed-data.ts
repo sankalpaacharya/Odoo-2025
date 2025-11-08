@@ -8,6 +8,8 @@ import {
 } from "../prisma/generated/enums";
 import { config } from "dotenv";
 import { resolve } from "path";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
 
 // Load environment variables from the server app
 config({ path: resolve(__dirname, "../../../apps/server/.env") });
@@ -20,9 +22,36 @@ if (!process.env.DATABASE_URL) {
 
 const prisma = new PrismaClient();
 
+// Create Better Auth instance for seeding
+const auth = betterAuth({
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  user: {
+    additionalFields: {
+      firstName: {
+        type: "string",
+        required: false,
+      },
+      lastName: {
+        type: "string",
+        required: false,
+      },
+      companyName: {
+        type: "string",
+        required: false,
+      },
+    },
+  },
+});
+
 const ORGANIZATION_NAME = "TechCorp Solutions";
 const TOTAL_USERS = 100;
 const USERS_PER_ROLE = 25;
+const DEFAULT_PASSWORD = "Welcome@123"; // Default password for all seeded employees
 
 // Departments and designations
 const DEPARTMENTS = [
@@ -205,23 +234,27 @@ async function main() {
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${employeeCount}@techcorp.com`;
       const employeeCode = `EMP${String(employeeCount).padStart(4, "0")}`;
 
-      const user = await prisma.user.create({
-        data: {
-          id: `user_${employeeCount}`,
-          name: `${firstName} ${lastName}`,
+      // Create user with Better Auth
+      console.log(`  Creating user ${employeeCount}/${TOTAL_USERS}: ${email}`);
+      const signupResult = await auth.api.signUpEmail({
+        body: {
           email: email,
-          emailVerified: true,
+          password: DEFAULT_PASSWORD,
+          name: `${firstName} ${lastName}`,
+          // @ts-ignore - additional fields
           firstName: firstName,
           lastName: lastName,
           companyName: ORGANIZATION_NAME,
-          createdAt: joiningDateStart,
-          updatedAt: joiningDateStart,
         },
       });
 
+      if (!signupResult || !signupResult.user) {
+        throw new Error(`Failed to create user account for ${email}`);
+      }
+
       const employee = await prisma.employee.create({
         data: {
-          userId: user.id,
+          userId: signupResult.user.id,
           organizationId: organization.id,
           employeeCode: employeeCode,
           firstName: firstName,
@@ -608,6 +641,11 @@ async function main() {
     }`
   );
   console.log(`Work Sessions: ${workSessionsData.length}`);
+  console.log(`\n🔐 Login Credentials:`);
+  console.log(
+    `  All users can login with their email and password: ${DEFAULT_PASSWORD}`
+  );
+  console.log(`  Example: amit.sharma1@techcorp.com / ${DEFAULT_PASSWORD}`);
   console.log(`\n✅ Seeding completed successfully!`);
 }
 
