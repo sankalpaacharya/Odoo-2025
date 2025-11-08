@@ -4,15 +4,6 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -22,9 +13,61 @@ import {
 } from "@/components/ui/select";
 import Loader from "@/components/loader";
 import { useTodayAttendance } from "../hooks";
-import { formatTime, formatStatus, getStatusColor } from "../utils";
+import { formatTime } from "../utils";
 import { toast } from "sonner";
 import type { EmployeeAttendance } from "../types";
+import { DataTable, type Column } from "@/components/data-table";
+import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
+
+const attendanceColumns: Column<EmployeeAttendance>[] = [
+  {
+    key: "avatar",
+    // No label for avatar column
+    sortable: false,
+    render: (record) => <EmployeeAvatar name={record.employeeName} size="sm" />,
+    className: "w-12",
+  },
+  {
+    key: "employeeName",
+    label: "Name",
+    className: "font-medium",
+  },
+  {
+    key: "employeeCode",
+    label: "Employee ID",
+    className: "font-medium",
+  },
+  {
+    key: "department",
+    label: "Department",
+  },
+  {
+    key: "designation",
+    label: "Designation",
+    render: (record) => record.designation || "N/A",
+  },
+  {
+    key: "checkIn",
+    label: "Check In",
+    render: (record) => formatTime(record.checkIn),
+  },
+  {
+    key: "checkOut",
+    label: "Check Out",
+    render: (record) => formatTime(record.checkOut),
+  },
+  {
+    key: "workingHours",
+    label: "Work Hours",
+    render: (record) =>
+      record.workingHours > 0 ? `${record.workingHours.toFixed(2)}h` : "-",
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (record) => <StatusBadge status={record.status} />,
+  },
+];
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,55 +192,14 @@ export function AdminAttendanceView() {
         <div className="py-4">
           <h2 className="text-lg font-semibold">Today's Attendance</h2>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee Code</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Designation</TableHead>
-              <TableHead>Check In</TableHead>
-              <TableHead>Check Out</TableHead>
-              <TableHead>Work Hours</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAttendances.length > 0 ? (
-              filteredAttendances.map((record: EmployeeAttendance) => (
-                <TableRow key={record.employeeId}>
-                  <TableCell className="font-medium">
-                    {record.employeeCode}
-                  </TableCell>
-                  <TableCell>{record.employeeName}</TableCell>
-                  <TableCell>{record.department}</TableCell>
-                  <TableCell>{record.designation || "N/A"}</TableCell>
-                  <TableCell>{formatTime(record.checkIn)}</TableCell>
-                  <TableCell>{formatTime(record.checkOut)}</TableCell>
-                  <TableCell>
-                    {record.workingHours > 0
-                      ? `${record.workingHours.toFixed(2)}h`
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(record.status)}>
-                      {formatStatus(record.status)}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center text-muted-foreground"
-                >
-                  No employees found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          data={filteredAttendances}
+          columns={attendanceColumns}
+          keyExtractor={(record) => record.employeeId}
+          emptyMessage="No employees found"
+          isLoading={isLoading}
+          loadingMessage="Loading attendance..."
+        />
       </div>
     </>
   );
