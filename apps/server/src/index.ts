@@ -1,8 +1,8 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { auth } from "@my-better-t-app/auth";
 import { toNodeHandler } from "better-auth/node";
+import {auth} from "./auth"
 
 const app = express();
 
