@@ -10,6 +10,22 @@ export const auth = betterAuth<BetterAuthOptions>({
 	emailAndPassword: {
 		enabled: true,
 	},
+	user: {
+		additionalFields: {
+			firstName: {
+				type: "string",
+				required: false,
+			},
+			lastName: {
+				type: "string",
+				required: false,
+			},
+			companyName: {
+				type: "string",
+				required: false,
+			},
+		},
+	},
 	advanced: {
 		defaultCookieAttributes: {
 			sameSite: "none",
@@ -18,3 +34,5 @@ export const auth = betterAuth<BetterAuthOptions>({
 		},
 	},
 });
+
+export { prisma };
