@@ -76,12 +76,7 @@ router.post("/signup", async (req, res) => {
       });
     }
 
-    const employeeCode = await generateEmployeeCode(
-      firstName,
-      lastName,
-      companyName,
-      new Date()
-    );
+    const employeeCode = await generateEmployeeCode(firstName, lastName, companyName, new Date());
 
     const signupResult = await auth.api.signUpEmail({
       body: {
@@ -99,6 +94,19 @@ router.post("/signup", async (req, res) => {
       throw new Error("Failed to create account");
     }
 
+    // Create or find organization
+    let organization = await prisma.organization.findUnique({
+      where: { companyName },
+    });
+
+    if (!organization) {
+      organization = await prisma.organization.create({
+        data: {
+          companyName,
+        },
+      });
+    }
+
     const employee = await prisma.employee.create({
       data: {
         userId: signupResult.user.id,
@@ -111,6 +119,7 @@ router.post("/signup", async (req, res) => {
         basicSalary: 0,
         pfContribution: 0,
         professionalTax: 0,
+        organizationId: organization.id,
       },
     });
 
@@ -127,8 +136,7 @@ router.post("/signup", async (req, res) => {
     console.error("Signup error:", error);
     res.status(500).json({
       error: {
-        message:
-          error instanceof Error ? error.message : "Failed to create account",
+        message: error instanceof Error ? error.message : "Failed to create account",
         statusText: "Internal Server Error",
       },
     });
