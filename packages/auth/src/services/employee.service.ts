@@ -51,7 +51,6 @@ export async function createEmployee(input: CreateEmployeeInput) {
     // Convert string dates to Date objects if needed
     const dateOfJoining = typeof input.dateOfJoining === "string" ? new Date(input.dateOfJoining) : input.dateOfJoining;
     const dateOfBirth = input.dateOfBirth ? (typeof input.dateOfBirth === "string" ? new Date(input.dateOfBirth) : input.dateOfBirth) : undefined;
-
     // Generate employee code
     const employeeCode = await generateEmployeeCode(input.firstName, input.lastName, input.companyName, dateOfJoining);
 

@@ -119,27 +119,6 @@ router.post("/signup", upload.single("logo"), async (req, res) => {
       });
     }
 
-    let organization = await prisma.organization.findUnique({
-      where: { companyName },
-    });
-
-    if (!organization) {
-      const logoPath = req.file ? `/uploads/logos/${req.file.filename}` : null;
-
-      console.log("Logo upload info:", {
-        hasFile: !!req.file,
-        filename: req.file?.filename,
-        logoPath,
-      });
-
-      organization = await prisma.organization.create({
-        data: {
-          companyName,
-          logo: logoPath,
-        },
-      });
-    }
-
     const employeeCode = await generateEmployeeCode(
       firstName,
       lastName,
@@ -161,6 +140,28 @@ router.post("/signup", upload.single("logo"), async (req, res) => {
 
     if (!signupResult || !signupResult.user) {
       throw new Error("Failed to create account");
+    }
+
+    // Create or find organization
+    let organization = await prisma.organization.findUnique({
+      where: { companyName },
+    });
+
+    if (!organization) {
+      const logoPath = req.file ? `/uploads/logos/${req.file.filename}` : null;
+
+      console.log("Logo upload info:", {
+        hasFile: !!req.file,
+        filename: req.file?.filename,
+        logoPath,
+      });
+
+      organization = await prisma.organization.create({
+        data: {
+          companyName,
+          logo: logoPath,
+        },
+      });
     }
 
     const employee = await prisma.employee.create({

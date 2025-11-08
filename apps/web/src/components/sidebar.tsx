@@ -1,6 +1,35 @@
 "use client";
 
-import { SidebarStatus } from "@/components/sidebar-status";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Users,
+  Calendar,
+  Clock,
+  Wallet,
+  FileText,
+  Settings,
+  LayoutDashboard,
+  LogOut,
+  User,
+  ChevronsUpDown,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
+import type { Route } from "next";
+import {
+  Sidebar as SidebarUI,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,12 +71,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "../../../../packages/db/prisma/generated/enums";
 import { useEffect, useState } from "react";
+import { SidebarStatus } from "@/components/sidebar-status";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useTheme } from "next-themes";
 
 type NavigationItem = {
   name: string;
   href: Route;
   icon: React.ComponentType<{ className?: string }>;
-  allowedRoles?: Role[];
+  module: string;
+  permission: string;
 };
 
 const navigationItems: NavigationItem[] = [
@@ -55,38 +88,50 @@ const navigationItems: NavigationItem[] = [
     name: "Dashboard",
     href: "/dashboard" as Route,
     icon: LayoutDashboard,
+    module: "Dashboard",
+    permission: "View",
   },
   {
     name: "Employees",
     href: "/dashboard/employees" as Route,
     icon: Users,
-    allowedRoles: ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"],
+    module: "Employees",
+    permission: "View",
   },
   {
     name: "Attendance",
     href: "/dashboard/attendance" as Route,
     icon: Calendar,
+    module: "Attendance",
+    permission: "View",
   },
   {
     name: "Time Off",
     href: "/dashboard/time-off" as Route,
     icon: Clock,
+    module: "Time Off",
+    permission: "View",
   },
   {
     name: "Payroll",
     href: "/dashboard/payroll" as Route,
     icon: Wallet,
-    allowedRoles: ["ADMIN", "PAYROLL_OFFICER"],
+    module: "Payroll",
+    permission: "View",
   },
   {
     name: "Reports",
     href: "/dashboard/reports" as Route,
     icon: FileText,
+    module: "Reports",
+    permission: "View",
   },
   {
     name: "Settings",
     href: "/dashboard/settings" as Route,
     icon: Settings,
+    module: "Settings",
+    permission: "View",
   },
 ];
 
@@ -121,6 +166,8 @@ export function Sidebar() {
       fetchOrganization();
     }
   }, [session]);
+
+  const { hasPermission, loading } = usePermissions();
 
   const userInitials = user?.name
     ? user.name
@@ -177,25 +224,31 @@ export function Sidebar() {
 
       <SidebarContent className="p-4">
         <SidebarMenu>
-          {navigationItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+          {loading ? (
+            <div className="text-sm text-muted-foreground p-4">Loading...</div>
+          ) : (
+            navigationItems
+              .filter((item) => hasPermission(item.module, item.permission))
+              .map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
 
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive}
-                  tooltip={item.name}
-                >
-                  <Link href={item.href}>
-                    <Icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.name}
+                    >
+                      <Link href={item.href}>
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })
+          )}
         </SidebarMenu>
       </SidebarContent>
 
@@ -237,7 +290,7 @@ export function Sidebar() {
                 sideOffset={4}
               >
                 <DropdownMenuItem
-                  onClick={() => router.push("/dashboard/profile")}
+                  onClick={() => router.push("/dashboard/profile" as Route)}
                 >
                   <User className="h-4 w-4 mr-2" />
                   My Profile

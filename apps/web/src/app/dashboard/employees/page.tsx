@@ -22,8 +22,7 @@ interface Employee {
 
 async function fetchEmployees(): Promise<Employee[]> {
   try {
-    const API_URL =
-      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     const response = await fetch(`${API_URL}/api/employees`, {
       method: "GET",
       credentials: "include",
@@ -99,28 +98,34 @@ export default function EmployeesPage() {
       emp.designation?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // TODO: Get user role from employee API to check permissions
-  const showAll = false;
+  const handleEmployeeAdded = () => {
+    setIsLoading(true);
+    fetchEmployees().then((data) => {
+      setEmployees(data);
+      setIsLoading(false);
+    });
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
           <p className="text-muted-foreground">Manage your team members</p>
         </div>
-        {showAll && <AddEmployeeModal />}
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search employees..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search employees..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+        </div>
       </div>
 
       <DataTable

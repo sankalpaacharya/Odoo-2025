@@ -12,6 +12,7 @@ import leaveRoutes from "./routes/leave";
 import permissionsRoutes from "./routes/permissions";
 import usersRoutes from "./routes/users";
 import organizationRoutes from "./routes/organization";
+import profileRoutes from "./routes/profile";
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use("/api/leaves", leaveRoutes);
 app.use("/api/permissions", permissionsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/organization", organizationRoutes);
+app.use("/api/profile", profileRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
