@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DataTable, type Column } from "@/components/data-table";
 import Loader from "@/components/loader";
@@ -101,7 +101,14 @@ const attendanceColumns: Column<EmployeeAttendance>[] = [
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { data: response, isLoading, error } = useTodayAttendance();
+  const [status, setStatus] = useState("all");
+  const [department, setDepartment] = useState("all");
+
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useTodayAttendance(status, department);
 
   if (error) {
     toast.error("Failed to load today's attendance");
@@ -218,7 +225,12 @@ export function AdminAttendanceView() {
             className="pl-10"
           />
         </div>
-        <Select defaultValue="all">
+        <Select
+          defaultValue="all"
+          onValueChange={(value) => {
+            setStatus(value);
+          }}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -230,7 +242,14 @@ export function AdminAttendanceView() {
             <SelectItem value="on-leave">On Leave</SelectItem>
           </SelectContent>
         </Select>
-        <Select defaultValue="all">
+        <Select
+          defaultValue="all"
+          value={department}
+          onValueChange={(value) => {
+            console.log(value);
+            setDepartment(value);
+          }}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by department" />
           </SelectTrigger>

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { MyAttendanceResponse, EmployeeAttendance } from "./types";
+import { useQuery } from "@tanstack/react-query";
+import type { EmployeeAttendance, MyAttendanceResponse } from "./types";
 
 export function useMyAttendance(month: number, year: number) {
   return useQuery({
@@ -14,11 +14,14 @@ export function useMyAttendance(month: number, year: number) {
   });
 }
 
-export function useTodayAttendance() {
+export function useTodayAttendance(status: string, department: string) {
   return useQuery({
-    queryKey: ["attendance", "today"],
-    queryFn: () => apiClient<EmployeeAttendance[]>("/api/attendance/today"),
+    queryKey: ["attendance", "today", department],
+    queryFn: () =>
+      apiClient<EmployeeAttendance[]>(
+        `/api/attendance/today?status=${status}&department=${department}`
+      ),
     retry: 1,
-    staleTime: 1 * 60 * 1000,
+    staleTime: 1,
   });
 }

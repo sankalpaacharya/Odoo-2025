@@ -19,11 +19,12 @@ export const employeeService = {
     });
   },
 
-  async findActiveEmployees(organizationId?: string) {
+  async findActiveEmployees(organizationId?: string, department?: string) {
     return db.employee.findMany({
       where: {
         employmentStatus: "ACTIVE",
         ...(organizationId && { organizationId }),
+        ...(department && { department }),
       },
       select: {
         id: true,
@@ -43,7 +44,10 @@ export const employeeService = {
       select: { role: true },
     });
 
-    return employee && ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"].includes(employee.role);
+    return (
+      employee &&
+      ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"].includes(employee.role)
+    );
   },
 
   async hasRole(userId: string, roles: string[]) {

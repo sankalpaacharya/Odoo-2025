@@ -193,6 +193,8 @@ router.get("/my-attendance", async (req, res) => {
 
 router.get("/today", async (req, res) => {
   try {
+    const department = req.query.department as string;
+
     const userId = (req as any).user.id;
     const employee = await employeeService.findByUserId(userId);
 
@@ -204,7 +206,8 @@ router.get("/today", async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     const allActiveEmployees = await employeeService.findActiveEmployees(
-      employee.organizationId || undefined
+      employee.organizationId || undefined,
+      department === "all" ? undefined : department
     );
 
     const [activeSessions, todaySessions] = await Promise.all([
