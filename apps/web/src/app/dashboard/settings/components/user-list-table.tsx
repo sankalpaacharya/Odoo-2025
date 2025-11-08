@@ -22,8 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Eye, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ROLES } from "../constants";
 
 const MOCK_USERS = [
@@ -58,6 +59,8 @@ const MOCK_USERS = [
 ];
 
 export function UserListTable() {
+  const router = useRouter();
+
   return (
     <Card>
       <CardHeader>
@@ -79,20 +82,15 @@ export function UserListTable() {
                   <TableHead>Login id</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {MOCK_USERS.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>
-                      <Input defaultValue={user.username} className="h-9" />
-                    </TableCell>
-                    <TableCell>
-                      <Input defaultValue={user.loginId} className="h-9" />
-                    </TableCell>
-                    <TableCell>
-                      <Input defaultValue={user.email} className="h-9" />
-                    </TableCell>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.loginId}</TableCell>
+                    <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Select defaultValue={user.role}>
                         <SelectTrigger className="h-9">
@@ -106,6 +104,26 @@ export function UserListTable() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => router.push(`/dashboard/settings/users/${user.id}` as any)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => router.push(`/dashboard/settings/users/${user.id}/edit` as any)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
