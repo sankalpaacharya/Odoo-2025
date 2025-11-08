@@ -149,4 +149,49 @@ router.get("/payslips/my", async (req, res) => {
   }
 });
 
+router.get("/warnings", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee || !(await employeeService.isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const warnings = await payrollService.getPayrollWarnings(
+      employee.organizationId || undefined
+    );
+
+    res.json(warnings);
+  } catch (error) {
+    console.error("Error fetching payroll warnings:", error);
+    res.status(500).json({ error: "Failed to fetch payroll warnings" });
+  }
+});
+
+router.get("/payruns/recent", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee || !(await employeeService.isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const limit = req.query.limit
+      ? parseInt(req.query.limit as string)
+      : undefined;
+
+    const payruns = await payrollService.getRecentPayruns(
+      employee.organizationId || undefined,
+      limit
+    );
+
+    res.json(payruns);
+  } catch (error) {
+    console.error("Error fetching recent payruns:", error);
+    res.status(500).json({ error: "Failed to fetch recent payruns" });
+  }
+});
+
 export default router;
