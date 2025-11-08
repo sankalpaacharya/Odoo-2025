@@ -12,15 +12,11 @@ export default function AttendancePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const goToPreviousMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
-    );
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
   };
 
   const goToNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
-    );
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
   if (isLoading) {
@@ -28,29 +24,19 @@ export default function AttendancePage() {
   }
 
   return (
-    <AuthGuard>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-            <p className="text-muted-foreground">
-              {isAdmin
-                ? "Monitor employee attendance"
-                : "Track your attendance records"}
-            </p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
+          <p className="text-muted-foreground">{isAdmin ? "Monitor employee attendance" : "Track your attendance records"}</p>
         </div>
-
-        {isAdmin ? (
-          <AdminAttendanceView />
-        ) : (
-          <EmployeeAttendanceView
-            currentMonth={currentMonth}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
-          />
-        )}
       </div>
-    </AuthGuard>
+
+      {isAdmin ? (
+        <AdminAttendanceView />
+      ) : (
+        <EmployeeAttendanceView currentMonth={currentMonth} onPreviousMonth={goToPreviousMonth} onNextMonth={goToNextMonth} />
+      )}
+    </div>
   );
 }
