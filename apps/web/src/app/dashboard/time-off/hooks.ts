@@ -9,6 +9,22 @@ import type {
   LeavesResponse,
 } from "./types";
 
+export interface ActiveEmployee {
+  id: string;
+  employeeCode: string;
+  name: string;
+  department: string;
+  designation: string;
+}
+
+export function useActiveEmployees() {
+  return useQuery({
+    queryKey: ["employees", "active-list"],
+    queryFn: () => apiClient<ActiveEmployee[]>("/api/employees/active-list"),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useMyLeaves(params?: {
   status?: string;
   leaveType?: string;

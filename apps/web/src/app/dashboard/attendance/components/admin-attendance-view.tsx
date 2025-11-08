@@ -83,11 +83,6 @@ const attendanceColumns: (
     className: "font-medium",
   },
   {
-    key: "designation",
-    label: "Designation",
-    render: (record) => record.designation || "N/A",
-  },
-  {
     key: "checkIn",
     label: "Check In",
     render: (record) => (

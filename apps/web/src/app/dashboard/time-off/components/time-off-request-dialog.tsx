@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
   addDays,
-  startOfWeek,
-  endOfWeek,
   nextMonday,
   isWeekend,
   format,
   addBusinessDays,
 } from "date-fns";
-import { Calendar, X } from "lucide-react";
+import { Calendar, X, ChevronsUpDown, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { formatLeaveType } from "../utils";
-import { useCreateLeaveRequest } from "../hooks";
+import { useCreateLeaveRequest, useActiveEmployees } from "../hooks";
 import { useEmployee } from "@/lib/employee-context";
 import { toast } from "sonner";
 import type { LeaveType } from "../types";
@@ -43,7 +47,7 @@ interface TimeOffRequestDialogProps {
 }
 
 interface TimeOffFormData {
-  employeeId?: string;
+  employeeId: string;
   timeOffType: string;
   startDate: string;
   endDate: string;
@@ -61,7 +65,7 @@ const timeOffTypes: LeaveType[] = [
 ];
 
 const timeOffSchema = yup.object({
-  employeeId: yup.string().optional(),
+  employeeId: yup.string().required("Employee is required"),
   timeOffType: yup.string().required("Time off type is required"),
   startDate: yup.string().required("Start date is required"),
   endDate: yup
@@ -86,8 +90,13 @@ export function TimeOffRequestDialog({
   open,
   onOpenChange,
 }: TimeOffRequestDialogProps) {
-  const { isAdmin } = useEmployee();
+  const { isAdmin, employee } = useEmployee();
   const createTimeOff = useCreateLeaveRequest();
+  const { data: employees, isLoading: isLoadingEmployees } =
+    useActiveEmployees();
+
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
 
   const {
     control,
@@ -107,11 +116,37 @@ export function TimeOffRequestDialog({
     },
   });
 
+  const selectedEmployeeId = watch("employeeId");
+
+  useEffect(() => {
+    if (open && employee?.id) {
+      setValue("employeeId", employee.id);
+    }
+  }, [open, employee, setValue]);
+
   useEffect(() => {
     if (!open) {
       reset();
+      setEmployeeSearchQuery("");
     }
   }, [open, reset]);
+
+  const filteredEmployees = useMemo(() => {
+    if (!employees) return [];
+    if (!employeeSearchQuery) return employees;
+
+    const query = employeeSearchQuery.toLowerCase();
+    return employees.filter(
+      (emp) =>
+        emp.name.toLowerCase().includes(query) ||
+        emp.employeeCode.toLowerCase().includes(query) ||
+        emp.department.toLowerCase().includes(query)
+    );
+  }, [employees, employeeSearchQuery]);
+
+  const selectedEmployee = useMemo(() => {
+    return employees?.find((emp) => emp.id === selectedEmployeeId);
+  }, [employees, selectedEmployeeId]);
 
   const getNextBusinessDay = (date: Date): Date => {
     let nextDay = new Date(date);
@@ -155,11 +190,6 @@ export function TimeOffRequestDialog({
   };
 
   const onSubmit = async (data: TimeOffFormData) => {
-    if (isAdmin && !data.employeeId) {
-      toast.error("Please select an employee");
-      return;
-    }
-
     try {
       const response = await createTimeOff.mutateAsync({
         employeeId: isAdmin ? data.employeeId : undefined,
@@ -188,9 +218,11 @@ export function TimeOffRequestDialog({
     }
   };
 
+  const getTodayDate = () => format(new Date(), "yyyy-MM-dd");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Time Off Request</DialogTitle>
@@ -206,25 +238,118 @@ export function TimeOffRequestDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
-          {isAdmin && (
-            <Controller
-              name="employeeId"
-              control={control}
-              render={({ field }) => (
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee ID</Label>
+          <Controller
+            name="employeeId"
+            control={control}
+            render={({ field }) => (
+              <div className="space-y-2">
+                <Label htmlFor="employee">
+                  Employee *{" "}
+                  {!isAdmin && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (You)
+                    </span>
+                  )}
+                </Label>
+                {isAdmin ? (
+                  <Popover
+                    open={employeeSearchOpen}
+                    onOpenChange={setEmployeeSearchOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={employeeSearchOpen}
+                        className="w-full justify-between"
+                        disabled={isLoadingEmployees}
+                      >
+                        {selectedEmployee ? (
+                          <span className="truncate">
+                            {selectedEmployee.name} (
+                            {selectedEmployee.employeeCode})
+                          </span>
+                        ) : (
+                          "Select employee..."
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <div className="flex flex-col gap-2 p-2">
+                        <Input
+                          placeholder="Search employee..."
+                          value={employeeSearchQuery}
+                          onChange={(e) =>
+                            setEmployeeSearchQuery(e.target.value)
+                          }
+                          className="h-9"
+                        />
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {filteredEmployees.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              No employee found.
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              {filteredEmployees.map((emp) => (
+                                <button
+                                  key={emp.id}
+                                  onClick={() => {
+                                    field.onChange(emp.id);
+                                    setEmployeeSearchOpen(false);
+                                    setEmployeeSearchQuery("");
+                                  }}
+                                  className={cn(
+                                    "flex flex-col items-start gap-1 rounded-sm px-2 py-2 text-sm hover:bg-accent",
+                                    selectedEmployeeId === emp.id && "bg-accent"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    <Check
+                                      className={cn(
+                                        "h-4 w-4",
+                                        selectedEmployeeId === emp.id
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-medium">
+                                      {emp.name}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground pl-6">
+                                    {emp.employeeCode} • {emp.department} •{" "}
+                                    {emp.designation}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
                   <Input
                     id="employee"
-                    {...field}
-                    placeholder="Enter employee ID"
+                    value={
+                      selectedEmployee
+                        ? `${selectedEmployee.name} (${selectedEmployee.employeeCode})`
+                        : ""
+                    }
+                    disabled
+                    className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Leave blank to create for yourself
+                )}
+                {errors.employeeId && (
+                  <p className="text-xs text-red-500">
+                    {errors.employeeId.message}
                   </p>
-                </div>
-              )}
-            />
-          )}
+                )}
+              </div>
+            )}
+          />
 
           <Controller
             name="timeOffType"
@@ -303,8 +428,13 @@ export function TimeOffRequestDialog({
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Start Date *</Label>
                   <div className="relative">
-                    <Input id="start-date" type="date" {...field} />
-                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="start-date"
+                      type="date"
+                      {...field}
+                      min={getTodayDate()}
+                      className="pr-10"
+                    />
                   </div>
                   {errors.startDate && (
                     <p className="text-xs text-red-500">
@@ -321,8 +451,13 @@ export function TimeOffRequestDialog({
                 <div className="space-y-2">
                   <Label htmlFor="end-date">End Date *</Label>
                   <div className="relative">
-                    <Input id="end-date" type="date" {...field} />
-                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="end-date"
+                      type="date"
+                      {...field}
+                      min={watch("startDate") || getTodayDate()}
+                      className="pr-10"
+                    />
                   </div>
                   {errors.endDate && (
                     <p className="text-xs text-red-500">
