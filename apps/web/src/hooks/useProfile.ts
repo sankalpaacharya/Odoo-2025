@@ -1,12 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { ProfileData, UpdateProfilePayload, UpdateSalaryPayload, SalaryComponent } from "@/types/profile";
+import type {
+  ProfileData,
+  UpdateProfilePayload,
+  UpdateSalaryPayload,
+  SalaryComponent,
+} from "@/types/profile";
 
 // Fetch complete profile data
-export function useProfile() {
+export function useProfile(employeeId?: string) {
+  const url = employeeId
+    ? `/api/profile?employeeId=${employeeId}`
+    : "/api/profile";
+
   return useQuery({
-    queryKey: ["profile"],
-    queryFn: () => apiClient<ProfileData>("/api/profile"),
+    queryKey: ["profile", employeeId],
+    queryFn: () => apiClient<ProfileData>(url),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -34,8 +43,16 @@ export function useUpdateSalary() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ employeeId, data }: { employeeId?: string; data: UpdateSalaryPayload }) => {
-      const url = employeeId ? `/api/profile/salary?employeeId=${employeeId}` : "/api/profile/salary";
+    mutationFn: ({
+      employeeId,
+      data,
+    }: {
+      employeeId?: string;
+      data: UpdateSalaryPayload;
+    }) => {
+      const url = employeeId
+        ? `/api/profile/salary?employeeId=${employeeId}`
+        : "/api/profile/salary";
 
       return apiClient<{ success: boolean; data: any }>(url, {
         method: "PUT",
@@ -52,7 +69,8 @@ export function useUpdateSalary() {
 export function useSalaryComponents() {
   return useQuery({
     queryKey: ["salary-components"],
-    queryFn: () => apiClient<SalaryComponent[]>("/api/profile/salary-components"),
+    queryFn: () =>
+      apiClient<SalaryComponent[]>("/api/profile/salary-components"),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -71,10 +89,65 @@ export function useAddSalaryComponent() {
       isRecurring?: boolean;
       description?: string;
     }) =>
-      apiClient<{ success: boolean; data: SalaryComponent }>("/api/profile/salary-components", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiClient<{ success: boolean; data: SalaryComponent }>(
+        "/api/profile/salary-components",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["salary-components"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+// Update salary component (Admin/Payroll only)
+export function useUpdateSalaryComponent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      componentId,
+      data,
+    }: {
+      componentId: string;
+      data: {
+        name?: string;
+        type?: "EARNING" | "DEDUCTION" | "BENEFIT";
+        amount?: string | number;
+        isPercentage?: boolean;
+        isRecurring?: boolean;
+        description?: string;
+      };
+    }) =>
+      apiClient<{ success: boolean; data: SalaryComponent }>(
+        `/api/profile/salary-components/${componentId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["salary-components"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+// Delete salary component (Admin/Payroll only)
+export function useDeleteSalaryComponent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (componentId: string) =>
+      apiClient<{ success: boolean }>(
+        `/api/profile/salary-components/${componentId}`,
+        {
+          method: "DELETE",
+        }
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["salary-components"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
