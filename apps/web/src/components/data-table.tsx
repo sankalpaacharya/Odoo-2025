@@ -53,8 +53,11 @@ export function DataTable<T extends Record<string, any>>({
     }
   };
 
+  // Ensure data is always an array
+  const dataArray = Array.isArray(data) ? data : [];
+
   const sortedData = sortField
-    ? [...data].sort((a, b) => {
+    ? [...dataArray].sort((a, b) => {
         const aValue = a[sortField] ?? "";
         const bValue = b[sortField] ?? "";
 
@@ -68,7 +71,7 @@ export function DataTable<T extends Record<string, any>>({
         if (aComp > bComp) return sortDirection === "asc" ? 1 : -1;
         return 0;
       })
-    : data;
+    : dataArray;
 
   return (
     <div className="rounded-lg border overflow-hidden">
