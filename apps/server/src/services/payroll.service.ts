@@ -67,15 +67,35 @@ export const payrollService = {
     payrunId: string,
     month: number,
     year: number,
-    organizationId?: string
+    organizationId?: string,
+    forceRegenerate: boolean = false
   ) {
     const employees = await db.employee.findMany({
       where: {
         employmentStatus: "ACTIVE",
         ...(organizationId && { organizationId }),
       },
-      include: {
-        salaryComponents: true,
+      select: {
+        id: true,
+        basicSalary: true,
+        pfContribution: true,
+        professionalTax: true,
+        hraPercentage: true,
+        standardAllowanceAmount: true,
+        performanceBonusPercentage: true,
+        leaveTravelPercentage: true,
+        pfPercentage: true,
+        salaryComponents: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            amount: true,
+            isPercentage: true,
+            isActive: true,
+          },
+        },
       },
     });
 
@@ -94,8 +114,15 @@ export const payrollService = {
           },
         });
 
-        if (existingPayslip) {
+        if (existingPayslip && !forceRegenerate) {
           return existingPayslip;
+        }
+
+        // If forcing regenerate and payslip exists, delete it first
+        if (existingPayslip && forceRegenerate) {
+          await db.payslip.delete({
+            where: { id: existingPayslip.id },
+          });
         }
 
         const workSessions = await sessionService.findSessionsByDateRange(
@@ -142,27 +169,83 @@ export const payrollService = {
         const workingDays = datesInMonth.length;
         const absentDays = workingDays - presentDays;
 
-        const basicSalary = employee.basicSalary
+        // Monthly wage is stored in basicSalary
+        const monthlyWage = employee.basicSalary
           ? parseFloat(employee.basicSalary.toString())
           : 0;
 
-        const allowances = employee.salaryComponents
+        // Calculate actual basic salary (50% of monthly wage)
+        const basicSalary = monthlyWage * 0.5;
+
+        // Calculate all salary components based on stored percentages
+        const hraPercentage = parseFloat(employee.hraPercentage.toString());
+        const houseRentAllowance = (basicSalary * hraPercentage) / 100;
+
+        const standardAllowance = parseFloat(
+          employee.standardAllowanceAmount.toString()
+        );
+
+        const performanceBonusPercentage = parseFloat(
+          employee.performanceBonusPercentage.toString()
+        );
+        const performanceBonus =
+          (basicSalary * performanceBonusPercentage) / 100;
+
+        const leaveTravelPercentage = parseFloat(
+          employee.leaveTravelPercentage.toString()
+        );
+        const leaveTravelAllowance =
+          (basicSalary * leaveTravelPercentage) / 100;
+
+        const totalPredefinedComponents =
+          basicSalary +
+          houseRentAllowance +
+          standardAllowance +
+          performanceBonus +
+          leaveTravelAllowance;
+
+        const fixedAllowance = Math.max(
+          0,
+          monthlyWage - totalPredefinedComponents
+        );
+
+        // Add custom salary components (if any)
+        const customAllowances = employee.salaryComponents
           .filter((c) => c.type === "EARNING" && c.isActive)
           .reduce((sum, c) => sum + parseFloat(c.amount.toString()), 0);
 
-        const grossSalary = basicSalary + allowances;
+        const grossSalary = monthlyWage + customAllowances;
 
-        const deductions = employee.salaryComponents
+        // Calculate deductions
+        const customDeductions = employee.salaryComponents
           .filter((c) => c.type === "DEDUCTION" && c.isActive)
           .reduce((sum, c) => sum + parseFloat(c.amount.toString()), 0);
 
-        const pfDeduction = basicSalary * 0.12;
-        const professionalTax = grossSalary > 20000 ? 200 : 0;
+        const pfPercentage = parseFloat(employee.pfPercentage.toString());
+        const pfDeduction = (basicSalary * pfPercentage) / 100;
 
-        const totalDeductions = deductions + pfDeduction + professionalTax;
+        const professionalTax = parseFloat(employee.professionalTax.toString());
+
+        const totalDeductions =
+          customDeductions + pfDeduction + professionalTax;
         const netSalary = grossSalary - totalDeductions;
 
         const totalEarnings = grossSalary;
+
+        console.log(`[Payroll] Employee ${employee.id}:`, {
+          monthlyWage,
+          basicSalary,
+          houseRentAllowance,
+          standardAllowance,
+          performanceBonus,
+          leaveTravelAllowance,
+          fixedAllowance,
+          grossSalary,
+          pfDeduction,
+          professionalTax,
+          totalDeductions,
+          netSalary,
+        });
 
         return db.payslip.create({
           data: {
@@ -182,7 +265,7 @@ export const payrollService = {
             netSalary,
             pfDeduction,
             professionalTax,
-            otherDeductions: deductions,
+            otherDeductions: customDeductions,
             status: "PENDING",
           },
         });

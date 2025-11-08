@@ -3,111 +3,118 @@
 // ================================
 
 model Organization {
-    id          String  @id @default(cuid()) @map("_id")
-    companyName String  @unique
-    logo        String?
+  id          String  @id @default(cuid()) @map("_id")
+  companyName String  @unique
+  logo        String?
 
-    employees Employee[]
+  employees Employee[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([companyName])
-    @@map("organization")
+  @@index([companyName])
+  @@map("organization")
 }
 
 enum Role {
-    ADMIN
-    EMPLOYEE
-    HR_OFFICER
-    PAYROLL_OFFICER
+  ADMIN
+  EMPLOYEE
+  HR_OFFICER
+  PAYROLL_OFFICER
 }
 
 enum EmploymentStatus {
-    ACTIVE
-    INACTIVE
-    SUSPENDED
-    TERMINATED
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
 }
 
 enum Gender {
-    MALE
-    FEMALE
-    OTHER
-    PREFER_NOT_TO_SAY
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
 }
 
 model Employee {
-    id     String @id @default(cuid()) @map("_id")
-    userId String @unique
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid()) @map("_id")
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    organizationId String?
-    organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-    // Personal Information
-    employeeCode   String    @unique
-    firstName      String
-    middleName     String?
-    lastName       String
-    dateOfBirth    DateTime?
-    gender         Gender?
-    phone          String?
-    alternatePhone String?
-    address        String?
-    city           String?
-    state          String?
-    country        String?
-    postalCode     String?
-    profileImage   String?
-    
-    // Resume Information
-    about          String?   @db.Text
-    jobLove        String?   @db.Text
-    interests      String?   @db.Text
-    skills         Json?     // Array of skill objects {name: string, level?: string}
-    certifications Json?     // Array of certification objects {name: string, issuer?: string, date?: string}
-    
-    // Bank Details
-    accountNumber  String?
-    bankName       String?
-    ifscCode       String?
-    panNumber      String?
-    uanNumber      String?
+  // Personal Information
+  employeeCode   String    @unique
+  firstName      String
+  middleName     String?
+  lastName       String
+  dateOfBirth    DateTime?
+  gender         Gender?
+  phone          String?
+  alternatePhone String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  profileImage   String?
 
-    // Employment Details
-    role               Role             @default(EMPLOYEE)
-    department         String?
-    designation        String?
-    dateOfJoining      DateTime
-    dateOfLeaving      DateTime?
-    employmentStatus   EmploymentStatus @default(ACTIVE)
-    reportingManagerId String?
-    reportingManager   Employee?        @relation("EmployeeReportsTo", fields: [reportingManagerId], references: [id])
-    subordinates       Employee[]       @relation("EmployeeReportsTo")
+  // Resume Information
+  about          String? @db.Text
+  jobLove        String? @db.Text
+  interests      String? @db.Text
+  skills         Json? // Array of skill objects {name: string, level?: string}
+  certifications Json? // Array of certification objects {name: string, issuer?: string, date?: string}
 
-    // Salary Information
-    basicSalary     Decimal @db.Decimal(12, 2)
-    pfContribution  Decimal @default(0) @db.Decimal(12, 2)
-    professionalTax Decimal @default(0) @db.Decimal(12, 2)
+  // Bank Details
+  accountNumber String?
+  bankName      String?
+  ifscCode      String?
+  panNumber     String?
+  uanNumber     String?
 
-    // Relationships
-    workSessions      WorkSession[]
-    leaves            Leave[]
-    leaveBalances     LeaveBalance[]
-    payslips          Payslip[]
-    salaryComponents  SalaryComponent[]
-    auditLogsCreated  AuditLog[]        @relation("AuditLogCreator")
-    auditLogsAffected AuditLog[]        @relation("AuditLogAffected")
+  // Employment Details
+  role               Role             @default(EMPLOYEE)
+  department         String?
+  designation        String?
+  dateOfJoining      DateTime
+  dateOfLeaving      DateTime?
+  employmentStatus   EmploymentStatus @default(ACTIVE)
+  reportingManagerId String?
+  reportingManager   Employee?        @relation("EmployeeReportsTo", fields: [reportingManagerId], references: [id])
+  subordinates       Employee[]       @relation("EmployeeReportsTo")
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  // Salary Information
+  basicSalary     Decimal @db.Decimal(12, 2)
+  pfContribution  Decimal @default(0) @db.Decimal(12, 2)
+  professionalTax Decimal @default(0) @db.Decimal(12, 2)
 
-    @@index([employeeCode])
-    @@index([userId])
-    @@index([role])
-    @@index([employmentStatus])
-    @@map("employee")
+  // Salary Component Percentages and Overrides
+  hraPercentage              Decimal @default(50) @db.Decimal(5, 2)
+  standardAllowanceAmount    Decimal @default(4167) @db.Decimal(12, 2)
+  performanceBonusPercentage Decimal @default(8.33) @db.Decimal(5, 2)
+  leaveTravelPercentage      Decimal @default(8.333) @db.Decimal(5, 2)
+  pfPercentage               Decimal @default(12) @db.Decimal(5, 2)
+
+  // Relationships
+  workSessions      WorkSession[]
+  leaves            Leave[]
+  leaveBalances     LeaveBalance[]
+  payslips          Payslip[]
+  salaryComponents  SalaryComponent[]
+  auditLogsCreated  AuditLog[]        @relation("AuditLogCreator")
+  auditLogsAffected AuditLog[]        @relation("AuditLogAffected")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeCode])
+  @@index([userId])
+  @@index([role])
+  @@index([employmentStatus])
+  @@map("employee")
 }
 
 // ================================
@@ -115,31 +122,31 @@ model Employee {
 // ================================
 
 model WorkSession {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid()) @map("_id")
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    date      DateTime  
+    date      DateTime
     startTime DateTime
     endTime   DateTime?
     isActive  Boolean   @default(true)
 
-    breakStartTime DateTime?
-    breakEndTime   DateTime?
-    totalBreakTime Decimal?  @default(0) @db.Decimal(5, 2)
+  breakStartTime DateTime?
+  breakEndTime   DateTime?
+  totalBreakTime Decimal?  @default(0) @db.Decimal(5, 2)
 
-    workingHours  Decimal? @db.Decimal(5, 2)
-    overtimeHours Decimal? @default(0) @db.Decimal(5, 2)
+  workingHours  Decimal? @db.Decimal(5, 2)
+  overtimeHours Decimal? @default(0) @db.Decimal(5, 2)
 
-    notes String?
+  notes String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([employeeId])
-    @@index([date])
-    @@index([isActive])
-    @@map("work_session")
+  @@index([employeeId])
+  @@index([date])
+  @@index([isActive])
+  @@map("work_session")
 }
 
 // ================================
@@ -147,63 +154,63 @@ model WorkSession {
 // ================================
 
 enum LeaveType {
-    PAID_TIME_OFF
-    SICK_LEAVE
-    UNPAID_LEAVE
+  PAID_TIME_OFF
+  SICK_LEAVE
+  UNPAID_LEAVE
 }
 
 enum LeaveStatus {
-    PENDING
-    APPROVED
-    REJECTED
-    CANCELLED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 model Leave {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid()) @map("_id")
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    leaveType  LeaveType
-    startDate  DateTime    
-    endDate    DateTime    
-    totalDays  Decimal     @db.Decimal(5, 2)
-    reason     String
-    attachment String?
-    status     LeaveStatus @default(PENDING)
+  leaveType  LeaveType
+  startDate  DateTime
+  endDate    DateTime
+  totalDays  Decimal     @db.Decimal(5, 2)
+  reason     String
+  attachment String?
+  status     LeaveStatus @default(PENDING)
 
-    approvedBy      String?
-    approvedAt      DateTime?
-    rejectionReason String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([employeeId])
-    @@index([status])
-    @@index([leaveType])
-    @@index([startDate])
-    @@map("leave")
+  @@index([employeeId])
+  @@index([status])
+  @@index([leaveType])
+  @@index([startDate])
+  @@map("leave")
 }
 
 model LeaveBalance {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid()) @map("_id")
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    leaveType LeaveType
-    year      Int
-    allocated Decimal   @db.Decimal(5, 2)
-    used      Decimal   @default(0) @db.Decimal(5, 2)
-    remaining Decimal   @db.Decimal(5, 2)
+  leaveType LeaveType
+  year      Int
+  allocated Decimal   @db.Decimal(5, 2)
+  used      Decimal   @default(0) @db.Decimal(5, 2)
+  remaining Decimal   @db.Decimal(5, 2)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([employeeId, leaveType, year])
-    @@index([employeeId])
-    @@index([year])
-    @@map("leave_balance")
+  @@unique([employeeId, leaveType, year])
+  @@index([employeeId])
+  @@index([year])
+  @@map("leave_balance")
 }
 
 // ================================
@@ -211,114 +218,114 @@ model LeaveBalance {
 // ================================
 
 enum PayrunStatus {
-    DRAFT
-    PROCESSING
-    COMPLETED
-    CANCELLED
+  DRAFT
+  PROCESSING
+  COMPLETED
+  CANCELLED
 }
 
 enum PayslipStatus {
-    PENDING
-    PROCESSED
-    PAID
-    CANCELLED
+  PENDING
+  PROCESSED
+  PAID
+  CANCELLED
 }
 
 model Payrun {
-    id String @id @default(cuid()) @map("_id")
+  id String @id @default(cuid()) @map("_id")
 
-    month       Int
-    year        Int
-    periodStart DateTime @db.Date
-    periodEnd   DateTime @db.Date
+  month       Int
+  year        Int
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
 
-    status      PayrunStatus @default(DRAFT)
-    totalAmount Decimal      @default(0) @db.Decimal(14, 2)
+  status      PayrunStatus @default(DRAFT)
+  totalAmount Decimal      @default(0) @db.Decimal(14, 2)
 
-    processedBy String?
-    processedAt DateTime?
+  processedBy String?
+  processedAt DateTime?
 
-    payslips Payslip[]
+  payslips Payslip[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([month, year])
-    @@index([status])
-    @@map("payrun")
+  @@unique([month, year])
+  @@index([status])
+  @@map("payrun")
 }
 
 model Payslip {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid()) @map("_id")
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    payrunId String
-    payrun   Payrun @relation(fields: [payrunId], references: [id], onDelete: Cascade)
+  payrunId String
+  payrun   Payrun @relation(fields: [payrunId], references: [id], onDelete: Cascade)
 
-    month Int
-    year  Int
+  month Int
+  year  Int
 
-    // Attendance Data
-    workingDays   Int
-    presentDays   Decimal @db.Decimal(5, 2)
-    absentDays    Decimal @db.Decimal(5, 2)
-    leaveDays     Decimal @db.Decimal(5, 2)
-    overtimeHours Decimal @default(0) @db.Decimal(5, 2)
+  // Attendance Data
+  workingDays   Int
+  presentDays   Decimal @db.Decimal(5, 2)
+  absentDays    Decimal @db.Decimal(5, 2)
+  leaveDays     Decimal @db.Decimal(5, 2)
+  overtimeHours Decimal @default(0) @db.Decimal(5, 2)
 
-    // Salary Breakdown
-    basicSalary     Decimal @db.Decimal(12, 2)
-    grossSalary     Decimal @db.Decimal(12, 2)
-    totalEarnings   Decimal @db.Decimal(12, 2)
-    totalDeductions Decimal @db.Decimal(12, 2)
-    netSalary       Decimal @db.Decimal(12, 2)
+  // Salary Breakdown
+  basicSalary     Decimal @db.Decimal(12, 2)
+  grossSalary     Decimal @db.Decimal(12, 2)
+  totalEarnings   Decimal @db.Decimal(12, 2)
+  totalDeductions Decimal @db.Decimal(12, 2)
+  netSalary       Decimal @db.Decimal(12, 2)
 
-    // Deductions
-    pfDeduction     Decimal @default(0) @db.Decimal(12, 2)
-    professionalTax Decimal @default(0) @db.Decimal(12, 2)
-    otherDeductions Decimal @default(0) @db.Decimal(12, 2)
+  // Deductions
+  pfDeduction     Decimal @default(0) @db.Decimal(12, 2)
+  professionalTax Decimal @default(0) @db.Decimal(12, 2)
+  otherDeductions Decimal @default(0) @db.Decimal(12, 2)
 
-    status PayslipStatus @default(PENDING)
-    paidAt DateTime?
+  status PayslipStatus @default(PENDING)
+  paidAt DateTime?
 
-    notes String?
+  notes String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([employeeId, month, year])
-    @@index([employeeId])
-    @@index([payrunId])
-    @@index([status])
-    @@map("payslip")
+  @@unique([employeeId, month, year])
+  @@index([employeeId])
+  @@index([payrunId])
+  @@index([status])
+  @@map("payslip")
 }
 
 enum ComponentType {
-    EARNING
-    DEDUCTION
-    BENEFIT
+  EARNING
+  DEDUCTION
+  BENEFIT
 }
 
 model SalaryComponent {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid()) @map("_id")
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-    name         String
-    type         ComponentType
-    amount       Decimal       @db.Decimal(12, 2)
-    isPercentage Boolean       @default(false)
-    isRecurring  Boolean       @default(true)
-    isActive     Boolean       @default(true)
+  name         String
+  type         ComponentType
+  amount       Decimal       @db.Decimal(12, 2)
+  isPercentage Boolean       @default(false)
+  isRecurring  Boolean       @default(true)
+  isActive     Boolean       @default(true)
 
-    description String?
+  description String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([employeeId])
-    @@index([type])
-    @@map("salary_component")
+  @@index([employeeId])
+  @@index([type])
+  @@map("salary_component")
 }
 
 // ================================
@@ -326,67 +333,67 @@ model SalaryComponent {
 // ================================
 
 enum AuditAction {
-    CREATE
-    UPDATE
-    DELETE
-    LOGIN
-    LOGOUT
-    APPROVE
-    REJECT
-    GENERATE
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  GENERATE
 }
 
 model AuditLog {
-    id String @id @default(cuid()) @map("_id")
+  id String @id @default(cuid()) @map("_id")
 
-    action   AuditAction
-    entity   String
-    entityId String?
+  action   AuditAction
+  entity   String
+  entityId String?
 
-    performedById String
-    performedBy   Employee @relation("AuditLogCreator", fields: [performedById], references: [id])
+  performedById String
+  performedBy   Employee @relation("AuditLogCreator", fields: [performedById], references: [id])
 
-    affectedUserId String?
-    affectedUser   Employee? @relation("AuditLogAffected", fields: [affectedUserId], references: [id])
+  affectedUserId String?
+  affectedUser   Employee? @relation("AuditLogAffected", fields: [affectedUserId], references: [id])
 
-    oldValue  Json?
-    newValue  Json?
-    ipAddress String?
-    userAgent String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([performedById])
-    @@index([affectedUserId])
-    @@index([entity])
-    @@index([createdAt])
-    @@map("audit_log")
+  @@index([performedById])
+  @@index([affectedUserId])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_log")
 }
 
 model RolePermission {
-    id String @id @default(cuid()) @map("_id")
+  id String @id @default(cuid()) @map("_id")
 
-    role       String // Using String instead of Role enum for flexibility
-    module     String
-    permission String
+  role       String // Using String instead of Role enum for flexibility
+  module     String
+  permission String
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([role, module, permission])
-    @@index([role])
-    @@index([module])
-    @@map("role_permission")
+  @@unique([role, module, permission])
+  @@index([role])
+  @@index([module])
+  @@map("role_permission")
 }
 
 model SystemSettings {
-    id String @id @default(cuid()) @map("_id")
+  id String @id @default(cuid()) @map("_id")
 
-    key         String  @unique
-    value       Json
-    description String?
+  key         String  @unique
+  value       Json
+  description String?
 
-    updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
-    @@map("system_settings")
+  @@map("system_settings")
 }

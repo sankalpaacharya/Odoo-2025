@@ -1,10 +1,15 @@
-import { Router } from "express";
+import { auth } from "@my-better-t-app/auth";
+import db, {
+  UPLOADS_CONFIG,
+  getUploadPath,
+  getUploadUrl,
+  type Gender,
+} from "@my-better-t-app/db";
 import type { Router as RouterType } from "express";
+import { Router } from "express";
+import fs from "fs";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import db, { type Gender, UPLOADS_CONFIG, getUploadPath, getUploadUrl } from "@my-better-t-app/db";
-import { auth } from "@my-better-t-app/auth";
 import { authenticateUser } from "../middleware/auth";
 
 const router: RouterType = Router();
@@ -34,13 +39,19 @@ const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP files are allowed."));
+      cb(
+        new Error(
+          "Invalid file type. Only JPEG, PNG, and WebP files are allowed."
+        )
+      );
     }
   },
 });
@@ -55,11 +66,15 @@ router.post("/reset-password", async (req, res) => {
 
     // Validation
     if (!oldPassword || !newPassword) {
-      return res.status(400).json({ error: "Old password and new password are required" });
+      return res
+        .status(400)
+        .json({ error: "Old password and new password are required" });
     }
 
     if (newPassword.length < 8) {
-      return res.status(400).json({ error: "New password must be at least 8 characters long" });
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 8 characters long" });
     }
 
     // Get user's email for authentication
@@ -140,7 +155,9 @@ router.post("/reset-password", async (req, res) => {
     });
 
     if (!account) {
-      return res.status(404).json({ error: "Password authentication not found for this user" });
+      return res
+        .status(404)
+        .json({ error: "Password authentication not found for this user" });
     }
 
     // Update password in account table with the properly hashed password
@@ -176,7 +193,8 @@ router.get("/", async (req, res) => {
     }
 
     // Check if requesting another employee's profile
-    const isViewingOtherProfile = targetEmployeeId && targetEmployeeId !== currentEmployee.id;
+    const isViewingOtherProfile =
+      targetEmployeeId && targetEmployeeId !== currentEmployee.id;
 
     // If viewing other profile, check permissions
     if (isViewingOtherProfile) {
@@ -227,6 +245,11 @@ router.get("/", async (req, res) => {
         basicSalary: true,
         pfContribution: true,
         professionalTax: true,
+        hraPercentage: true,
+        standardAllowanceAmount: true,
+        performanceBonusPercentage: true,
+        leaveTravelPercentage: true,
+        pfPercentage: true,
         reportingManagerId: true,
         reportingManager: {
           select: {
@@ -339,6 +362,12 @@ router.get("/", async (req, res) => {
         basicSalary: employee.basicSalary.toString(),
         pfContribution: employee.pfContribution.toString(),
         professionalTax: employee.professionalTax.toString(),
+        hraPercentage: employee.hraPercentage.toString(),
+        standardAllowanceAmount: employee.standardAllowanceAmount.toString(),
+        performanceBonusPercentage:
+          employee.performanceBonusPercentage.toString(),
+        leaveTravelPercentage: employee.leaveTravelPercentage.toString(),
+        pfPercentage: employee.pfPercentage.toString(),
         components: employee.salaryComponents.map((comp) => ({
           id: comp.id,
           name: comp.name,
@@ -352,7 +381,9 @@ router.get("/", async (req, res) => {
 
       // Include role info for permission checks on frontend
       currentUserRole: currentEmployee.role,
-      canEditSalary: ["ADMIN", "PAYROLL_OFFICER"].includes(currentEmployee.role),
+      canEditSalary: ["ADMIN", "PAYROLL_OFFICER"].includes(
+        currentEmployee.role
+      ),
     };
 
     res.json(profileData);
@@ -479,7 +510,15 @@ router.put("/", async (req, res) => {
 router.put("/salary", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { basicSalary, pfContribution, professionalTax } = req.body;
+    const {
+      monthlyWage,
+      pfPercentage,
+      professionalTax,
+      hraPercentage,
+      standardAllowanceAmount,
+      performanceBonusPercentage,
+      leaveTravelPercentage,
+    } = req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({
@@ -499,18 +538,41 @@ router.put("/salary", async (req, res) => {
     }
 
     // Get target employee ID from query param or use current user
-    const targetEmployeeId = (req.query.employeeId as string) || currentEmployee.id;
+    const targetEmployeeId =
+      (req.query.employeeId as string) || currentEmployee.id;
+
+    // Calculate pfContribution if pfPercentage is provided
+    let pfContributionValue = undefined;
+    if (monthlyWage !== undefined && pfPercentage !== undefined) {
+      const basicSalary = Number(monthlyWage) * 0.5;
+      pfContributionValue = (basicSalary * Number(pfPercentage)) / 100;
+    }
 
     // Update salary data
     const updatedEmployee = await db.employee.update({
       where: { id: targetEmployeeId },
       data: {
-        ...(basicSalary !== undefined && { basicSalary: Number(basicSalary) }),
-        ...(pfContribution !== undefined && {
-          pfContribution: Number(pfContribution),
+        ...(monthlyWage !== undefined && { basicSalary: Number(monthlyWage) }),
+        ...(pfContributionValue !== undefined && {
+          pfContribution: pfContributionValue,
         }),
         ...(professionalTax !== undefined && {
           professionalTax: Number(professionalTax),
+        }),
+        ...(hraPercentage !== undefined && {
+          hraPercentage: Number(hraPercentage),
+        }),
+        ...(standardAllowanceAmount !== undefined && {
+          standardAllowanceAmount: Number(standardAllowanceAmount),
+        }),
+        ...(performanceBonusPercentage !== undefined && {
+          performanceBonusPercentage: Number(performanceBonusPercentage),
+        }),
+        ...(leaveTravelPercentage !== undefined && {
+          leaveTravelPercentage: Number(leaveTravelPercentage),
+        }),
+        ...(pfPercentage !== undefined && {
+          pfPercentage: Number(pfPercentage),
         }),
       },
       select: {
@@ -518,6 +580,11 @@ router.put("/salary", async (req, res) => {
         basicSalary: true,
         pfContribution: true,
         professionalTax: true,
+        hraPercentage: true,
+        standardAllowanceAmount: true,
+        performanceBonusPercentage: true,
+        leaveTravelPercentage: true,
+        pfPercentage: true,
       },
     });
 
@@ -528,6 +595,13 @@ router.put("/salary", async (req, res) => {
         basicSalary: updatedEmployee.basicSalary.toString(),
         pfContribution: updatedEmployee.pfContribution.toString(),
         professionalTax: updatedEmployee.professionalTax.toString(),
+        hraPercentage: updatedEmployee.hraPercentage.toString(),
+        standardAllowanceAmount:
+          updatedEmployee.standardAllowanceAmount.toString(),
+        performanceBonusPercentage:
+          updatedEmployee.performanceBonusPercentage.toString(),
+        leaveTravelPercentage: updatedEmployee.leaveTravelPercentage.toString(),
+        pfPercentage: updatedEmployee.pfPercentage.toString(),
       },
     });
   } catch (error) {
@@ -584,123 +658,139 @@ router.get("/salary-components", async (req, res) => {
 });
 
 // Upload profile image
-router.post("/upload-image", upload.single("profileImage"), async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
+router.post(
+  "/upload-image",
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    // Generate the URL path using the helper function
-    const imagePath = getUploadUrl(req.file.filename, "profile");
-
-    // Find employee first
-    const employee = await db.employee.findUnique({
-      where: { userId },
-      select: { id: true, profileImage: true },
-    });
-
-    if (!employee) {
-      // Delete uploaded file if employee not found
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ error: "Employee not found" });
-    }
-
-    // Delete old profile image if exists
-    if (employee.profileImage) {
-      try {
-        const oldImagePath = getUploadPath(employee.profileImage);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      } catch (err) {
-        console.warn("Failed to delete old profile image:", err);
-        // Continue anyway - don't fail the upload if we can't delete the old image
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
       }
-    }
 
-    // Update employee profile image
-    await db.employee.update({
-      where: { id: employee.id },
-      data: { profileImage: imagePath },
-    });
+      // Generate the URL path using the helper function
+      const imagePath = getUploadUrl(req.file.filename, "profile");
 
-    res.json({
-      success: true,
-      profileImage: imagePath,
-    });
-  } catch (error) {
-    console.error("Error uploading profile image:", error);
-    // Delete uploaded file on error
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
+      // Find employee first
+      const employee = await db.employee.findUnique({
+        where: { userId },
+        select: { id: true, profileImage: true },
+      });
+
+      if (!employee) {
+        // Delete uploaded file if employee not found
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      // Delete old profile image if exists
+      if (employee.profileImage) {
+        try {
+          const oldImagePath = getUploadPath(employee.profileImage);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        } catch (err) {
+          console.warn("Failed to delete old profile image:", err);
+          // Continue anyway - don't fail the upload if we can't delete the old image
+        }
+      }
+
+      // Update employee profile image
+      await db.employee.update({
+        where: { id: employee.id },
+        data: { profileImage: imagePath },
+      });
+
+      res.json({
+        success: true,
+        profileImage: imagePath,
+      });
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      // Delete uploaded file on error
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ error: "Failed to upload profile image" });
     }
-    res.status(500).json({ error: "Failed to upload profile image" });
   }
-});
+);
 
 // Upload profile image
-router.post("/upload-image", upload.single("profileImage"), async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
+router.post(
+  "/upload-image",
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
 
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    // Generate the URL path using the helper function
-    const imagePath = getUploadUrl(req.file.filename, "profile");
-
-    // Find employee first
-    const employee = await db.employee.findUnique({
-      where: { userId },
-      select: { id: true, profileImage: true },
-    });
-
-    if (!employee) {
-      // Delete uploaded file if employee not found
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ error: "Employee not found" });
-    }
-
-    // Delete old profile image if exists
-    if (employee.profileImage) {
-      try {
-        const oldImagePath = getUploadPath(employee.profileImage);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      } catch (err) {
-        console.warn("Failed to delete old profile image:", err);
-        // Continue anyway - don't fail the upload if we can't delete the old image
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
       }
-    }
 
-    // Update employee profile image
-    await db.employee.update({
-      where: { id: employee.id },
-      data: { profileImage: imagePath },
-    });
+      // Generate the URL path using the helper function
+      const imagePath = getUploadUrl(req.file.filename, "profile");
 
-    res.json({
-      success: true,
-      profileImage: imagePath,
-    });
-  } catch (error) {
-    console.error("Error uploading profile image:", error);
-    // Delete uploaded file on error
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
+      // Find employee first
+      const employee = await db.employee.findUnique({
+        where: { userId },
+        select: { id: true, profileImage: true },
+      });
+
+      if (!employee) {
+        // Delete uploaded file if employee not found
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      // Delete old profile image if exists
+      if (employee.profileImage) {
+        try {
+          const oldImagePath = getUploadPath(employee.profileImage);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        } catch (err) {
+          console.warn("Failed to delete old profile image:", err);
+          // Continue anyway - don't fail the upload if we can't delete the old image
+        }
+      }
+
+      // Update employee profile image
+      await db.employee.update({
+        where: { id: employee.id },
+        data: { profileImage: imagePath },
+      });
+
+      res.json({
+        success: true,
+        profileImage: imagePath,
+      });
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      // Delete uploaded file on error
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ error: "Failed to upload profile image" });
     }
-    res.status(500).json({ error: "Failed to upload profile image" });
   }
-});
+);
 
 router.post("/salary-components", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { employeeId, name, type, amount, isPercentage, isRecurring, description } = req.body;
+    const {
+      employeeId,
+      name,
+      type,
+      amount,
+      isPercentage,
+      isRecurring,
+      description,
+    } = req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({
@@ -751,7 +841,8 @@ router.put("/salary-components/:componentId", async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { componentId } = req.params;
-    const { name, type, amount, isPercentage, isRecurring, description } = req.body;
+    const { name, type, amount, isPercentage, isRecurring, description } =
+      req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({

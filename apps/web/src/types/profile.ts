@@ -42,6 +42,11 @@ export interface Salary {
   basicSalary: string;
   pfContribution: string;
   professionalTax: string;
+  hraPercentage?: string;
+  standardAllowanceAmount?: string;
+  performanceBonusPercentage?: string;
+  leaveTravelPercentage?: string;
+  pfPercentage?: string;
   components: SalaryComponent[];
 }
 
@@ -131,7 +136,12 @@ export interface UpdateProfilePayload {
 }
 
 export interface UpdateSalaryPayload {
-  basicSalary?: string | number;
-  pfContribution?: string | number;
+  monthlyWage?: string | number;
+  pfPercentage?: string | number;
   professionalTax?: string | number;
+  hraPercentage?: string | number;
+  standardAllowanceAmount?: string | number;
+  performanceBonusPercentage?: string | number;
+  leaveTravelPercentage?: string | number;
+  fixedAllowancePercentage?: string | number;
 }
