@@ -323,7 +323,9 @@ export function PayrollDashboard() {
                   tickLine={false}
                   tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
+                  tickFormatter={(value) =>
+                    employerCostView === "annually" ? value : value.slice(0, 3)
+                  }
                 />
                 <YAxis
                   yAxisId="left"

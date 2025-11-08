@@ -1,6 +1,11 @@
 "use client";
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Plane } from "lucide-react";
 import { getImageUrl } from "@/lib/image-utils";
 import { useRouter } from "next/navigation";
@@ -58,15 +63,20 @@ export default function EmployeeCard({
 
   return (
     <Card
-      className="relative min-h-[120px] hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => router.push(`/dashboard/employees/${id}`)}>
+      className="relative hover:bg-card-foreground/7 cursor-pointer transition"
+      onClick={() => router.push(`/dashboard/employees/${id}`)}
+    >
       {/* top-right status */}
       <div className="absolute right-3 top-3">{statusNode}</div>
 
       <CardHeader>
         <div className="flex items-center gap-4">
           {imageUrl ? (
-            <img src={imageUrl} alt={name} className="h-14 w-14 shrink-0 rounded-md object-cover" />
+            <img
+              src={imageUrl}
+              alt={name}
+              className="h-14 w-14 shrink-0 rounded-md object-cover"
+            />
           ) : (
             <div className="h-14 w-14 shrink-0 rounded-md bg-muted/40 flex items-center justify-center text-2xl text-muted-foreground font-semibold">
               {initials}
@@ -74,7 +84,11 @@ export default function EmployeeCard({
           )}
           <div>
             <CardTitle>{name}</CardTitle>
-            {role && <CardDescription className="capitalize">{role.replace(/_/g, " ")}</CardDescription>}
+            {role && (
+              <CardDescription className="capitalize">
+                {role.replace(/_/g, " ")}
+              </CardDescription>
+            )}
           </div>
         </div>
       </CardHeader>

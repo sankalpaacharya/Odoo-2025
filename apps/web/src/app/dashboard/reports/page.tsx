@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,8 +9,9 @@ import {
   FileText,
   Check,
   ChevronsUpDown,
+  Printer,
 } from "lucide-react";
-import { generateSalaryStatementPDF } from "@/lib/generate-salary-pdf";
+import { useReactToPrint } from "react-to-print";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
@@ -33,6 +34,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -95,6 +104,11 @@ export default function ReportsPage() {
   const [isFetchingSalary, setIsFetchingSalary] = useState(false);
   const [open, setOpen] = useState(false);
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef,
+  });
+
   useEffect(() => {
     fetchEmployees().then((data) => {
       setEmployees(data);
@@ -122,15 +136,6 @@ export default function ReportsPage() {
       setSalaryData(null);
     }
   }, [selectedEmployee, selectedYear]);
-
-  const handlePrint = () => {
-    if (!selectedEmployee || !selectedYear || !salaryData) {
-      alert("Please select an employee and year first");
-      return;
-    }
-
-    generateSalaryStatementPDF(salaryData);
-  };
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -295,28 +300,23 @@ export default function ReportsPage() {
             </Select>
           </div>
 
-          {(!selectedEmployee ||
-            !selectedYear ||
-            !salaryData ||
-            isFetchingSalary) && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium invisible">Action</label>
-              <Button
-                onClick={handlePrint}
-                variant="default"
-                className="gap-2 w-full"
-                disabled={
-                  !selectedEmployee ||
-                  !selectedYear ||
-                  !salaryData ||
-                  isFetchingSalary
-                }
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium invisible">Action</label>
+            <Button
+              onClick={handlePrint}
+              variant="default"
+              className="gap-2 w-full"
+              disabled={
+                !selectedEmployee ||
+                !selectedYear ||
+                !salaryData ||
+                isFetchingSalary
+              }
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         {isFetchingSalary && (
@@ -328,7 +328,10 @@ export default function ReportsPage() {
         {!isFetchingSalary && salaryData && (
           <>
             {/* PDF Preview */}
-            <div className="rounded-lg border bg-background overflow-hidden">
+            <div
+              ref={contentRef}
+              className="rounded-lg border bg-background overflow-hidden"
+            >
               <div className="bg-muted px-6 py-4 border-b">
                 <h2 className="text-lg font-semibold">
                   Salary Statement Report
@@ -338,9 +341,9 @@ export default function ReportsPage() {
                 </p>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="pspace-y-6">
                 {/* Employee Info */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 p-6">
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Employee Name
@@ -368,77 +371,77 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Salary Components Table */}
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-sm font-semibold">
+                <div className="overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-left py-3 text-sm font-semibold">
                           Salary Components
-                        </th>
-                        <th className="text-right px-4 py-3 text-sm font-semibold">
+                        </TableHead>
+                        <TableHead className="text-right py-3 text-sm font-semibold">
                           Monthly Amount
-                        </th>
-                        <th className="text-right px-4 py-3 text-sm font-semibold">
+                        </TableHead>
+                        <TableHead className="text-right py-3 text-sm font-semibold">
                           Yearly Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="bg-muted/50">
-                        <td
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableCell
                           colSpan={3}
-                          className="px-4 py-2 text-sm font-semibold"
+                          className="py-2 text-sm font-semibold"
                         >
                           Earnings
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                       {salaryData.earnings.map((item, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="px-4 py-2 pl-8 text-sm">
+                        <TableRow key={index}>
+                          <TableCell className="pl-8 text-sm">
                             {item.name}
-                          </td>
-                          <td className="px-4 py-2 text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
                             ₹ {item.monthlyAmount.toLocaleString("en-IN")}
-                          </td>
-                          <td className="px-4 py-2 text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
                             ₹ {item.yearlyAmount.toLocaleString("en-IN")}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
 
-                      <tr className="bg-muted/50 border-t">
-                        <td
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableCell
                           colSpan={3}
-                          className="px-4 py-2 text-sm font-semibold"
+                          className="py-2 text-sm font-semibold"
                         >
                           Deductions
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                       {salaryData.deductions.map((item, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="px-4 py-2 pl-8 text-sm">
+                        <TableRow key={index}>
+                          <TableCell className="pl-8 text-sm">
                             {item.name}
-                          </td>
-                          <td className="px-4 py-2 text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
                             ₹ {item.monthlyAmount.toLocaleString("en-IN")}
-                          </td>
-                          <td className="px-4 py-2 text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
                             ₹ {item.yearlyAmount.toLocaleString("en-IN")}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
 
-                      <tr className="bg-primary/10 border-t-2 border-primary/20 font-semibold">
-                        <td className="px-4 py-3 text-sm">Net Salary</td>
-                        <td className="px-4 py-3 text-right text-sm">
+                      <TableRow className="bg-primary/10 border-t-2 border-primary/20 font-semibold hover:bg-primary/10">
+                        <TableCell className="text-sm">Net Salary</TableCell>
+                        <TableCell className="text-right text-sm">
                           ₹ {totals.netSalary.toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm">
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
                           ₹ {(totals.netSalary * 12).toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </div>
