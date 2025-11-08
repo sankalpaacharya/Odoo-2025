@@ -1,18 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+
+import { DataTable, type Column } from "@/components/data-table";
+import Loader from "@/components/loader";
+import { EmployeeAvatar, StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
+
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -20,19 +17,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Loader from "@/components/loader";
-import { useTodayAttendance } from "../hooks";
-import { formatTime, formatStatus, getStatusColor } from "../utils";
+import { formatHoursToTime, formatTime } from "@/lib/time-utils";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useTodayAttendance } from "../hooks";
 import type { EmployeeAttendance } from "../types";
+
+import { StatsCards, type StatItem } from "@/components";
+
+const attendanceColumns: Column<EmployeeAttendance>[] = [
+  {
+    key: "avatar",
+    // No label for avatar column
+    sortable: false,
+    render: (record) => <EmployeeAvatar name={record.employeeName} size="sm" />,
+    className: "w-12",
+  },
+  {
+    key: "employeeName",
+    label: "Name",
+    className: "font-medium",
+  },
+  {
+    key: "employeeCode",
+    label: "Employee ID",
+    className: "font-medium",
+  },
+  {
+    key: "department",
+    label: "Department",
+  },
+  {
+    key: "designation",
+    label: "Designation",
+    render: (record) => record.designation || "N/A",
+  },
+  {
+    key: "checkIn",
+    label: "Check In",
+    render: (record) => (
+      <div className="flex items-center gap-2">
+        {record.isCurrentlyActive && (
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+        )}
+        {formatTime(record.checkIn)}
+      </div>
+    ),
+  },
+  {
+    key: "checkOut",
+    label: "Check Out",
+    render: (record) => formatTime(record.checkOut),
+  },
+  {
+    key: "workingHours",
+    label: "Work Hours",
+    render: (record) =>
+      record.workingHours > 0 ? formatHoursToTime(record.workingHours) : "-",
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (record) => <StatusBadge status={record.status} />,
+  },
+  {
+    key: "isCurrentlyActive",
+    label: "Active",
+    sortable: false,
+    render: (record) =>
+      record.isCurrentlyActive ? (
+        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          <div className="flex items-center gap-1">
+            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            Working
+          </div>
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-sm">-</span>
+      ),
+  },
+];
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: attendances = [], isLoading, error } = useTodayAttendance();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { data: response, isLoading, error } = useTodayAttendance();
 
   if (error) {
     toast.error("Failed to load today's attendance");
   }
+
+  const attendances = response ? response : [];
 
   const filteredAttendances = attendances.filter(
     (record: EmployeeAttendance) =>
@@ -52,12 +127,87 @@ export function AdminAttendanceView() {
     (e: EmployeeAttendance) => e.status === "ABSENT"
   ).length;
 
+  const statsData: StatItem[] = [
+    {
+      name: "Total Employees",
+      value: totalEmployees,
+      description: "Active employees",
+    },
+    {
+      name: "Present Today",
+      value: presentToday,
+      description: `${
+        totalEmployees > 0
+          ? ((presentToday / totalEmployees) * 100).toFixed(1)
+          : 0
+      }% attendance`,
+      valueClassName: "text-green-600",
+    },
+    {
+      name: "On Leave",
+      value: onLeave,
+      description: "Employees on leave",
+      valueClassName: "text-amber-600",
+    },
+    {
+      name: "Absent",
+      value: absent,
+      description: "Absent employees",
+      valueClassName: "text-red-600",
+    },
+  ];
+
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const dateDisplay = selectedDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   if (isLoading) {
     return <Loader />;
   }
 
   return (
     <>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-[300px] justify-center">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{dateDisplay}</span>
+          </div>
+          <Button variant="outline" size="icon" onClick={goToNextDay}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          {!isToday && (
+            <Button variant="outline" onClick={goToToday}>
+              Today
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -94,113 +244,21 @@ export function AdminAttendanceView() {
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Total Employees
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">Active employees</p>
-          </CardContent>
-        </Card>
+      <StatsCards data={statsData} />
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Present Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {presentToday}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalEmployees > 0
-                ? ((presentToday / totalEmployees) * 100).toFixed(1)
-                : 0}
-              % attendance
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">On Leave</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{onLeave}</div>
-            <p className="text-xs text-muted-foreground">Employees on leave</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{absent}</div>
-            <p className="text-xs text-muted-foreground">Absent employees</p>
-          </CardContent>
-        </Card>
+      <div className="rounded-lg">
+        <div className="py-4">
+          <h2 className="text-lg font-semibold">Today's Attendance</h2>
+        </div>
+        <DataTable
+          data={filteredAttendances}
+          columns={attendanceColumns}
+          keyExtractor={(record) => record.employeeId}
+          emptyMessage="No employees found"
+          isLoading={isLoading}
+          loadingMessage="Loading attendance..."
+        />
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Work Hours</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAttendances.length > 0 ? (
-                filteredAttendances.map((record: EmployeeAttendance) => (
-                  <TableRow key={record.employeeId}>
-                    <TableCell className="font-medium">
-                      {record.employeeCode}
-                    </TableCell>
-                    <TableCell>{record.employeeName}</TableCell>
-                    <TableCell>{record.department}</TableCell>
-                    <TableCell>{record.designation || "N/A"}</TableCell>
-                    <TableCell>{formatTime(record.checkIn)}</TableCell>
-                    <TableCell>{formatTime(record.checkOut)}</TableCell>
-                    <TableCell>
-                      {record.workingHours > 0
-                        ? `${record.workingHours.toFixed(2)}h`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(record.status)}>
-                        {formatStatus(record.status)}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center text-muted-foreground"
-                  >
-                    No employees found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </>
   );
 }

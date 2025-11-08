@@ -27,7 +27,7 @@ export function AddEmployeeModal({ onEmployeeAdded }: AddEmployeeModalProps) {
     const fullName = (formData.get("name") as string).trim();
     const nameParts = fullName.split(/\s+/); // Split by whitespace
     const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || nameParts[0] || ""; // Use first name as last name if only one word
+    const lastName = nameParts.slice(1).join(" ") || ""; // Use first name as last name if only one word
 
     const data = {
       firstName,

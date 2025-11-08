@@ -59,6 +59,14 @@ model Employee {
     state          String?
     country        String?
     postalCode     String?
+    profileImage   String?
+    
+    // Bank Details
+    accountNumber  String?
+    bankName       String?
+    ifscCode       String?
+    panNumber      String?
+    uanNumber      String?
 
     // Employment Details
     role               Role             @default(EMPLOYEE)
@@ -77,7 +85,6 @@ model Employee {
     professionalTax Decimal @default(0) @db.Decimal(12, 2)
 
     // Relationships
-    attendances       Attendance[]
     workSessions      WorkSession[]
     leaves            Leave[]
     leaveBalances     LeaveBalance[]
@@ -97,41 +104,8 @@ model Employee {
 }
 
 // ================================
-// ATTENDANCE MANAGEMENT
+// WORK SESSION MANAGEMENT
 // ================================
-
-enum AttendanceStatus {
-    PRESENT
-    ABSENT
-    HALF_DAY
-    LATE
-    ON_LEAVE
-    HOLIDAY
-    WEEKEND
-}
-
-model Attendance {
-    id         String   @id @default(cuid()) @map("_id")
-    employeeId String
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-    date          DateTime         @db.Date
-    checkIn       DateTime?
-    checkOut      DateTime?
-    status        AttendanceStatus
-    workingHours  Decimal?         @db.Decimal(5, 2)
-    overtimeHours Decimal?         @default(0) @db.Decimal(5, 2)
-    notes         String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([employeeId, date])
-    @@index([employeeId])
-    @@index([date])
-    @@index([status])
-    @@map("attendance")
-}
 
 model WorkSession {
     id         String   @id @default(cuid()) @map("_id")

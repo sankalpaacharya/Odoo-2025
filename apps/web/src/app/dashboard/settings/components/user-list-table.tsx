@@ -69,44 +69,48 @@ export function UserListTable() {
   }, []);
 
   const fetchEmployees = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await apiClient<Employee[]>("/api/employees");
-      setEmployees(data);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      toast.error("Failed to fetch employees. Please try again.");
-    } finally {
-      setLoading(false);
+      const employees = await apiClient<Employee[]>("/api/employees");
+      setEmployees(employees);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch employees");
     }
+    setLoading(false);
   };
 
   const handleRoleChange = async (employeeId: string, newRole: string) => {
+    setUpdatingRole(employeeId);
+
+    // Convert display role to database role
+    const dbRole = reverseRoleMap[newRole];
+
     try {
-      setUpdatingRole(employeeId);
+      await apiClient<{ success: boolean; employee: any }>(
+        `/api/users/${employeeId}/role`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ role: dbRole }),
+        }
+      );
 
-      // Convert display role to database role
-      const dbRole = reverseRoleMap[newRole];
-
-      await apiClient(`/api/users/${employeeId}/role`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: dbRole }),
-      });
-
-      // Update local state
+      // Update local state with the new role
       setEmployees((prevEmployees) =>
         prevEmployees.map((emp) =>
           emp.id === employeeId ? { ...emp, role: dbRole.toLowerCase() } : emp
         )
       );
-
-      toast.success("User role updated successfully.");
-    } catch (error) {
-      console.error("Error updating role:", error);
-      toast.error("Failed to update user role. Please try again.");
-    } finally {
-      setUpdatingRole(null);
+      toast.success("Employee role updated successfully.");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update role");
+      // Refresh the employee list to revert any optimistic updates
+      fetchEmployees();
     }
+
+    setUpdatingRole(null);
   };
 
   if (loading) {

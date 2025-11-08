@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { authenticateUser } from "../middleware/auth";
 import { sessionService } from "../services/session.service";
-import { attendanceService } from "../services/attendance.service";
 import { employeeService } from "../services/employee.service";
 
 const router: Router = Router();
@@ -130,35 +129,6 @@ router.post("/stop", async (req, res) => {
         isActive: false,
         workingHours,
         overtimeHours,
-      }
-    );
-
-    const sessionDate = new Date(
-      activeSession.date.getFullYear(),
-      activeSession.date.getMonth(),
-      activeSession.date.getDate()
-    );
-
-    const attendanceStatus = attendanceService.determineAttendanceStatus(
-      workingHours,
-      startTime
-    );
-
-    await attendanceService.upsertAttendance(
-      employee.id,
-      sessionDate,
-      {
-        checkIn: startTime,
-        checkOut: now,
-        workingHours,
-        overtimeHours,
-        status: attendanceStatus,
-      },
-      {
-        checkOut: now,
-        workingHours,
-        overtimeHours,
-        status: attendanceStatus,
       }
     );
 

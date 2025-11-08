@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useActiveSession,
   useStartSession,
@@ -21,6 +21,15 @@ export function SidebarStatus() {
     useActiveSession();
   const startSessionMutation = useStartSession();
   const stopSessionMutation = useStopSession();
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCheckInOut = async () => {
     if (startSessionMutation.isPending || stopSessionMutation.isPending) return;
