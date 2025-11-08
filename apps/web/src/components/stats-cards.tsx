@@ -19,48 +19,47 @@ export function StatsCards({ data, className }: StatsCardsProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-4",
+        "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4",
         className
       )}
     >
-      {data.map((stat, index) => (
-        <Card
-          key={stat.name}
-          className={cn(
-            "rounded-none border-0 shadow-none py-0 bg-card",
-            index === 0 && "rounded-l-xl",
-            index === data.length - 1 && "rounded-r-xl"
-          )}
-        >
-          <CardContent className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 p-4 sm:p-6">
-            <div className="font-medium text-muted-foreground">{stat.name}</div>
-            {stat.change && (
+      {data.map((stat) => (
+        <Card key={stat.name} className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground truncate">
+                  {stat.name}
+                </p>
+                {stat.change && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium shrink-0 ml-2",
+                      stat.changeType === "positive" &&
+                        "text-green-800 dark:text-green-400",
+                      stat.changeType === "negative" &&
+                        "text-red-800 dark:text-red-400",
+                      stat.changeType === "neutral" && "text-muted-foreground"
+                    )}
+                  >
+                    {stat.change}
+                  </span>
+                )}
+              </div>
               <div
                 className={cn(
-                  "text-xs font-medium",
-                  stat.changeType === "positive" &&
-                    "text-green-800 dark:text-green-400",
-                  stat.changeType === "negative" &&
-                    "text-red-800 dark:text-red-400",
-                  stat.changeType === "neutral" && "text-muted-foreground"
+                  "text-3xl font-bold tracking-tight",
+                  stat.valueClassName || "text-foreground"
                 )}
               >
-                {stat.change}
+                {stat.value}
               </div>
-            )}
-            <div
-              className={cn(
-                "w-full flex-none text-3xl font-medium tracking-tight",
-                stat.valueClassName || "text-foreground"
+              {stat.description && (
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
               )}
-            >
-              {stat.value}
             </div>
-            {stat.description && (
-              <p className="text-xs text-muted-foreground w-full">
-                {stat.description}
-              </p>
-            )}
           </CardContent>
         </Card>
       ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -19,125 +19,141 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CheckCircle2 } from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CheckCircle2, CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api-client";
+import { format } from "date-fns";
+
+interface Employee {
+  id: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  designation: string;
+}
 
 interface Payslip {
   id: string;
-  payPeriod: string;
   employeeId: string;
-  employeeName: string;
-  employerCost: number;
-  basicWage: number;
-  grossWage: number;
-  netWage: number;
-  status: "draft" | "validated" | "done";
+  employee: Employee;
+  month: number;
+  year: number;
+  workingDays: number;
+  presentDays: number;
+  absentDays: number;
+  leaveDays: number;
+  overtimeHours: number;
+  basicSalary: number;
+  grossSalary: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  netSalary: number;
+  pfDeduction: number;
+  professionalTax: number;
+  otherDeductions: number;
+  status: "PENDING" | "PROCESSED" | "PAID" | "CANCELLED";
+  paidAt: string | null;
+}
+
+interface Payrun {
+  id: string;
+  month: number;
+  year: number;
+  periodStart: string;
+  periodEnd: string;
+  status: "DRAFT" | "PROCESSING" | "COMPLETED" | "CANCELLED";
+  totalAmount: number;
+  processedBy: string | null;
+  processedAt: string | null;
+  payslips: Payslip[];
 }
 
 export function PayrollPayrun() {
-  const [selectedMonth, setSelectedMonth] = useState("Oct 2025");
-  const [payslips, setPayslips] = useState<Payslip[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [payrun, setPayrun] = useState<Payrun | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isMarkingDone, setIsMarkingDone] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Sample data - replace with actual API calls
-  const months = [
-    "Oct 2025",
-    "Sept 2025",
-    "Aug 2025",
-    "Jul 2025",
-    "Jun 2025",
-    "May 2025",
-  ];
+  const selectedMonth = selectedDate.getMonth() + 1;
+  const selectedYear = selectedDate.getFullYear();
 
-  const handleGeneratePayrun = async () => {
-    setIsGenerating(true);
+  useEffect(() => {
+    generatePayrun();
+  }, [selectedMonth, selectedYear]);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Sample generated payslips
-    const generatedPayslips: Payslip[] = [
-      {
-        id: "1",
-        payPeriod: selectedMonth,
-        employeeId: "EMP001",
-        employeeName: "John Doe",
-        employerCost: 50000,
-        basicWage: 25000,
-        grossWage: 50000,
-        netWage: 43800,
-        status: "draft",
-      },
-      {
-        id: "2",
-        payPeriod: selectedMonth,
-        employeeId: "EMP002",
-        employeeName: "Jane Smith",
-        employerCost: 60000,
-        basicWage: 30000,
-        grossWage: 60000,
-        netWage: 52560,
-        status: "draft",
-      },
-      {
-        id: "3",
-        payPeriod: selectedMonth,
-        employeeId: "EMP003",
-        employeeName: "Mike Johnson",
-        employerCost: 55000,
-        basicWage: 27500,
-        grossWage: 55000,
-        netWage: 48190,
-        status: "draft",
-      },
-    ];
-
-    setPayslips(generatedPayslips);
-    setIsGenerating(false);
-    toast.success(`Payrun generated for ${selectedMonth}`, {
-      description: `${generatedPayslips.length} payslips created`,
-    });
+  const generatePayrun = async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiClient<Payrun>("/api/payroll/payrun/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          month: selectedMonth,
+          year: selectedYear,
+        }),
+      });
+      setPayrun(data);
+    } catch (error: any) {
+      console.error("Error generating payrun:", error);
+      toast.error("Failed to generate payrun", {
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleValidatePayrun = async () => {
-    if (payslips.length === 0) {
-      toast.error("No payslips to validate");
-      return;
-    }
+    if (!payrun) return;
 
     setIsValidating(true);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setPayslips((prev) =>
-      prev.map((p) => ({ ...p, status: "validated" as const }))
-    );
-    setIsValidating(false);
-    toast.success("Payrun validated successfully");
+    try {
+      const data = await apiClient<Payrun>(
+        `/api/payroll/payrun/${payrun.id}/validate`,
+        {
+          method: "POST",
+        }
+      );
+      setPayrun(data);
+      toast.success("Payrun validated successfully");
+    } catch (error: any) {
+      console.error("Error validating payrun:", error);
+      toast.error("Failed to validate payrun", {
+        description: error.message,
+      });
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleMarkAsDone = async () => {
-    if (
-      payslips.length === 0 ||
-      !payslips.every((p) => p.status === "validated")
-    ) {
-      toast.error("Please validate payrun first");
-      return;
+    if (!payrun) return;
+
+    setIsMarkingDone(true);
+    try {
+      const data = await apiClient<Payrun>(
+        `/api/payroll/payrun/${payrun.id}/done`,
+        {
+          method: "POST",
+        }
+      );
+      setPayrun(data);
+      toast.success("Payrun marked as done");
+    } catch (error: any) {
+      console.error("Error marking payrun as done:", error);
+      toast.error("Failed to mark payrun as done", {
+        description: error.message,
+      });
+    } finally {
+      setIsMarkingDone(false);
     }
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setPayslips((prev) => prev.map((p) => ({ ...p, status: "done" as const })));
-    toast.success("Payrun marked as done");
   };
 
   const formatCurrency = (amount: number) => {
@@ -148,46 +164,61 @@ export function PayrollPayrun() {
     }).format(amount);
   };
 
+  const payslips = payrun?.payslips || [];
   const totalEmployerCost = payslips.reduce(
-    (sum, p) => sum + p.employerCost,
+    (sum, p) => sum + Number(p.grossSalary),
     0
   );
-  const totalGrossWage = payslips.reduce((sum, p) => sum + p.grossWage, 0);
-  const totalNetWage = payslips.reduce((sum, p) => sum + p.netWage, 0);
-  const allDone =
-    payslips.length > 0 && payslips.every((p) => p.status === "done");
+  const totalGrossWage = payslips.reduce(
+    (sum, p) => sum + Number(p.grossSalary),
+    0
+  );
+  const totalNetWage = payslips.reduce(
+    (sum, p) => sum + Number(p.netSalary),
+    0
+  );
+
+  const isDone = payrun?.status === "COMPLETED";
+  const isProcessing = payrun?.status === "PROCESSING";
+  const isDraft = payrun?.status === "DRAFT";
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex-1 min-w-[200px]">
           <label className="text-sm font-medium mb-2 block">Pay Period</label>
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month} value={month}>
-                  {month}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(selectedDate, "MMMM yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setCalendarOpen(false);
+                  }
+                }}
+                captionLayout="dropdown"
+                fromYear={2020}
+                toYear={2030}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="flex gap-2">
           <Button
-            onClick={handleGeneratePayrun}
-            disabled={isGenerating}
-            variant="default"
-          >
-            {isGenerating ? "Generating..." : "Payrun"}
-          </Button>
-          <Button
             onClick={handleValidatePayrun}
-            disabled={isValidating || payslips.length === 0}
+            disabled={isValidating || !payrun || payrun.status !== "DRAFT"}
             variant="outline"
           >
             {isValidating ? "Validating..." : "Validate"}
@@ -195,120 +226,142 @@ export function PayrollPayrun() {
         </div>
       </div>
 
-      {/* Summary Card */}
-      {payslips.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Payrun {selectedMonth}</CardTitle>
-                <CardDescription>{payslips.length} employee(s)</CardDescription>
-              </div>
-              {allDone ? (
-                <Badge variant="success" className="gap-1">
-                  <CheckCircle2 className="size-3" />
-                  Done
-                </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={handleMarkAsDone}
-                  disabled={!payslips.every((p) => p.status === "validated")}
-                >
-                  Done
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-muted-foreground">Employer Cost</div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(totalEmployerCost)}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Gross Wage</div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(totalGrossWage)}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Net Wage</div>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(totalNetWage)}
-                </div>
-              </div>
-            </div>
+      {isLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading payrun...</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Payslip Table */}
-      {payslips.length > 0 && (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Pay Period</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead className="text-right">Employer Cost</TableHead>
-                  <TableHead className="text-right">Basic Wage</TableHead>
-                  <TableHead className="text-right">Gross Wage</TableHead>
-                  <TableHead className="text-right">Net Wage</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payslips.map((payslip) => (
-                  <TableRow key={payslip.id}>
-                    <TableCell className="font-medium">
-                      {payslip.payPeriod}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {payslip.employeeName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {payslip.employeeId}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(payslip.employerCost)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(payslip.basicWage)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(payslip.grossWage)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(payslip.netWage)}
-                    </TableCell>
-                    <TableCell>
-                      {payslip.status === "done" && (
-                        <Badge variant="success">Done</Badge>
-                      )}
-                      {payslip.status === "validated" && (
-                        <Badge variant="default">Validated</Badge>
-                      )}
-                      {payslip.status === "draft" && (
-                        <Badge variant="secondary">Draft</Badge>
-                      )}
-                    </TableCell>
+      {!isLoading && payrun && payslips.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>
+                    Payrun {format(selectedDate, "MMMM yyyy")}
+                  </CardTitle>
+                  <CardDescription>
+                    {payslips.length} employee(s)
+                  </CardDescription>
+                </div>
+                {isDone ? (
+                  <Badge variant="success" className="gap-1">
+                    <CheckCircle2 className="size-3" />
+                    Done
+                  </Badge>
+                ) : isProcessing ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">Validated</Badge>
+                    <Button
+                      size="sm"
+                      onClick={handleMarkAsDone}
+                      disabled={isMarkingDone}
+                    >
+                      {isMarkingDone ? "Processing..." : "Done"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Badge variant="secondary">Draft</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Employer Cost</div>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(totalEmployerCost)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Gross Wage</div>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(totalGrossWage)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Net Wage</div>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(totalNetWage)}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pay Period</TableHead>
+                    <TableHead>Employee</TableHead>
+                    <TableHead className="text-right">Employer Cost</TableHead>
+                    <TableHead className="text-right">Basic Wage</TableHead>
+                    <TableHead className="text-right">Gross Wage</TableHead>
+                    <TableHead className="text-right">Net Wage</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {payslips.map((payslip) => (
+                    <TableRow key={payslip.id}>
+                      <TableCell className="font-medium">
+                        {format(
+                          new Date(payslip.year, payslip.month - 1),
+                          "MMM yyyy"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {payslip.employee.firstName}{" "}
+                            {payslip.employee.lastName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {payslip.employee.employeeCode}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(payslip.grossSalary))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(payslip.basicSalary))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(payslip.grossSalary))}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(Number(payslip.netSalary))}
+                      </TableCell>
+                      <TableCell>
+                        {payslip.status === "PAID" && (
+                          <Badge variant="success">Done</Badge>
+                        )}
+                        {payslip.status === "PROCESSED" && (
+                          <Badge variant="default">Validated</Badge>
+                        )}
+                        {payslip.status === "PENDING" && (
+                          <Badge variant="secondary">Draft</Badge>
+                        )}
+                        {payslip.status === "CANCELLED" && (
+                          <Badge variant="destructive">Cancelled</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
 
-      {/* Information Section */}
       <Card>
         <CardHeader>
           <CardTitle>Payroll Definitions</CardTitle>
@@ -342,17 +395,15 @@ export function PayrollPayrun() {
         </CardContent>
       </Card>
 
-      {/* Note about attendance */}
-      {payslips.length === 0 && (
+      {!isLoading && (!payrun || payslips.length === 0) && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
             <p className="text-muted-foreground mb-4">
-              No payslips generated yet for {selectedMonth}
+              No payslips generated yet for {format(selectedDate, "MMMM yyyy")}
             </p>
             <p className="text-sm text-muted-foreground max-w-md">
-              Click the <strong>Payrun</strong> button to automatically generate
-              payslips for all employees based on their attendance and salary
-              structure for the selected month.
+              Payslips are automatically generated based on employee attendance
+              and salary structure for the selected month.
             </p>
           </CardContent>
         </Card>
