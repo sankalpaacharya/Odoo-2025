@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticateUser } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
 import { sessionService } from "../services/session.service";
 import { employeeService } from "../services/employee.service";
 import { leaveService } from "../services/leave.service";
@@ -55,7 +56,7 @@ function determineStatus(
   return "PRESENT";
 }
 
-router.get("/my-attendance", async (req, res) => {
+router.get("/my-attendance", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { month, year } = req.query;
@@ -207,7 +208,7 @@ router.get("/my-attendance", async (req, res) => {
   }
 });
 
-router.get("/today", async (req, res) => {
+router.get("/today", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const department = req.query.department as string;
 
@@ -332,7 +333,7 @@ router.get("/today", async (req, res) => {
   }
 });
 
-router.get("/employee/:employeeId", async (req, res) => {
+router.get("/employee/:employeeId", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { employeeId } = req.params;
