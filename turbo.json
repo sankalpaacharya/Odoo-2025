@@ -48,6 +48,12 @@
 		"db:down": {
 			"cache": false,
 			"persistent": true
+		},
+		"db:seed": {
+			"cache": false
+		},
+		"db:seed:permissions": {
+			"cache": false
 		}
 	}
 }

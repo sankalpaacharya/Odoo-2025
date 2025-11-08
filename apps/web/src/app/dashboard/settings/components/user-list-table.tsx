@@ -132,96 +132,91 @@ export function UserListTable() {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="space-y-4">
+      <div className="space-y-2">
         <CardTitle>User Management</CardTitle>
         <CardDescription>
           Manage users and assign roles to control access rights
         </CardDescription>
-      </CardHeader>
-      <CardContent>
-         
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Employee Code</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+      </div>
+      <div className="rounded-md border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Employee Code</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {employees.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12">
+                  <p className="text-muted-foreground">No employees found</p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              employees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell>{employee.name}</TableCell>
+                  <TableCell>{employee.employeeCode}</TableCell>
+                  <TableCell>{employee.department || "N/A"}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={roleMap[employee.role] || employee.role}
+                      onValueChange={(value) =>
+                        handleRoleChange(employee.id, value)
+                      }
+                      disabled={updatingRole === employee.id}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/settings/users/${employee.id}` as any
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/settings/users/${employee.id}/edit` as any
+                          )
+                        }
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
-                      <p className="text-muted-foreground">
-                        No employees found
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  employees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell>{employee.name}</TableCell>
-                      <TableCell>{employee.employeeCode}</TableCell>
-                      <TableCell>{employee.department || "N/A"}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={roleMap[employee.role] || employee.role}
-                          onValueChange={(value) =>
-                            handleRoleChange(employee.id, value)
-                          }
-                          disabled={updatingRole === employee.id}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLES.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {role}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/settings/users/${employee.id}` as any
-                              )
-                            }
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/settings/users/${employee.id}/edit` as any
-                              )
-                            }
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-      </CardContent>
-    </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }

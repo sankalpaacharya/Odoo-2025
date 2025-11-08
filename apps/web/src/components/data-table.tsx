@@ -31,6 +31,7 @@ interface DataTableProps<T> {
   loadingMessage?: string;
   expandedContent?: (item: T) => React.ReactNode;
   expandedRows?: Set<string>;
+  footer?: React.ReactNode;
 }
 
 type SortDirection = "asc" | "desc";
@@ -44,6 +45,7 @@ export function DataTable<T extends Record<string, any>>({
   loadingMessage = "Loading...",
   expandedContent,
   expandedRows,
+  footer,
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -149,6 +151,7 @@ export function DataTable<T extends Record<string, any>>({
             })
           )}
         </TableBody>
+        {footer && <TableFooter>{footer}</TableFooter>}
       </Table>
     </div>
   );

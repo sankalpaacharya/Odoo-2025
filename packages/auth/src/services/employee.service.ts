@@ -1,5 +1,8 @@
 import prisma from "@my-better-t-app/db";
-import { generateEmployeeCode, generateRandomPassword } from "../utils/generate-employee-code";
+import {
+  generateEmployeeCode,
+  generateRandomPassword,
+} from "../utils/generate-employee-code";
 import { auth } from "../index";
 
 type Role = "ADMIN" | "EMPLOYEE" | "HR_OFFICER" | "PAYROLL_OFFICER";
@@ -49,10 +52,22 @@ export async function createEmployee(input: CreateEmployeeInput) {
     }
 
     // Convert string dates to Date objects if needed
-    const dateOfJoining = typeof input.dateOfJoining === "string" ? new Date(input.dateOfJoining) : input.dateOfJoining;
-    const dateOfBirth = input.dateOfBirth ? (typeof input.dateOfBirth === "string" ? new Date(input.dateOfBirth) : input.dateOfBirth) : undefined;
+    const dateOfJoining =
+      typeof input.dateOfJoining === "string"
+        ? new Date(input.dateOfJoining)
+        : input.dateOfJoining;
+    const dateOfBirth = input.dateOfBirth
+      ? typeof input.dateOfBirth === "string"
+        ? new Date(input.dateOfBirth)
+        : input.dateOfBirth
+      : undefined;
     // Generate employee code
-    const employeeCode = await generateEmployeeCode(input.firstName, input.lastName, input.companyName, dateOfJoining);
+    const employeeCode = await generateEmployeeCode(
+      input.firstName,
+      input.lastName,
+      input.companyName,
+      dateOfJoining
+    );
 
     // Generate random password
     const generatedPassword = generateRandomPassword(12);
@@ -120,10 +135,15 @@ export async function createEmployee(input: CreateEmployeeInput) {
         role: input.role || "EMPLOYEE",
         department: input.department,
         designation: input.designation,
-        dateOfJoining: dateOfJoining,
+        dateOfJoining,
         basicSalary: input.basicSalary,
         pfContribution: input.pfContribution || 0,
-        professionalTax: input.professionalTax || 0,
+        professionalTax: input.professionalTax || 200,
+        hraPercentage: 50,
+        standardAllowanceAmount: 4167,
+        performanceBonusPercentage: 8.33,
+        leaveTravelPercentage: 8.333,
+        pfPercentage: 12,
         reportingManagerId: input.reportingManagerId,
         employmentStatus: "ACTIVE",
         organizationId,

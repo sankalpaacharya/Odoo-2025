@@ -4,12 +4,12 @@ const prisma = new PrismaClient();
 
 const defaultPermissions = {
   EMPLOYEE: {
-    Dashboard: ["View"],
-    Employees: ["View"],
+    Dashboard: [],
+    Employees: [],
     Attendance: ["View", "Create"],
     "Time Off": ["View", "Create"],
     Payroll: ["View"],
-    Reports: ["View"],
+    Reports: [],
   },
   HR_OFFICER: {
     Dashboard: ["View", "Export Data"],

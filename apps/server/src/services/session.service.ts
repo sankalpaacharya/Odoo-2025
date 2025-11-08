@@ -22,11 +22,17 @@ export const sessionService = {
     const startOfDay = new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
     );
-    
+    const endOfDay = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1)
+    );
+
     return db.workSession.findMany({
       where: {
         employeeId,
-        date: startOfDay,
+        date: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
       },
       orderBy: { startTime: "asc" },
     });
