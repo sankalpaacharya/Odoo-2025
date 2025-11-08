@@ -10,7 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, Download } from "lucide-react";
+import {
+  generateSalaryStatementPDF,
+  getDummySalaryData,
+} from "@/lib/generate-salary-pdf";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -62,7 +66,20 @@ export default function ReportsPage() {
   }, []);
 
   const handlePrint = () => {
-    window.print();
+    if (!selectedEmployee || !selectedYear) {
+      alert("Please select an employee and year first");
+      return;
+    }
+
+    const employee = employees.find((e) => e.id === selectedEmployee);
+    if (!employee) {
+      alert("Employee not found");
+      return;
+    }
+
+    // Use dummy data for now - you can replace this with real data later
+    const salaryData = getDummySalaryData(employee.name, selectedYear);
+    generateSalaryStatementPDF(salaryData);
   };
 
   const currentYear = new Date().getFullYear();
@@ -80,10 +97,17 @@ export default function ReportsPage() {
           <CardTitle className="text-xl font-semibold">
             Salary Statement Report
           </CardTitle>
-          <Button onClick={handlePrint} variant="default" className="gap-2">
-            <Printer className="h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handlePrint}
+              variant="default"
+              className="gap-2"
+              disabled={!selectedEmployee || !selectedYear}
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
