@@ -8,6 +8,25 @@ import { sendNewEmployeeEmail } from "../services/email.service";
 
 const router: RouterType = Router();
 
+// Helper function to map attendance status to UI status
+const mapAttendanceStatus = (dbStatus?: string): string => {
+  if (!dbStatus) return "absent";
+
+  switch (dbStatus) {
+    case "PRESENT":
+    case "LATE":
+    case "HALF_DAY":
+      return "present";
+    case "ON_LEAVE":
+      return "on_leave";
+    case "ABSENT":
+    case "HOLIDAY":
+    case "WEEKEND":
+    default:
+      return "absent";
+  }
+};
+
 router.use(authenticateUser);
 
 router.get("/me", async (req, res) => {
@@ -33,6 +52,116 @@ router.get("/me", async (req, res) => {
     res.json(employee);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch employee" });
+  }
+});
+
+// Get all employees with their latest attendance status
+router.get("/", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+
+    // Get the current user's employee record to check permissions
+    const currentEmployee = await db.employee.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        employeeCode: true,
+        department: true,
+        designation: true,
+        employmentStatus: true,
+      },
+    });
+
+    if (!currentEmployee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    // Roles that can see all employees
+    const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
+    const canViewAll = allowedRoles.includes(currentEmployee.role);
+
+    // If user can't view all, return only their own data
+    if (!canViewAll) {
+      // Get today's attendance for current employee
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayAttendance = await db.attendance.findFirst({
+        where: {
+          employeeId: currentEmployee.id,
+          date: today,
+        },
+      });
+
+      return res.json([
+        {
+          id: currentEmployee.id,
+          name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
+          role: currentEmployee.role.toLowerCase(),
+          status: mapAttendanceStatus(todayAttendance?.status),
+          employeeCode: currentEmployee.employeeCode,
+          department: currentEmployee.department,
+          designation: currentEmployee.designation,
+          employmentStatus: currentEmployee.employmentStatus,
+        },
+      ]);
+    }
+
+    // Fetch all employees with only ACTIVE employment status
+    const employees = await db.employee.findMany({
+      where: {
+        employmentStatus: "ACTIVE",
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        employeeCode: true,
+        department: true,
+        designation: true,
+        employmentStatus: true,
+      },
+      orderBy: {
+        firstName: "asc",
+      },
+    });
+
+    // Get today's attendance for all employees
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendances = await db.attendance.findMany({
+      where: {
+        date: today,
+        employeeId: {
+          in: employees.map((e) => e.id),
+        },
+      },
+    });
+
+    // Create a map of employee ID to attendance status
+    const attendanceMap = new Map(attendances.map((a) => [a.employeeId, a.status]));
+
+    // Format the response
+    const formattedEmployees = employees.map((emp) => ({
+      id: emp.id,
+      name: `${emp.firstName} ${emp.lastName}`,
+      role: emp.role.toLowerCase(),
+      status: mapAttendanceStatus(attendanceMap.get(emp.id)),
+      employeeCode: emp.employeeCode,
+      department: emp.department,
+      designation: emp.designation,
+      employmentStatus: emp.employmentStatus,
+    }));
+
+    res.json(formattedEmployees);
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    res.status(500).json({ error: "Failed to fetch employees" });
   }
 });
 

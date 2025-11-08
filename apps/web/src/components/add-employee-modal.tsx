@@ -54,9 +54,8 @@ export function AddEmployeeModal({ onEmployeeAdded }: AddEmployeeModalProps) {
       const result = await response.json();
 
       if (result.success) {
-        const employeeData = result.data;
         toast.success("Employee created successfully!", {
-          description: `Employee Code: ${employeeData.employeeCode} | Password: ${employeeData.temporaryPassword} | Credentials sent to ${data.email}`,
+          description: `Credentials sent to ${data.email}`,
           duration: 10000,
         });
         setOpen(false);
