@@ -4,41 +4,28 @@ import { useMemo, useState, useCallback, memo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Save, Plus, Trash2, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import type { ProfileData } from "@/types/profile";
-import {
-  useUpdateSalary,
-  useAddSalaryComponent,
-  useUpdateSalaryComponent,
-  useDeleteSalaryComponent,
-} from "@/hooks/useProfile";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { useUpdateSalary } from "@/hooks/useProfile";
 import { Separator } from "@/components/ui/separator";
 
 interface SalaryInfoTabProps {
   profile: ProfileData;
 }
 
+interface SalaryComponents {
+  hraPercentage?: number;
+  standardAllowanceAmount?: number;
+  performanceBonusPercentage?: number;
+  leaveTravelPercentage?: number;
+  fixedAllowancePercentage?: number;
+}
+
 interface ChangeTracker {
-  basicSalary?: number;
-  pfContribution?: number;
+  monthlyWage?: number;
+  pfPercentage?: number;
   professionalTax?: number;
-  components: Record<string, { amount: number; percentage?: number }>;
+  components: SalaryComponents;
 }
 
 interface SalaryFieldProps {
@@ -47,13 +34,10 @@ interface SalaryFieldProps {
   percentage?: number;
   unit?: string;
   description?: string;
-  readOnly?: boolean;
   readOnlyAmount?: boolean;
   readOnlyPercentage?: boolean;
-  componentId?: string;
-  onDelete?: (id: string) => void;
-  baseSalary?: number;
-  onChange?: (amount: number, percentage?: number) => void;
+  onPercentageChange?: (percentage: number) => void;
+  onAmountChange?: (amount: number) => void;
   isModified?: boolean;
 }
 
@@ -63,23 +47,16 @@ const SalaryField = memo(function SalaryField({
   percentage,
   unit = "₹ / month",
   description,
-  readOnly = false,
-  readOnlyAmount,
-  readOnlyPercentage,
-  componentId,
-  onDelete,
-  baseSalary,
-  onChange,
+  readOnlyAmount = true,
+  readOnlyPercentage = false,
+  onPercentageChange,
+  onAmountChange,
   isModified = false,
 }: SalaryFieldProps) {
-  const [localAmount, setLocalAmount] = useState<string>("");
   const [localPercentage, setLocalPercentage] = useState<string>("");
-  const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [localAmount, setLocalAmount] = useState<string>("");
   const [isEditingPercentage, setIsEditingPercentage] = useState(false);
-
-  // Determine effective readOnly states
-  const isAmountReadOnly = readOnlyAmount ?? readOnly;
-  const isPercentageReadOnly = readOnlyPercentage ?? readOnly;
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
 
   const displayAmount = isEditingAmount
     ? localAmount
@@ -92,72 +69,50 @@ const SalaryField = memo(function SalaryField({
     ? percentage.toFixed(2)
     : "0.00";
 
-  const handleAmountChange = (value: string) => {
-    setLocalAmount(value);
-  };
-
-  const handleAmountBlur = () => {
-    setIsEditingAmount(false);
-    if (!onChange) {
-      return;
-    }
-    if (!localAmount || localAmount === "") {
-      return;
-    }
-    const numValue = Number.parseFloat(localAmount);
-    if (isNaN(numValue)) {
-      return;
-    }
-    if (baseSalary && baseSalary > 0 && percentage !== undefined) {
-      const calculatedPercentage = (numValue / baseSalary) * 100;
-      if (isFinite(calculatedPercentage)) {
-        onChange(numValue, calculatedPercentage);
-      } else {
-        onChange(numValue);
-      }
-    } else {
-      onChange(numValue);
-    }
-  };
-
-  const handleAmountFocus = () => {
-    if (isAmountReadOnly || !onChange) {
-      return;
-    }
-    setIsEditingAmount(true);
-    setLocalAmount(amount.toString());
-  };
-
   const handlePercentageChange = (value: string) => {
     setLocalPercentage(value);
   };
 
   const handlePercentageBlur = () => {
     setIsEditingPercentage(false);
-    if (!onChange) {
-      return;
-    }
-    if (!localPercentage || localPercentage === "") {
+    if (!onPercentageChange || !localPercentage) {
       return;
     }
     const numValue = Number.parseFloat(localPercentage);
-    if (isNaN(numValue)) {
-      return;
-    }
-    if (baseSalary && baseSalary > 0) {
-      const calculatedAmount = (baseSalary * numValue) / 100;
-      if (isFinite(calculatedAmount)) {
-        onChange(calculatedAmount, numValue);
-      }
+    if (!isNaN(numValue) && isFinite(numValue)) {
+      onPercentageChange(numValue);
     }
   };
 
   const handlePercentageFocus = () => {
-    if (isPercentageReadOnly || !onChange) {
+    if (readOnlyPercentage) {
       return;
     }
     setIsEditingPercentage(true);
     setLocalPercentage(percentage?.toString() || "0");
+  };
+
+  const handleAmountChange = (value: string) => {
+    setLocalAmount(value);
+  };
+
+  const handleAmountBlur = () => {
+    setIsEditingAmount(false);
+    if (!onAmountChange || !localAmount) {
+      return;
+    }
+    const numValue = Number.parseFloat(localAmount);
+    if (!isNaN(numValue) && isFinite(numValue)) {
+      onAmountChange(numValue);
+    }
+  };
+
+  const handleAmountFocus = () => {
+    if (readOnlyAmount) {
+      return;
+    }
+    setIsEditingAmount(true);
+    setLocalAmount(amount.toString());
   };
 
   return (
@@ -171,18 +126,6 @@ const SalaryField = memo(function SalaryField({
             </span>
           )}
         </Label>
-        <div className="flex items-center gap-2">
-          {!isAmountReadOnly && onDelete && componentId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(componentId)}
-              className="h-7 w-7 p-0"
-            >
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-            </Button>
-          )}
-        </div>
       </div>
       <div className="flex justify-between">
         <div className="flex items-center gap-2">
@@ -192,7 +135,7 @@ const SalaryField = memo(function SalaryField({
             onChange={(e) => handleAmountChange(e.target.value)}
             onFocus={handleAmountFocus}
             onBlur={handleAmountBlur}
-            readOnly={isAmountReadOnly}
+            readOnly={readOnlyAmount}
             className={`h-10 ${
               isModified
                 ? "border-orange-500 dark:border-orange-400"
@@ -211,7 +154,7 @@ const SalaryField = memo(function SalaryField({
               onChange={(e) => handlePercentageChange(e.target.value)}
               onFocus={handlePercentageFocus}
               onBlur={handlePercentageBlur}
-              readOnly={isPercentageReadOnly}
+              readOnly={readOnlyPercentage}
               className={`h-10 ${
                 isModified
                   ? "border-orange-500 dark:border-orange-400"
@@ -319,29 +262,18 @@ const SimpleField = memo(function SimpleField({
 
 export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
   const updateSalary = useUpdateSalary();
-  const addComponent = useAddSalaryComponent();
-  const updateComponent = useUpdateSalaryComponent();
-  const deleteComponent = useDeleteSalaryComponent();
 
   const [changes, setChanges] = useState<ChangeTracker>({
     components: {},
   });
   const [isSaving, setIsSaving] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newComponent, setNewComponent] = useState({
-    name: "",
-    type: "EARNING" as const,
-    amount: "",
-    isPercentage: false,
-    description: "",
-  });
 
   const canEdit = profile.canEditSalary || false;
 
-  // Wage is the total monthly salary (full amount as entered by user)
+  // Monthly wage is stored in basicSalary field
   const monthlyWage = useMemo(
-    () => changes.basicSalary ?? Number(profile.salary.basicSalary),
-    [changes.basicSalary, profile.salary.basicSalary]
+    () => changes.monthlyWage ?? Number(profile.salary.basicSalary),
+    [changes.monthlyWage, profile.salary.basicSalary]
   );
 
   const yearlyWage = useMemo(() => monthlyWage * 12, [monthlyWage]);
@@ -352,136 +284,138 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
   // Check if there are any pending changes
   const hasChanges = useMemo(() => {
     return (
-      changes.basicSalary !== undefined ||
-      changes.pfContribution !== undefined ||
+      changes.monthlyWage !== undefined ||
+      changes.pfPercentage !== undefined ||
       changes.professionalTax !== undefined ||
       Object.keys(changes.components).length > 0
     );
   }, [changes]);
 
-  // Calculate component values
+  // Calculate salary components with user modifications
   const components = useMemo(() => {
-    const comps = profile.salary.components;
+    // HRA - House Rent Allowance - Default 50% of Basic
+    const hraPercentage = changes.components.hraPercentage ?? 50;
+    const houseRentAllowance = (basicSalary * hraPercentage) / 100;
 
-    const findComponent = (name: string) =>
-      comps.find((c) => c.name.toLowerCase().includes(name.toLowerCase()));
-
-    // Basic Salary - 50% of Monthly Wage
-    const basicPercentage = 50;
-    const basicAmount = basicSalary; // This is already calculated as monthlyWage * 0.5
-
-    // HRA - House Rent Allowance - 50% of Basic
-    const hra = findComponent("house rent") || findComponent("hra");
-    const houseRentAllowance =
-      changes.components[hra?.id || ""]?.amount ??
-      (hra ? Number(hra.amount) : basicSalary * 0.5);
-    const hraPercentage = changes.components[hra?.id || ""]?.percentage ?? 50;
-
-    // Standard Allowance - Fixed 4,167
-    const sa = findComponent("standard");
+    // Standard Allowance - Default fixed 4,167
     const standardAllowance =
-      changes.components[sa?.id || ""]?.amount ??
-      (sa ? Number(sa.amount) : 4167);
-    const standardAllowancePercentage =
-      changes.components[sa?.id || ""]?.percentage ??
-      (standardAllowance / monthlyWage) * 100;
+      changes.components.standardAllowanceAmount ?? 4167;
+    const standardAllowancePercentage = (standardAllowance / monthlyWage) * 100;
 
-    // Performance Bonus - 8.33% of Basic
-    const pb = findComponent("performance") || findComponent("bonus");
-    const performanceBonus =
-      changes.components[pb?.id || ""]?.amount ??
-      (pb ? Number(pb.amount) : basicSalary * 0.0833);
+    // Performance Bonus - Default 8.33% of Basic
     const performanceBonusPercentage =
-      changes.components[pb?.id || ""]?.percentage ?? 8.33;
+      changes.components.performanceBonusPercentage ?? 8.33;
+    const performanceBonus = (basicSalary * performanceBonusPercentage) / 100;
 
-    // Leave Travel Allowance - 8.333% of Basic
-    const lta = findComponent("leave travel") || findComponent("lta");
-    const leaveTravelAllowance =
-      changes.components[lta?.id || ""]?.amount ??
-      (lta ? Number(lta.amount) : basicSalary * 0.08333);
+    // Leave Travel Allowance - Default 8.333% of Basic
     const leaveTravelPercentage =
-      changes.components[lta?.id || ""]?.percentage ?? 8.333;
+      changes.components.leaveTravelPercentage ?? 8.333;
+    const leaveTravelAllowance = (basicSalary * leaveTravelPercentage) / 100;
 
-    // Fixed Allowance - Wage minus all other components
-    const fa = findComponent("fixed");
+    // Fixed Allowance - Remaining amount to match monthly wage
     const totalComponents =
-      basicAmount +
+      basicSalary +
       houseRentAllowance +
       standardAllowance +
       performanceBonus +
       leaveTravelAllowance;
-    const fixedAllowance =
-      changes.components[fa?.id || ""]?.amount ??
-      (fa ? Number(fa.amount) : Math.max(0, monthlyWage - totalComponents));
+
+    const fixedAllowance = Math.max(0, monthlyWage - totalComponents);
     const fixedAllowancePercentage =
-      changes.components[fa?.id || ""]?.percentage ??
+      changes.components.fixedAllowancePercentage ??
       (fixedAllowance / monthlyWage) * 100;
 
     return {
-      basicPercentage,
-      basicAmount,
-      hra,
+      basicAmount: basicSalary,
+      basicPercentage: 50,
       houseRentAllowance,
       hraPercentage,
-      sa,
       standardAllowance,
       standardAllowancePercentage,
-      pb,
       performanceBonus,
       performanceBonusPercentage,
-      lta,
       leaveTravelAllowance,
       leaveTravelPercentage,
-      fa,
       fixedAllowance,
       fixedAllowancePercentage,
     };
-  }, [profile.salary.components, basicSalary, monthlyWage, changes.components]);
+  }, [basicSalary, monthlyWage, changes.components]);
 
   // PF calculation
-  const pfEmployeeContribution = useMemo(
-    () => changes.pfContribution ?? basicSalary * 0.12,
-    [changes.pfContribution, basicSalary]
-  );
-  const pfEmployerContribution = useMemo(
-    () => changes.pfContribution ?? basicSalary * 0.12,
-    [changes.pfContribution, basicSalary]
-  );
   const pfPercentage = useMemo(
-    () => (pfEmployeeContribution / basicSalary) * 100,
-    [pfEmployeeContribution, basicSalary]
+    () => changes.pfPercentage ?? 12,
+    [changes.pfPercentage]
   );
+  const pfEmployeeContribution = useMemo(
+    () => (basicSalary * pfPercentage) / 100,
+    [basicSalary, pfPercentage]
+  );
+  const pfEmployerContribution = pfEmployeeContribution;
 
   // Professional Tax defaults to 200
   const professionalTax = useMemo(
     () =>
-      changes.professionalTax ??
-      (profile.salary.professionalTax
-        ? Number(profile.salary.professionalTax)
-        : 200),
+      changes.professionalTax ?? Number(profile.salary.professionalTax || 200),
     [changes.professionalTax, profile.salary.professionalTax]
   );
 
   // Change handlers
-  const handleBasicSalaryChange = useCallback((amount: number) => {
-    setChanges((prev) => ({ ...prev, basicSalary: amount }));
+  const handleMonthlyWageChange = useCallback((amount: number) => {
+    setChanges((prev) => ({ ...prev, monthlyWage: amount }));
   }, []);
 
-  const handlePFChange = useCallback((amount: number) => {
-    setChanges((prev) => ({ ...prev, pfContribution: amount }));
+  const handlePFPercentageChange = useCallback((percentage: number) => {
+    setChanges((prev) => ({ ...prev, pfPercentage: percentage }));
   }, []);
 
   const handleProfessionalTaxChange = useCallback((amount: number) => {
     setChanges((prev) => ({ ...prev, professionalTax: amount }));
   }, []);
 
-  const handleComponentChange = useCallback(
-    (componentId: string, amount: number, percentage?: number) => {
+  const handleHRAPercentageChange = useCallback((percentage: number) => {
+    setChanges((prev) => ({
+      ...prev,
+      components: { ...prev.components, hraPercentage: percentage },
+    }));
+  }, []);
+
+  const handleStandardAllowanceChange = useCallback((amount: number) => {
+    setChanges((prev) => ({
+      ...prev,
+      components: { ...prev.components, standardAllowanceAmount: amount },
+    }));
+  }, []);
+
+  const handlePerformanceBonusPercentageChange = useCallback(
+    (percentage: number) => {
       setChanges((prev) => ({
         ...prev,
         components: {
           ...prev.components,
-          [componentId]: { amount, percentage },
+          performanceBonusPercentage: percentage,
+        },
+      }));
+    },
+    []
+  );
+
+  const handleLeaveTravelPercentageChange = useCallback(
+    (percentage: number) => {
+      setChanges((prev) => ({
+        ...prev,
+        components: { ...prev.components, leaveTravelPercentage: percentage },
+      }));
+    },
+    []
+  );
+
+  const handleFixedAllowancePercentageChange = useCallback(
+    (percentage: number) => {
+      setChanges((prev) => ({
+        ...prev,
+        components: {
+          ...prev.components,
+          fixedAllowancePercentage: percentage,
         },
       }));
     },
@@ -492,37 +426,21 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      // Update basic salary, PF, and professional tax if changed
-      if (
-        changes.basicSalary !== undefined ||
-        changes.pfContribution !== undefined ||
-        changes.professionalTax !== undefined
-      ) {
-        await updateSalary.mutateAsync({
-          employeeId: profile.id,
-          data: {
-            basicSalary: changes.basicSalary,
-            pfContribution: changes.pfContribution,
-            professionalTax: changes.professionalTax,
-          },
-        });
-      }
+      await updateSalary.mutateAsync({
+        employeeId: profile.id,
+        data: {
+          monthlyWage: changes.monthlyWage,
+          pfPercentage: changes.pfPercentage,
+          professionalTax: changes.professionalTax,
+          hraPercentage: changes.components.hraPercentage,
+          standardAllowanceAmount: changes.components.standardAllowanceAmount,
+          performanceBonusPercentage:
+            changes.components.performanceBonusPercentage,
+          leaveTravelPercentage: changes.components.leaveTravelPercentage,
+          fixedAllowancePercentage: changes.components.fixedAllowancePercentage,
+        },
+      });
 
-      // Update all modified components
-      const componentUpdates = Object.entries(changes.components).map(
-        ([componentId, data]) =>
-          updateComponent.mutateAsync({
-            componentId,
-            data: {
-              amount: data.amount,
-              isPercentage: data.percentage !== undefined,
-            },
-          })
-      );
-
-      await Promise.all(componentUpdates);
-
-      // Clear changes after successful save
       setChanges({ components: {} });
     } catch (error) {
       console.error("Failed to save changes:", error);
@@ -533,37 +451,6 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
 
   const handleDiscardChanges = () => {
     setChanges({ components: {} });
-  };
-
-  const handleAddComponent = async () => {
-    try {
-      await addComponent.mutateAsync({
-        employeeId: profile.id,
-        name: newComponent.name,
-        type: newComponent.type,
-        amount: newComponent.amount,
-        isPercentage: newComponent.isPercentage,
-        description: newComponent.description || undefined,
-      });
-      setIsAddDialogOpen(false);
-      setNewComponent({
-        name: "",
-        type: "EARNING",
-        amount: "",
-        isPercentage: false,
-        description: "",
-      });
-    } catch (error) {
-      console.error("Failed to add component:", error);
-    }
-  };
-
-  const handleDeleteComponent = async (componentId: string) => {
-    if (
-      window.confirm("Are you sure you want to delete this salary component?")
-    ) {
-      await deleteComponent.mutateAsync(componentId);
-    }
   };
 
   return (
@@ -607,8 +494,8 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
           unit="₹ / month"
           large
           readOnly={!canEdit}
-          onChange={canEdit ? handleBasicSalaryChange : undefined}
-          isModified={changes.basicSalary !== undefined}
+          onChange={canEdit ? handleMonthlyWageChange : undefined}
+          isModified={changes.monthlyWage !== undefined}
         />
         <SimpleField
           title="No of working days in a week:"
@@ -635,126 +522,6 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Salary Components</h3>
-            {canEdit && (
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Salary Component</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Component Name</Label>
-                      <Input
-                        value={newComponent.name}
-                        onChange={(e) =>
-                          setNewComponent({
-                            ...newComponent,
-                            name: e.target.value,
-                          })
-                        }
-                        placeholder="e.g., Transport Allowance"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Type</Label>
-                      <Select
-                        value={newComponent.type}
-                        onValueChange={(value: any) =>
-                          setNewComponent({ ...newComponent, type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="EARNING">Earning</SelectItem>
-                          <SelectItem value="DEDUCTION">Deduction</SelectItem>
-                          <SelectItem value="BENEFIT">Benefit</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Computation Type</Label>
-                      <Select
-                        value={
-                          newComponent.isPercentage ? "percentage" : "fixed"
-                        }
-                        onValueChange={(value) =>
-                          setNewComponent({
-                            ...newComponent,
-                            isPercentage: value === "percentage",
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed">Fixed Amount</SelectItem>
-                          <SelectItem value="percentage">
-                            Percentage of Wage
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        {newComponent.isPercentage
-                          ? "Percentage (%)"
-                          : "Amount (₹)"}
-                      </Label>
-                      <Input
-                        type="number"
-                        value={newComponent.amount}
-                        onChange={(e) =>
-                          setNewComponent({
-                            ...newComponent,
-                            amount: e.target.value,
-                          })
-                        }
-                        placeholder={
-                          newComponent.isPercentage ? "e.g., 10" : "e.g., 5000"
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Description (Optional)</Label>
-                      <Textarea
-                        value={newComponent.description}
-                        onChange={(e) =>
-                          setNewComponent({
-                            ...newComponent,
-                            description: e.target.value,
-                          })
-                        }
-                        placeholder="Additional details"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAddDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleAddComponent}
-                      disabled={!newComponent.name || !newComponent.amount}
-                    >
-                      Add
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
           <div className="space-y-4">
             <SalaryField
@@ -762,161 +529,71 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
               amount={components.basicAmount}
               percentage={components.basicPercentage}
               description="Basic salary is 50% of the monthly wage"
-              readOnly={true}
-              baseSalary={monthlyWage}
+              readOnlyAmount={true}
+              readOnlyPercentage={true}
             />
             <SalaryField
               title="House Rent Allowance"
               amount={components.houseRentAllowance}
               percentage={components.hraPercentage}
-              description="HRA is 50% of the basic salary"
+              description="HRA is calculated as a percentage of the basic salary"
               readOnlyAmount={true}
               readOnlyPercentage={!canEdit}
-              componentId={components.hra?.id}
-              onDelete={canEdit ? handleDeleteComponent : undefined}
-              baseSalary={basicSalary}
-              onChange={
-                canEdit && components.hra
-                  ? (amt, pct) =>
-                      handleComponentChange(components.hra!.id, amt, pct)
-                  : undefined
+              onPercentageChange={
+                canEdit ? handleHRAPercentageChange : undefined
               }
-              isModified={
-                components.hra
-                  ? changes.components[components.hra.id] !== undefined
-                  : false
-              }
+              isModified={changes.components.hraPercentage !== undefined}
             />
             <SalaryField
               title="Standard Allowance"
               amount={components.standardAllowance}
               percentage={components.standardAllowancePercentage}
-              description="Fixed amount of ₹4,167 per month"
+              description="Standard fixed allowance per month"
               readOnlyAmount={!canEdit}
-              readOnlyPercentage={!canEdit}
-              componentId={components.sa?.id}
-              onDelete={canEdit ? handleDeleteComponent : undefined}
-              baseSalary={monthlyWage}
-              onChange={
-                canEdit && components.sa
-                  ? (amt, pct) =>
-                      handleComponentChange(components.sa!.id, amt, pct)
-                  : undefined
+              readOnlyPercentage={true}
+              onAmountChange={
+                canEdit ? handleStandardAllowanceChange : undefined
               }
               isModified={
-                components.sa
-                  ? changes.components[components.sa.id] !== undefined
-                  : false
+                changes.components.standardAllowanceAmount !== undefined
               }
             />
             <SalaryField
               title="Performance Bonus"
               amount={components.performanceBonus}
               percentage={components.performanceBonusPercentage}
-              description="Performance bonus is 8.33% of the basic salary"
+              description="Performance bonus as a percentage of basic salary"
               readOnlyAmount={true}
               readOnlyPercentage={!canEdit}
-              componentId={components.pb?.id}
-              onDelete={canEdit ? handleDeleteComponent : undefined}
-              baseSalary={basicSalary}
-              onChange={
-                canEdit && components.pb
-                  ? (amt, pct) =>
-                      handleComponentChange(components.pb!.id, amt, pct)
-                  : undefined
+              onPercentageChange={
+                canEdit ? handlePerformanceBonusPercentageChange : undefined
               }
               isModified={
-                components.pb
-                  ? changes.components[components.pb.id] !== undefined
-                  : false
+                changes.components.performanceBonusPercentage !== undefined
               }
             />
             <SalaryField
               title="Leave Travel Allowance"
               amount={components.leaveTravelAllowance}
               percentage={components.leaveTravelPercentage}
-              description="LTA is 8.333% of the basic salary"
+              description="LTA as a percentage of basic salary"
               readOnlyAmount={true}
               readOnlyPercentage={!canEdit}
-              componentId={components.lta?.id}
-              onDelete={canEdit ? handleDeleteComponent : undefined}
-              baseSalary={basicSalary}
-              onChange={
-                canEdit && components.lta
-                  ? (amt, pct) =>
-                      handleComponentChange(components.lta!.id, amt, pct)
-                  : undefined
+              onPercentageChange={
+                canEdit ? handleLeaveTravelPercentageChange : undefined
               }
               isModified={
-                components.lta
-                  ? changes.components[components.lta.id] !== undefined
-                  : false
+                changes.components.leaveTravelPercentage !== undefined
               }
             />
             <SalaryField
               title="Fixed Allowance"
               amount={components.fixedAllowance}
               percentage={components.fixedAllowancePercentage}
-              description="Fixed allowance = Monthly Wage - (Basic + HRA + Standard + Performance Bonus + LTA)"
+              description="Remaining allowance to match total monthly wage"
               readOnlyAmount={true}
-              readOnlyPercentage={!canEdit}
-              componentId={components.fa?.id}
-              onDelete={canEdit ? handleDeleteComponent : undefined}
-              baseSalary={monthlyWage}
-              onChange={
-                canEdit && components.fa
-                  ? (amt, pct) =>
-                      handleComponentChange(components.fa!.id, amt, pct)
-                  : undefined
-              }
-              isModified={
-                components.fa
-                  ? changes.components[components.fa.id] !== undefined
-                  : false
-              }
+              readOnlyPercentage={true}
             />
-
-            {/* Custom components */}
-            {profile.salary.components
-              .filter(
-                (comp) =>
-                  ![
-                    "house rent",
-                    "hra",
-                    "standard",
-                    "performance",
-                    "bonus",
-                    "leave travel",
-                    "lta",
-                    "fixed",
-                  ].some((keyword) => comp.name.toLowerCase().includes(keyword))
-              )
-              .map((comp) => (
-                <SalaryField
-                  key={comp.id}
-                  title={comp.name}
-                  amount={
-                    changes.components[comp.id]?.amount ?? Number(comp.amount)
-                  }
-                  percentage={
-                    changes.components[comp.id]?.percentage ??
-                    (comp.isPercentage
-                      ? Number(comp.amount)
-                      : (Number(comp.amount) / basicSalary) * 100)
-                  }
-                  description={comp.description || undefined}
-                  readOnly={!canEdit}
-                  componentId={comp.id}
-                  onDelete={canEdit ? handleDeleteComponent : undefined}
-                  baseSalary={basicSalary}
-                  onChange={
-                    canEdit
-                      ? (amt, pct) => handleComponentChange(comp.id, amt, pct)
-                      : undefined
-                  }
-                  isModified={changes.components[comp.id] !== undefined}
-                />
-              ))}
           </div>
         </div>
 
@@ -932,20 +609,21 @@ export default function SalaryInfoTab({ profile }: SalaryInfoTabProps) {
                 title="Employee"
                 amount={pfEmployeeContribution}
                 percentage={pfPercentage}
-                description="Employee PF contribution is 12% of basic salary"
+                description="Employee PF contribution as percentage of basic salary"
                 readOnlyAmount={true}
                 readOnlyPercentage={!canEdit}
-                baseSalary={basicSalary}
-                onChange={canEdit ? handlePFChange : undefined}
-                isModified={changes.pfContribution !== undefined}
+                onPercentageChange={
+                  canEdit ? handlePFPercentageChange : undefined
+                }
+                isModified={changes.pfPercentage !== undefined}
               />
               <SalaryField
                 title="Employer"
                 amount={pfEmployerContribution}
                 percentage={pfPercentage}
                 description="Employer PF contribution matches employee contribution"
-                readOnly={true}
-                baseSalary={basicSalary}
+                readOnlyAmount={true}
+                readOnlyPercentage={true}
               />
             </div>
           </div>

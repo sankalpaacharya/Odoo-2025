@@ -19,12 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CheckCircle2, CalendarIcon, Loader2 } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { format } from "date-fns";
@@ -75,21 +76,39 @@ interface Payrun {
 }
 
 export function PayrollPayrun() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    currentDate.getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    currentDate.getFullYear()
+  );
   const [payrun, setPayrun] = useState<Payrun | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isMarkingDone, setIsMarkingDone] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const selectedMonth = selectedDate.getMonth() + 1;
-  const selectedYear = selectedDate.getFullYear();
-
+  // Fetch payrun when component mounts or when month/year changes
   useEffect(() => {
-    generatePayrun();
+    fetchPayrun();
   }, [selectedMonth, selectedYear]);
 
-  const generatePayrun = async () => {
+  const fetchPayrun = async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiClient<Payrun>(
+        `/api/payroll/payrun/${selectedMonth}/${selectedYear}`
+      );
+      setPayrun(data);
+    } catch (error: any) {
+      // Payrun doesn't exist yet, that's okay
+      setPayrun(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGeneratePayrun = async () => {
     setIsLoading(true);
     try {
       const data = await apiClient<Payrun>("/api/payroll/payrun/generate", {
@@ -100,6 +119,7 @@ export function PayrollPayrun() {
         }),
       });
       setPayrun(data);
+      toast.success("Payrun generated successfully");
     } catch (error: any) {
       console.error("Error generating payrun:", error);
       toast.error("Failed to generate payrun", {
@@ -182,47 +202,90 @@ export function PayrollPayrun() {
   const isProcessing = payrun?.status === "PROCESSING";
   const isDraft = payrun?.status === "DRAFT";
 
+  const months = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" },
+  ];
+
+  const years = Array.from(
+    { length: 11 },
+    (_, i) => currentDate.getFullYear() - 5 + i
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex-1 min-w-[200px]">
-          <label className="text-sm font-medium mb-2 block">Pay Period</label>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(selectedDate, "MMMM yyyy")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date);
-                    setCalendarOpen(false);
-                  }
-                }}
-                captionLayout="dropdown"
-                fromYear={2020}
-                toYear={2030}
-              />
-            </PopoverContent>
-          </Popover>
+          <label className="text-sm font-medium mb-2 block">Month</label>
+          <Select
+            value={selectedMonth.toString()}
+            onValueChange={(value) => setSelectedMonth(Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select month" />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((month) => (
+                <SelectItem key={month.value} value={month.value.toString()}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <label className="text-sm font-medium mb-2 block">Year</label>
+          <Select
+            value={selectedYear.toString()}
+            onValueChange={(value) => setSelectedYear(Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select year" />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex gap-2">
           <Button
-            onClick={handleValidatePayrun}
-            disabled={isValidating || !payrun || payrun.status !== "DRAFT"}
-            variant="outline"
+            onClick={handleGeneratePayrun}
+            disabled={isLoading || (payrun !== null && isDraft)}
           >
-            {isValidating ? "Validating..." : "Validate"}
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              "Generate Payrun"
+            )}
           </Button>
+          {payrun && isDraft && (
+            <Button
+              onClick={handleValidatePayrun}
+              disabled={isValidating}
+              variant="outline"
+            >
+              {isValidating ? "Validating..." : "Validate"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -235,6 +298,21 @@ export function PayrollPayrun() {
         </Card>
       )}
 
+      {!isLoading && !payrun && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+            <p className="text-muted-foreground mb-4">
+              No payrun found for{" "}
+              {months.find((m) => m.value === selectedMonth)?.label}{" "}
+              {selectedYear}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Click "Generate Payrun" to create payslips for all employees
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {!isLoading && payrun && payslips.length > 0 && (
         <>
           <Card>
@@ -242,7 +320,9 @@ export function PayrollPayrun() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>
-                    Payrun {format(selectedDate, "MMMM yyyy")}
+                    Payrun{" "}
+                    {months.find((m) => m.value === selectedMonth)?.label}{" "}
+                    {selectedYear}
                   </CardTitle>
                   <CardDescription>
                     {payslips.length} employee(s)
@@ -394,20 +474,6 @@ export function PayrollPayrun() {
           </div>
         </CardContent>
       </Card>
-
-      {!isLoading && (!payrun || payslips.length === 0) && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-            <p className="text-muted-foreground mb-4">
-              No payslips generated yet for {format(selectedDate, "MMMM yyyy")}
-            </p>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Payslips are automatically generated based on employee attendance
-              and salary structure for the selected month.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
