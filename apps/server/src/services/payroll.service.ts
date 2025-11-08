@@ -1,31 +1,6 @@
 import db from "@my-better-t-app/db";
 import { sessionService } from "./session.service";
-
-// type PayrunStatus = "DRAFT" | "PROCESSING" | "COMPLETED" | "CANCELLED";
-// type PayslipStatus = "PENDING" | "PROCESSED" | "PAID" | "CANCELLED";
-
-function calculateWorkingHoursFromSessions(
-  sessions: any[],
-  now: Date = new Date()
-): number {
-  let totalMinutes = 0;
-
-  sessions.forEach((session) => {
-    if (session.isActive) {
-      const sessionMinutes = Math.floor(
-        (now.getTime() - session.startTime.getTime()) / (1000 * 60)
-      );
-      const breakMinutes = session.totalBreakTime
-        ? parseFloat(session.totalBreakTime.toString()) * 60
-        : 0;
-      totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
-    } else if (session.workingHours) {
-      totalMinutes += parseFloat(session.workingHours.toString()) * 60;
-    }
-  });
-
-  return parseFloat((totalMinutes / 60).toFixed(2));
-}
+import { attendanceCalculationService } from "./attendance-calculation.service";
 
 export const payrollService = {
   async getOrCreatePayrun(month: number, year: number) {
@@ -118,12 +93,18 @@ export const payrollService = {
           return existingPayslip;
         }
 
-        // If forcing regenerate and payslip exists, delete it first
         if (existingPayslip && forceRegenerate) {
           await db.payslip.delete({
             where: { id: existingPayslip.id },
           });
         }
+
+        const attendance =
+          await attendanceCalculationService.calculateAbsentDays(
+            employee.id,
+            month,
+            year
+          );
 
         const workSessions = await sessionService.findSessionsByDateRange(
           employee.id,
@@ -131,53 +112,20 @@ export const payrollService = {
           periodEnd
         );
 
-        const sessionsByDate = workSessions.reduce((acc, session) => {
-          const dateKey = session.date.toISOString().split("T")[0];
-          if (dateKey) {
-            if (!acc[dateKey]) acc[dateKey] = [];
-            acc[dateKey].push(session);
-          }
-          return acc;
-        }, {} as Record<string, typeof workSessions>);
-
-        const datesInMonth: Date[] = [];
-        for (
-          let d = new Date(periodStart);
-          d <= periodEnd;
-          d.setDate(d.getDate() + 1)
-        ) {
-          datesInMonth.push(new Date(d));
-        }
-
-        const now = new Date();
-        let presentDays = 0;
-        let totalWorkingHours = 0;
         let overtimeHours = 0;
-
-        datesInMonth.forEach((date) => {
-          const dateKey = date.toISOString().split("T")[0];
-          const sessions = (dateKey && sessionsByDate[dateKey]) || [];
-          const workingHours = calculateWorkingHoursFromSessions(sessions, now);
-
-          if (workingHours >= 4) {
-            presentDays += workingHours >= 9 ? 1 : 0.5;
-            totalWorkingHours += workingHours;
-            overtimeHours += Math.max(0, workingHours - 9);
-          }
+        workSessions.forEach((session) => {
+          const workingHours = session.workingHours
+            ? parseFloat(session.workingHours.toString())
+            : 0;
+          overtimeHours += Math.max(0, workingHours - 9);
         });
 
-        const workingDays = datesInMonth.length;
-        const absentDays = workingDays - presentDays;
-
-        // Monthly wage is stored in basicSalary
         const monthlyWage = employee.basicSalary
           ? parseFloat(employee.basicSalary.toString())
           : 0;
 
-        // Calculate actual basic salary (50% of monthly wage)
         const basicSalary = monthlyWage * 0.5;
 
-        // Calculate all salary components based on stored percentages
         const hraPercentage = parseFloat(employee.hraPercentage.toString());
         const houseRentAllowance = (basicSalary * hraPercentage) / 100;
 
@@ -209,14 +157,19 @@ export const payrollService = {
           monthlyWage - totalPredefinedComponents
         );
 
-        // Add custom salary components (if any)
         const customAllowances = employee.salaryComponents
           .filter((c) => c.type === "EARNING" && c.isActive)
           .reduce((sum, c) => sum + parseFloat(c.amount.toString()), 0);
 
         const grossSalary = monthlyWage + customAllowances;
 
-        // Calculate deductions
+        const lopDeduction = attendanceCalculationService.calculateLOPDeduction(
+          grossSalary,
+          attendance.totalWorkingDays,
+          attendance.absentDays,
+          attendance.unpaidLeaveDays
+        );
+
         const customDeductions = employee.salaryComponents
           .filter((c) => c.type === "DEDUCTION" && c.isActive)
           .reduce((sum, c) => sum + parseFloat(c.amount.toString()), 0);
@@ -227,25 +180,11 @@ export const payrollService = {
         const professionalTax = parseFloat(employee.professionalTax.toString());
 
         const totalDeductions =
-          customDeductions + pfDeduction + professionalTax;
+          customDeductions + pfDeduction + professionalTax + lopDeduction;
+
         const netSalary = grossSalary - totalDeductions;
 
         const totalEarnings = grossSalary;
-
-        console.log(`[Payroll] Employee ${employee.id}:`, {
-          monthlyWage,
-          basicSalary,
-          houseRentAllowance,
-          standardAllowance,
-          performanceBonus,
-          leaveTravelAllowance,
-          fixedAllowance,
-          grossSalary,
-          pfDeduction,
-          professionalTax,
-          totalDeductions,
-          netSalary,
-        });
 
         return db.payslip.create({
           data: {
@@ -253,10 +192,13 @@ export const payrollService = {
             payrunId,
             month,
             year,
-            workingDays,
-            presentDays,
-            absentDays,
-            leaveDays: 0,
+            totalWorkingDays: attendance.totalWorkingDays,
+            workingDays: attendance.totalWorkingDays,
+            presentDays: attendance.presentDays,
+            absentDays: attendance.absentDays,
+            paidLeaveDays: attendance.paidLeaveDays,
+            unpaidLeaveDays: attendance.unpaidLeaveDays,
+            leaveDays: attendance.paidLeaveDays + attendance.unpaidLeaveDays,
             overtimeHours,
             basicSalary,
             grossSalary,
@@ -265,6 +207,7 @@ export const payrollService = {
             netSalary,
             pfDeduction,
             professionalTax,
+            lopDeduction,
             otherDeductions: customDeductions,
             status: "PENDING",
           },
@@ -569,10 +512,19 @@ export const payrollService = {
     return warnings;
   },
 
-  async getRecentPayruns(limit: number = 5) {
+  async getRecentPayruns(limit: number = 5, organizationId?: string) {
     return db.payrun.findMany({
       where: {
         status: { in: ["COMPLETED", "PROCESSING"] },
+        ...(organizationId && {
+          payslips: {
+            some: {
+              employee: {
+                organizationId,
+              },
+            },
+          },
+        }),
       },
       select: {
         id: true,
@@ -592,7 +544,10 @@ export const payrollService = {
     });
   },
 
-  async getPayrollStatistics(view: "monthly" | "annually" = "monthly") {
+  async getPayrollStatistics(
+    view: "monthly" | "annually" = "monthly",
+    organizationId?: string
+  ) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
@@ -614,6 +569,15 @@ export const payrollService = {
             month: m.month,
             year: m.year,
           })),
+          ...(organizationId && {
+            payslips: {
+              some: {
+                employee: {
+                  organizationId,
+                },
+              },
+            },
+          }),
         },
         include: {
           payslips: {
@@ -666,6 +630,15 @@ export const payrollService = {
       const payruns = await db.payrun.findMany({
         where: {
           year: { in: yearsToFetch },
+          ...(organizationId && {
+            payslips: {
+              some: {
+                employee: {
+                  organizationId,
+                },
+              },
+            },
+          }),
         },
         include: {
           payslips: {
@@ -684,11 +657,16 @@ export const payrollService = {
           0
         );
 
-        // Get unique employee count across all months in the year
-        const uniqueEmployees = new Set(
-          yearPayruns.flatMap((p) => p.payslips.map((ps) => ps.employeeId))
+        // Calculate average employee count per month in the year
+        // This gives a more accurate representation than counting unique employees
+        const totalEmployees = yearPayruns.reduce(
+          (sum, p) => sum + p.payslips.length,
+          0
         );
-        const count = uniqueEmployees.size;
+        const count =
+          yearPayruns.length > 0
+            ? Math.round(totalEmployees / yearPayruns.length)
+            : 0;
         const isPending = yearPayruns.some((p) => p.status === "PROCESSING");
 
         return {

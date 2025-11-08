@@ -183,8 +183,8 @@ router.get("/payruns/recent", async (req, res) => {
       : undefined;
 
     const payruns = await payrollService.getRecentPayruns(
-      employee.organizationId || undefined,
-      limit
+      limit,
+      employee.organizationId || undefined
     );
 
     res.json(payruns);
@@ -206,8 +206,8 @@ router.get("/statistics", async (req, res) => {
     const view = (req.query.view as "monthly" | "annually") || "monthly";
 
     const statistics = await payrollService.getPayrollStatistics(
-      employee.organizationId || undefined,
-      view
+      view,
+      employee.organizationId || undefined
     );
 
     res.json(statistics);
