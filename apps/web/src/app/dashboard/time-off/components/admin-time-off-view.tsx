@@ -30,78 +30,9 @@ import {
 import { NewLeaveRequestDialog } from "./new-leave-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
 import { ApprovalDialog } from "./approval-dialog";
+import { useAllLeaves } from "../hooks";
 import type { Leave } from "../types";
-
-const mockLeaves: Leave[] = [
-  {
-    id: "1",
-    employeeId: "emp1",
-    employeeName: "John Doe",
-    employeeCode: "EMP001",
-    department: "Engineering",
-    leaveType: "CASUAL",
-    startDate: "2025-11-15",
-    endDate: "2025-11-17",
-    totalDays: 3,
-    reason: "Family function",
-    status: "PENDING",
-    approvedBy: null,
-    approvedAt: null,
-    rejectionReason: null,
-    createdAt: "2025-11-08T09:00:00Z",
-  },
-  {
-    id: "2",
-    employeeId: "emp2",
-    employeeName: "Jane Smith",
-    employeeCode: "EMP002",
-    department: "Marketing",
-    leaveType: "SICK",
-    startDate: "2025-11-10",
-    endDate: "2025-11-12",
-    totalDays: 3,
-    reason: "Medical checkup",
-    status: "PENDING",
-    approvedBy: null,
-    approvedAt: null,
-    rejectionReason: null,
-    createdAt: "2025-11-07T10:30:00Z",
-  },
-  {
-    id: "3",
-    employeeId: "emp3",
-    employeeName: "Bob Johnson",
-    employeeCode: "EMP003",
-    department: "Sales",
-    leaveType: "EARNED",
-    startDate: "2025-10-25",
-    endDate: "2025-10-30",
-    totalDays: 6,
-    reason: "Vacation",
-    status: "APPROVED",
-    approvedBy: "HR001",
-    approvedAt: "2025-10-20T14:00:00Z",
-    rejectionReason: null,
-    createdAt: "2025-10-15T11:00:00Z",
-  },
-  {
-    id: "4",
-    employeeId: "emp4",
-    employeeName: "Alice Williams",
-    employeeCode: "EMP004",
-    department: "HR",
-    leaveType: "CASUAL",
-    startDate: "2025-11-20",
-    endDate: "2025-11-20",
-    totalDays: 1,
-    reason: "Personal work",
-    status: "REJECTED",
-    approvedBy: "HR001",
-    approvedAt: "2025-11-08T09:30:00Z",
-    rejectionReason: "Already too many leaves this month",
-    createdAt: "2025-11-06T08:00:00Z",
-  },
-];
+import Loader from "@/components/loader";
 
 export function AdminTimeOffView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,6 +44,10 @@ export function AdminTimeOffView() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">(
     "approve"
   );
+
+  const { data: leavesData, isLoading } = useAllLeaves({
+    status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
+  });
 
   const handleApprove = (leave: Leave, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -133,27 +68,25 @@ export function AdminTimeOffView() {
     setDetailsDialogOpen(true);
   };
 
-  const filteredLeaves = mockLeaves.filter((leave) => {
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  const leaves = leavesData?.leaves || [];
+
+  const filteredLeaves = leaves.filter((leave) => {
     const matchesSearch =
       leave.employeeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       leave.employeeCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       leave.department?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      leave.status.toLowerCase() === statusFilter.toLowerCase();
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
-  const pendingCount = mockLeaves.filter((l) => l.status === "PENDING").length;
-  const approvedCount = mockLeaves.filter(
-    (l) => l.status === "APPROVED"
-  ).length;
-  const rejectedCount = mockLeaves.filter(
-    (l) => l.status === "REJECTED"
-  ).length;
-  const totalRequests = mockLeaves.length;
+  const pendingCount = leaves.filter((l) => l.status === "PENDING").length;
+  const approvedCount = leaves.filter((l) => l.status === "APPROVED").length;
+  const rejectedCount = leaves.filter((l) => l.status === "REJECTED").length;
+  const totalRequests = leaves.length;
 
   return (
     <>

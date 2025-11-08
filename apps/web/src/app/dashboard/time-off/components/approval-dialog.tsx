@@ -11,6 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useApproveLeave, useRejectLeave } from "../hooks";
+import { formatLeaveType } from "../utils";
+import { toast } from "sonner";
 import type { Leave } from "../types";
 
 interface ApprovalDialogProps {
@@ -28,13 +31,44 @@ export function ApprovalDialog({
 }: ApprovalDialogProps) {
   const [reason, setReason] = useState("");
 
+  const approveLeave = useApproveLeave();
+  const rejectLeave = useRejectLeave();
+
   if (!leave) return null;
 
-  const handleSubmit = () => {
-    console.log({ leaveId: leave.id, action, reason });
-    setReason("");
-    onOpenChange(false);
+  const handleSubmit = async () => {
+    if (action === "reject" && !reason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      if (action === "approve") {
+        await approveLeave.mutateAsync({
+          leaveId: leave.id,
+          data: reason.trim() ? { note: reason } : undefined,
+        });
+        toast.success("Leave request approved successfully");
+      } else {
+        await rejectLeave.mutateAsync({
+          leaveId: leave.id,
+          data: { rejectionReason: reason },
+        });
+        toast.success("Leave request rejected successfully");
+      }
+
+      setReason("");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Failed to ${action} leave request`
+      );
+    }
   };
+
+  const isPending = approveLeave.isPending || rejectLeave.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,11 +97,17 @@ export function ApprovalDialog({
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Leave Type: </span>
-              <span className="font-medium">{leave.leaveType}</span>
+              <span className="font-medium">
+                {formatLeaveType(leave.leaveType)}
+              </span>
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Duration: </span>
               <span className="font-medium">{leave.totalDays} days</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Reason: </span>
+              <span>{leave.reason}</span>
             </div>
           </div>
 
@@ -102,13 +142,18 @@ export function ApprovalDialog({
               onClick={handleSubmit}
               className="flex-1"
               variant={action === "approve" ? "default" : "destructive"}
-              disabled={action === "reject" && !reason.trim()}
+              disabled={isPending || (action === "reject" && !reason.trim())}
             >
-              {action === "approve" ? "Approve" : "Reject"}
+              {isPending
+                ? "Processing..."
+                : action === "approve"
+                ? "Approve"
+                : "Reject"}
             </Button>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isPending}
               className="flex-1"
             >
               Cancel

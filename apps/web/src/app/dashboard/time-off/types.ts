@@ -34,3 +34,30 @@ export interface Leave {
   rejectionReason: string | null;
   createdAt: string;
 }
+
+export interface CreateLeaveRequest {
+  employeeId?: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
+export interface ApproveLeaveRequest {
+  note?: string;
+}
+
+export interface RejectLeaveRequest {
+  rejectionReason: string;
+}
+
+export interface LeavesResponse {
+  leaves: Leave[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
