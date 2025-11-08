@@ -33,16 +33,16 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const isAdmin = employee?.role === "ADMIN" || employee?.role === "HR_OFFICER" || employee?.role === "PAYROLL_OFFICER";
+  const isAdmin =
+    employee?.role === "ADMIN" ||
+    employee?.role === "HR_OFFICER" ||
+    employee?.role === "PAYROLL_OFFICER";
 
-      console.log(
-        "EmployeeProvider - employee:",
-        employee,
-        "isAdmin:",
-        isAdmin
-      );
-
-  return <EmployeeContext.Provider value={{ employee, isLoading, isAdmin }}>{children}</EmployeeContext.Provider>;
+  return (
+    <EmployeeContext.Provider value={{ employee, isLoading, isAdmin }}>
+      {children}
+    </EmployeeContext.Provider>
+  );
 }
 
 export function useEmployee() {
