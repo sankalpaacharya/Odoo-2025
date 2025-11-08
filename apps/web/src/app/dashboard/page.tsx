@@ -6,39 +6,67 @@ import { LeaveDistributionChart } from "@/components/leave-distribution-chart";
 import { DepartmentHeadcountChart } from "@/components/department-headcount-chart";
 import { RecentLeaveRequests } from "@/components/recent-leave-requests";
 import { WeeklyAttendanceChart } from "@/components/weekly-attendance-chart";
-
-const statsData = [
-  {
-    name: "Total Employees",
-    value: "158",
-    description: "Active users in system",
-    change: "+12 this month",
-    changeType: "positive" as const,
-  },
-  {
-    name: "Present Today",
-    value: "142",
-    description: "89.9% attendance rate",
-    change: "+5.2%",
-    changeType: "positive" as const,
-  },
-  {
-    name: "Pending Requests",
-    value: "8",
-    description: "Awaiting approval",
-    change: "-3 from yesterday",
-    changeType: "positive" as const,
-  },
-  {
-    name: "Next Payrun",
-    value: "Nov 15",
-    description: "7 days remaining",
-    change: "On schedule",
-    changeType: "neutral" as const,
-  },
-];
+import { useDashboardStats } from "./hooks";
+import Loader from "@/components/loader";
 
 export default function DashboardPage() {
+  const { data: stats, isLoading } = useDashboardStats();
+
+  if (isLoading || !stats) {
+    return <Loader />;
+  }
+
+  const attendanceChangeType: "positive" | "negative" | "neutral" =
+    stats.attendanceRate >= 90
+      ? "positive"
+      : stats.attendanceRate >= 80
+      ? "neutral"
+      : "negative";
+
+  const pendingChangeType: "positive" | "neutral" =
+    stats.pendingLeaves === 0 ? "positive" : "neutral";
+
+  const statsData = [
+    {
+      name: "Total Employees",
+      value: stats.activeEmployees.toString(),
+      description: "Active users in system",
+      change: `${stats.totalEmployees} total`,
+      changeType: "neutral" as const,
+    },
+    {
+      name: "Present Today",
+      value: stats.presentToday.toString(),
+      description: `${stats.attendanceRate.toFixed(1)}% attendance rate`,
+      change: `${stats.activeEmployees - stats.presentToday} absent`,
+      changeType: attendanceChangeType,
+    },
+    {
+      name: "Pending Requests",
+      value: stats.pendingLeaves.toString(),
+      description: "Awaiting approval",
+      change: stats.pendingLeaves === 0 ? "All clear" : "Needs attention",
+      changeType: pendingChangeType,
+    },
+    {
+      name: "Next Payrun",
+      value: stats.nextPayrun
+        ? new Date(stats.nextPayrun.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "N/A",
+      description: stats.nextPayrun
+        ? `${stats.nextPayrun.daysRemaining} days remaining`
+        : "No scheduled payrun",
+      change:
+        stats.nextPayrun && stats.nextPayrun.daysRemaining <= 7
+          ? "Coming soon"
+          : "On schedule",
+      changeType: "neutral" as const,
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-8">
       <div className="space-y-1">
