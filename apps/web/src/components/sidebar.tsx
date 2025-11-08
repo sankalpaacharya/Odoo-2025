@@ -56,8 +56,17 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[200px] border-r bg-background flex-shrink-0">
-      <nav className="flex flex-col p-4 space-y-1">
+    <aside className="w-[240px] border-r bg-background flex-shrink-0">
+      <div className="flex items-center gap-3 px-6 py-5 border-b">
+        <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+          <span className="text-primary-foreground font-bold text-lg">W</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="font-semibold text-base">WorkZen</span>
+          <span className="text-xs text-muted-foreground">HR Platform</span>
+        </div>
+      </div>
+      <nav className="flex flex-col p-4 space-y-2">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -67,13 +76,13 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-4 px-4 py-3.5 rounded-lg text-base font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-6 w-6" />
               <span>{item.name}</span>
             </Link>
           );
