@@ -48,7 +48,7 @@ export const payrollService = {
           year,
           periodStart,
           periodEnd,
-          status: "DRAFT",
+          status: "PROCESSING",
         },
         include: { payslips: true },
       });
@@ -317,8 +317,8 @@ export const payrollService = {
       throw new Error("Payrun not found");
     }
 
-    if (payrun.status !== "DRAFT") {
-      throw new Error("Payrun is not in draft status");
+    if (payrun.status === "COMPLETED") {
+      throw new Error("Payrun is already completed");
     }
 
     await db.$transaction([
@@ -329,7 +329,6 @@ export const payrollService = {
       db.payrun.update({
         where: { id: payrunId },
         data: {
-          status: "PROCESSING",
           processedBy,
           processedAt: new Date(),
         },

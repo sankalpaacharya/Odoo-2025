@@ -58,18 +58,6 @@ export function PayrollWarningModal({
         sortable: true,
         render: (employee) => `${employee.firstName} ${employee.lastName}`,
       },
-      {
-        key: "department",
-        label: "Department",
-        sortable: true,
-        render: (employee) => employee.department || "—",
-      },
-      {
-        key: "designation",
-        label: "Designation",
-        sortable: true,
-        render: (employee) => employee.designation || "—",
-      },
     ];
 
     if (warning.type === "bank_account") {

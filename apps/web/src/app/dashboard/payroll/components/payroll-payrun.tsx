@@ -77,7 +77,7 @@ interface Payrun {
   year: number;
   periodStart: string;
   periodEnd: string;
-  status: "DRAFT" | "PROCESSING" | "COMPLETED" | "CANCELLED";
+  status: "PROCESSING" | "COMPLETED" | "CANCELLED";
   totalAmount: number;
   processedBy: string | null;
   processedAt: string | null;
