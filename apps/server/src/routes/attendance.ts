@@ -74,11 +74,7 @@ router.get(
 
       const [workSessions, approvedLeaves] = await Promise.all([
         sessionService.findSessionsByDateRange(employee.id, startDate, endDate),
-        leaveService.findApprovedLeavesByDateRange(
-          employee.id,
-          startDate,
-          endDate
-        ),
+        leaveService.findApprovedLeavesByDateRange(employee.id, startDate),
       ]);
 
       const now = new Date();
@@ -208,8 +204,8 @@ router.get(
       } else {
         targetDate = new Date();
       }
-
-      targetDate.setUTCHours(0, 0, 0, 0);
+      const startTargetDate = new Date(targetDate);
+      startTargetDate.setUTCHours(0, 0, 0, 0);
 
       const allActiveEmployees = await employeeService.findActiveEmployees(
         employee.organizationId || undefined
@@ -224,16 +220,15 @@ router.get(
           ),
           Promise.all(
             allActiveEmployees.map((emp) =>
-              sessionService.findSessionsByEmployeeAndDate(emp.id, targetDate)
+              sessionService.findSessionsByEmployeeAndDate(
+                emp.id,
+                startTargetDate
+              )
             )
           ),
           Promise.all(
             allActiveEmployees.map((emp) =>
-              leaveService.findApprovedLeavesByDateRange(
-                emp.id,
-                targetDate,
-                targetDate
-              )
+              leaveService.findApprovedLeavesByDateRange(emp.id, targetDate)
             )
           ),
         ]

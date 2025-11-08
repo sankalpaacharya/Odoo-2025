@@ -297,19 +297,36 @@ export const leaveService = {
 
   async findApprovedLeavesByDateRange(
     employeeId: string,
-    startDate: Date,
-    endDate: Date
+    startDate: Date, // When endDate is provided, find leaves that overlap with this range, else use startDate as a single day
+    endDate?: Date
   ) {
+    const timeFilters = [];
+
+    if (endDate) {
+      timeFilters.push(
+        { startDate: { lte: endDate } },
+        { endDate: { gte: startDate } }
+      );
+    } else {
+      timeFilters.push(
+        { startDate: { lte: startDate } },
+        { endDate: { gte: startDate } }
+      );
+    }
+
+    console.log({
+      startDate,
+      endDate,
+      timeFilters,
+    });
+
     return db.leave.findMany({
       where: {
         employeeId,
         status: "APPROVED",
         OR: [
           {
-            AND: [
-              { startDate: { lte: endDate } },
-              { endDate: { gte: startDate } },
-            ],
+            AND: timeFilters,
           },
         ],
       },
