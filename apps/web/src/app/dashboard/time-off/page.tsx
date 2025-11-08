@@ -19,7 +19,7 @@ export default function TimeOffPage() {
         <p className="text-muted-foreground">
           {isAdmin
             ? "Manage employee leave requests and approvals"
-            : "Request time off and view your leave balances"}
+            : "Request time off and view your leave requests"}
         </p>
       </div>
 

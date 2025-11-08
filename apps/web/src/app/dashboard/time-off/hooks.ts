@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiClientFormData } from "@/lib/api-client";
 import type {
   Leave,
-  LeaveBalance,
   CreateLeaveRequest,
   ApproveLeaveRequest,
   RejectLeaveRequest,
@@ -43,17 +42,6 @@ export function useMyLeaves(params?: {
   return useQuery({
     queryKey: ["leaves", "my-leaves", params],
     queryFn: () => apiClient<Leave[]>(endpoint),
-  });
-}
-
-export function useMyLeaveBalances(year?: number) {
-  const currentYear = year || new Date().getFullYear();
-  return useQuery({
-    queryKey: ["leaves", "my-balances", currentYear],
-    queryFn: () =>
-      apiClient<LeaveBalance[]>(
-        `/api/leaves/my-balances?year=${currentYear}`
-      ),
   });
 }
 
