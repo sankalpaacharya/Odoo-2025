@@ -9,7 +9,8 @@ import { generateEmployeeCode } from "@my-better-t-app/auth/utils/generate-emplo
 
 const router: RouterType = Router();
 
-const uploadsDir = path.join(__dirname, "../../uploads/logos");
+// Using the packages/db/uploads directory where all uploaded files are stored
+const uploadsDir = path.join(__dirname, "../../../../../packages/db/uploads/logos");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -32,19 +33,13 @@ const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|svg|webp/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(
-        new Error(
-          "Invalid file type. Only JPEG, PNG, SVG, and WebP files are allowed."
-        )
-      );
+      cb(new Error("Invalid file type. Only JPEG, PNG, SVG, and WebP files are allowed."));
     }
   },
 });
@@ -119,12 +114,7 @@ router.post("/signup", upload.single("logo"), async (req, res) => {
       });
     }
 
-    const employeeCode = await generateEmployeeCode(
-      firstName,
-      lastName,
-      companyName,
-      new Date()
-    );
+    const employeeCode = await generateEmployeeCode(firstName, lastName, companyName, new Date());
 
     const signupResult = await auth.api.signUpEmail({
       body: {
@@ -198,8 +188,7 @@ router.post("/signup", upload.single("logo"), async (req, res) => {
     console.error("Signup error:", error);
     res.status(500).json({
       error: {
-        message:
-          error instanceof Error ? error.message : "Failed to create account",
+        message: error instanceof Error ? error.message : "Failed to create account",
         statusText: "Internal Server Error",
       },
     });

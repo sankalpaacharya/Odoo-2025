@@ -140,10 +140,7 @@ export function UserListTable() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button>Add User</Button>
-          </div>
+         
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -224,7 +221,6 @@ export function UserListTable() {
               </TableBody>
             </Table>
           </div>
-        </div>
       </CardContent>
     </Card>
   );

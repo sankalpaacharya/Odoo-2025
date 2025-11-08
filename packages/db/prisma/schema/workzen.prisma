@@ -65,6 +65,8 @@ model Employee {
     about          String?   @db.Text
     jobLove        String?   @db.Text
     interests      String?   @db.Text
+    skills         Json?     // Array of skill objects {name: string, level?: string}
+    certifications Json?     // Array of certification objects {name: string, issuer?: string, date?: string}
     
     // Bank Details
     accountNumber  String?

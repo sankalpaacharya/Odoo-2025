@@ -14,20 +14,16 @@ import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  useActiveSession,
-  useStartSession,
-  useStopSession,
-} from "@/app/dashboard/attendance/session-hooks";
+import { useActiveSession, useStartSession, useStopSession } from "@/app/dashboard/attendance/session-hooks";
 import { toast } from "sonner";
+import { getProfileImageUrl } from "@/lib/image-utils";
 
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const { data: activeSessionData, isLoading: isLoadingSession } =
-    useActiveSession();
+  const { data: activeSessionData, isLoading: isLoadingSession } = useActiveSession();
   const startSessionMutation = useStartSession();
   const stopSessionMutation = useStopSession();
 
@@ -71,9 +67,7 @@ export default function UserMenu() {
   const sessionStartTime = activeSessionData?.session?.startTime;
   const isCheckedIn = hasActiveSession && sessionStartTime;
 
-  const tooltipText = isCheckedIn
-    ? `Checked in since ${new Date(sessionStartTime).toLocaleTimeString()}`
-    : "Not checked in";
+  const tooltipText = isCheckedIn ? `Checked in since ${new Date(sessionStartTime).toLocaleTimeString()}` : "Not checked in";
 
   return (
     <div className="flex items-center gap-2">
@@ -86,19 +80,14 @@ export default function UserMenu() {
             onFocus={() => setShowTooltip(true)}
             onBlur={() => setShowTooltip(false)}
             onClick={handleCheckInOut}
-            disabled={
-              startSessionMutation.isPending || stopSessionMutation.isPending
-            }
+            disabled={startSessionMutation.isPending || stopSessionMutation.isPending}
             className={`relative flex items-center justify-center h-10 w-10 rounded-full focus:outline-none transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               isCheckedIn ? "" : "hover:scale-105"
-            }`}
-          >
+            }`}>
             <span
               aria-hidden
               className={`absolute rounded-full transition-opacity duration-300 ${
-                isCheckedIn
-                  ? "h-10 w-10 bg-emerald-500/20 animate-pulse"
-                  : "h-8 w-8"
+                isCheckedIn ? "h-10 w-10 bg-emerald-500/20 animate-pulse" : "h-8 w-8"
               }`}
             />
 
@@ -120,26 +109,46 @@ export default function UserMenu() {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="rounded-full h-9 w-9 flex items-center justify-center"
-          >
-            {user.name
-              .split(" ")
-              .map((s: string) => (s ? s[0] : ""))
-              .slice(0, 2)
-              .join("")}
+          <Button variant="outline" className="rounded-full h-9 w-9 p-0 flex items-center justify-center overflow-hidden">
+            {getProfileImageUrl(user.profileImage, user.image) ? (
+              <img src={getProfileImageUrl(user.profileImage, user.image)!} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              <span>
+                {user.name
+                  .split(" ")
+                  .map((s: string) => (s ? s[0] : ""))
+                  .slice(0, 2)
+                  .join("")}
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="bg-card">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuContent className="bg-card" align="end">
+          <DropdownMenuLabel className="flex items-center gap-2">
+            <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
+              {getProfileImageUrl(user.profileImage, user.image) ? (
+                <img src={getProfileImageUrl(user.profileImage, user.image)!} alt={user.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-muted flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {user.name
+                      .split(" ")
+                      .map((s: string) => (s ? s[0] : ""))
+                      .slice(0, 2)
+                      .join("")}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="font-medium">{user.name}</div>
+              <div className="text-xs text-muted-foreground">{user.email}</div>
+            </div>
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
           <DropdownMenuItem>
-            <Button
-              variant="ghost"
-              onClick={() => (window.location.href = "/dashboard/profile")}
-            >
+            <Button variant="ghost" onClick={() => (window.location.href = "/dashboard/profile")}>
               My Profile
             </Button>
           </DropdownMenuItem>
@@ -157,8 +166,7 @@ export default function UserMenu() {
                     },
                   },
                 });
-              }}
-            >
+              }}>
               Sign Out
             </Button>
           </DropdownMenuItem>

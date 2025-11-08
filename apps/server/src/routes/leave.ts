@@ -9,7 +9,8 @@ import { leaveService } from "../services/leave.service";
 const router: Router = Router();
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, "../../uploads/leave-attachments");
+// Using the packages/db/uploads directory where all uploaded files are stored
+const uploadsDir = path.join(__dirname, "../../../../../packages/db/uploads/leave-attachments");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -35,19 +36,13 @@ const upload = multer({
   fileFilter: (_req, file, cb) => {
     // Allow common document and image types
     const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (mimetype && extname) {
       return cb(null, true);
     } else {
-      cb(
-        new Error(
-          "Invalid file type. Only JPEG, PNG, PDF, DOC, and DOCX files are allowed."
-        )
-      );
+      cb(new Error("Invalid file type. Only JPEG, PNG, PDF, DOC, and DOCX files are allowed."));
     }
   },
 });
@@ -109,19 +104,14 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
     const targetEmployeeId = employeeId && isAdmin ? employeeId : employee.id;
 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
     if (end < start) {
-      return res
-        .status(400)
-        .json({ error: "End date must be after start date" });
+      return res.status(400).json({ error: "End date must be after start date" });
     }
 
     const attachmentPath = req.file ? req.file.filename : null;
@@ -165,23 +155,13 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
 router.get("/all", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
 
     if (!isAdmin) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const {
-      status,
-      leaveType,
-      department,
-      year,
-      page = "1",
-      limit = "50",
-    } = req.query;
+    const { status, leaveType, department, year, page = "1", limit = "50" } = req.query;
 
     const {
       leaves,
@@ -242,20 +222,13 @@ router.patch("/:leaveId/approve", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
 
     if (!isAdmin) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const updatedLeave = await leaveService.approveLeave(
-      leaveId,
-      employee.employeeCode,
-      true
-    );
+    const updatedLeave = await leaveService.approveLeave(leaveId, employee.employeeCode, true);
 
     res.json({
       id: updatedLeave.id,
@@ -273,8 +246,7 @@ router.patch("/:leaveId/approve", async (req, res) => {
     });
   } catch (error) {
     console.error("Error approving leave:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to approve leave";
+    const message = error instanceof Error ? error.message : "Failed to approve leave";
     res.status(400).json({ error: message });
   }
 });
@@ -295,20 +267,13 @@ router.patch("/:leaveId/reject", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
 
     if (!isAdmin) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const updatedLeave = await leaveService.rejectLeave(
-      leaveId,
-      employee.employeeCode,
-      rejectionReason
-    );
+    const updatedLeave = await leaveService.rejectLeave(leaveId, employee.employeeCode, rejectionReason);
 
     res.json({
       id: updatedLeave.id,
@@ -326,8 +291,7 @@ router.patch("/:leaveId/reject", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rejecting leave:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to reject leave";
+    const message = error instanceof Error ? error.message : "Failed to reject leave";
     res.status(400).json({ error: message });
   }
 });
@@ -349,10 +313,7 @@ router.delete("/:leaveId", async (req, res) => {
       return res.status(404).json({ error: "Leave request not found" });
     }
 
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
 
     if (leave.employeeId !== employee.id && !isAdmin) {
       return res.status(403).json({ error: "Forbidden" });
@@ -371,8 +332,7 @@ router.delete("/:leaveId", async (req, res) => {
     res.json({ message: "Leave request cancelled successfully" });
   } catch (error) {
     console.error("Error cancelling leave:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to cancel leave";
+    const message = error instanceof Error ? error.message : "Failed to cancel leave";
     res.status(400).json({ error: message });
   }
 });
@@ -396,10 +356,7 @@ router.get("/attachment/:filename", async (req, res) => {
 
     // Verify that the file belongs to a leave request the user can access
     const leaves = await leaveService.findByEmployee(employee.id, {});
-    const isAdmin = await employeeService.hasRole(userId, [
-      "ADMIN",
-      "HR_OFFICER",
-    ]);
+    const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
 
     let hasAccess = false;
     if (isAdmin) {

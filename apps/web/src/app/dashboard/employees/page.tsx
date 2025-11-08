@@ -18,6 +18,7 @@ interface Employee {
   department?: string | null;
   designation?: string | null;
   employmentStatus: string;
+  profileImage?: string | null;
 }
 
 async function fetchEmployees(): Promise<Employee[]> {
@@ -47,7 +48,7 @@ const employeeColumns: Column<Employee>[] = [
     key: "avatar",
     // No label for avatar column
     sortable: false,
-    render: (emp) => <EmployeeAvatar name={emp.name} size="sm" />,
+    render: (emp) => <EmployeeAvatar name={emp.name} size="sm" profileImage={emp.profileImage} />,
     className: "w-12",
   },
   {
@@ -132,11 +133,7 @@ export default function EmployeesPage() {
         data={filteredEmployees}
         columns={employeeColumns}
         keyExtractor={(emp) => emp.id}
-        emptyMessage={
-          searchQuery
-            ? "No employees found matching your search"
-            : "No employees found"
-        }
+        emptyMessage={searchQuery ? "No employees found matching your search" : "No employees found"}
         isLoading={isLoading}
         loadingMessage="Loading employees..."
       />

@@ -1,9 +1,48 @@
 import { Router } from "express";
 import type { Router as RouterType } from "express";
-import db, { type Gender } from "@my-better-t-app/db";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import db, { type Gender, UPLOADS_CONFIG, getUploadPath, getUploadUrl } from "@my-better-t-app/db";
 import { authenticateUser } from "../middleware/auth";
 
 const router: RouterType = Router();
+
+// Use centralized uploads configuration
+const profileImagesDir = UPLOADS_CONFIG.PROFILE_IMAGES;
+if (!fs.existsSync(profileImagesDir)) {
+  fs.mkdirSync(profileImagesDir, { recursive: true });
+}
+
+// Configure multer for profile image uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, profileImagesDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `profile-${uniqueSuffix}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP files are allowed."));
+    }
+  },
+});
 
 router.use(authenticateUser);
 
@@ -33,6 +72,8 @@ router.get("/", async (req, res) => {
         about: true,
         jobLove: true,
         interests: true,
+        skills: true,
+        certifications: true,
         accountNumber: true,
         bankName: true,
         ifscCode: true,
@@ -117,6 +158,8 @@ router.get("/", async (req, res) => {
       about: employee.about,
       jobLove: employee.jobLove,
       interests: employee.interests,
+      skills: employee.skills as any,
+      certifications: employee.certifications as any,
 
       // Bank Details
       accountNumber: employee.accountNumber,
@@ -203,6 +246,8 @@ router.put("/", async (req, res) => {
       about,
       jobLove,
       interests,
+      skills,
+      certifications,
     } = req.body;
 
     // Find employee first
@@ -241,6 +286,8 @@ router.put("/", async (req, res) => {
         ...(about !== undefined && { about }),
         ...(jobLove !== undefined && { jobLove }),
         ...(interests !== undefined && { interests }),
+        ...(skills !== undefined && { skills }),
+        ...(certifications !== undefined && { certifications }),
       },
       select: {
         id: true,
@@ -267,6 +314,8 @@ router.put("/", async (req, res) => {
         about: true,
         jobLove: true,
         interests: true,
+        skills: true,
+        certifications: true,
       },
     });
 
@@ -382,6 +431,63 @@ router.get("/salary-components", async (req, res) => {
   } catch (error) {
     console.error("Error fetching salary components:", error);
     res.status(500).json({ error: "Failed to fetch salary components" });
+  }
+});
+
+// Upload profile image
+router.post("/upload-image", upload.single("profileImage"), async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Generate the URL path using the helper function
+    const imagePath = getUploadUrl(req.file.filename, "profile");
+
+    // Find employee first
+    const employee = await db.employee.findUnique({
+      where: { userId },
+      select: { id: true, profileImage: true },
+    });
+
+    if (!employee) {
+      // Delete uploaded file if employee not found
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    // Delete old profile image if exists
+    if (employee.profileImage) {
+      try {
+        const oldImagePath = getUploadPath(employee.profileImage);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      } catch (err) {
+        console.warn("Failed to delete old profile image:", err);
+        // Continue anyway - don't fail the upload if we can't delete the old image
+      }
+    }
+
+    // Update employee profile image
+    await db.employee.update({
+      where: { id: employee.id },
+      data: { profileImage: imagePath },
+    });
+
+    res.json({
+      success: true,
+      profileImage: imagePath,
+    });
+  } catch (error) {
+    console.error("Error uploading profile image:", error);
+    // Delete uploaded file on error
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: "Failed to upload profile image" });
   }
 });
 

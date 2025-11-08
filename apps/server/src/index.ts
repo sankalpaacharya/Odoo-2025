@@ -1,9 +1,9 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import path from "path";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "@my-better-t-app/auth";
+import { UPLOADS_CONFIG } from "@my-better-t-app/db";
 import attendanceRoutes from "./routes/attendance";
 import employeeRoutes from "./routes/employee";
 import authRoutes from "./routes/auth";
@@ -27,10 +27,9 @@ app.use(
   })
 );
 
-// Serve static files from uploads directory
-const uploadsPath = path.join(__dirname, "../uploads");
-app.use("/uploads", express.static(uploadsPath));
-console.log("Serving static files from:", uploadsPath);
+// Serve static files from uploads directory using centralized config
+app.use(UPLOADS_CONFIG.URL_PREFIX, express.static(UPLOADS_CONFIG.BASE_DIR));
+console.log("Serving static files from:", UPLOADS_CONFIG.BASE_DIR);
 
 app.get("/", (_req, res) => {
   res.status(200).send("OK");
