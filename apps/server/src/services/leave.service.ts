@@ -284,7 +284,7 @@ export const leaveService = {
     leaveType: LeaveType,
     requiredDays: number,
     year: number
-  ): Promise<{ isValid: boolean; remaining?: number; error?: string }> {
+  ): Promise<{ isValid: boolean; remaining?: number; warning?: string }> {
     const balance = await db.leaveBalance.findUnique({
       where: {
         employeeId_leaveType_year: {
@@ -297,8 +297,9 @@ export const leaveService = {
 
     if (!balance) {
       return {
-        isValid: false,
-        error: `No leave balance found for ${leaveType} in ${year}`,
+        isValid: true,
+        remaining: 0,
+        warning: `No leave balance found for ${leaveType} in ${year}. Request will be pending admin approval.`,
       };
     }
 
@@ -306,9 +307,9 @@ export const leaveService = {
 
     if (remaining < requiredDays) {
       return {
-        isValid: false,
+        isValid: true,
         remaining,
-        error: `Insufficient leave balance. Available: ${remaining}, Requested: ${requiredDays}`,
+        warning: `Insufficient leave balance. Available: ${remaining}, Requested: ${requiredDays}. Request will be pending admin approval.`,
       };
     }
 
