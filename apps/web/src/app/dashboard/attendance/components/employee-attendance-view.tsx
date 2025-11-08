@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
 import { formatDate, formatTime, formatStatus, getStatusColor } from "../utils";
 import { toast } from "sonner";
 import type { AttendanceRecord } from "../types";
+import { useState } from "react";
 
 interface EmployeeAttendanceViewProps {
   currentMonth: Date;
@@ -31,6 +37,7 @@ export function EmployeeAttendanceView({
 }: EmployeeAttendanceViewProps) {
   const month = currentMonth.getMonth() + 1;
   const year = currentMonth.getFullYear();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const {
     data: attendanceData,
@@ -41,6 +48,18 @@ export function EmployeeAttendanceView({
   if (error) {
     toast.error("Failed to load attendance records");
   }
+
+  const toggleRow = (recordId: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(recordId)) {
+        newSet.delete(recordId);
+      } else {
+        newSet.add(recordId);
+      }
+      return newSet;
+    });
+  };
 
   const attendances = attendanceData?.attendances || [];
   const summary = attendanceData?.summary;
@@ -180,30 +199,132 @@ export function EmployeeAttendanceView({
             </TableHeader>
             <TableBody>
               {attendances.length > 0 ? (
-                attendances.map((record: AttendanceRecord) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium">
-                      {formatDate(record.date)}
-                    </TableCell>
-                    <TableCell>{formatTime(record.checkIn)}</TableCell>
-                    <TableCell>{formatTime(record.checkOut)}</TableCell>
-                    <TableCell>
-                      {record.workingHours > 0
-                        ? `${record.workingHours.toFixed(2)}h`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {record.overtimeHours > 0
-                        ? `${record.overtimeHours.toFixed(2)}h`
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(record.status)}>
-                        {formatStatus(record.status)}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
+                attendances.map((record: AttendanceRecord) => {
+                  const hasSessions =
+                    record.sessions && record.sessions.length > 0;
+                  const isExpanded = expandedRows.has(record.id);
+
+                  return (
+                    <>
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {formatDate(record.date)}
+                            {hasSessions && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => toggleRow(record.id)}
+                              >
+                                <Clock
+                                  className={`h-4 w-4 transition-transform ${
+                                    isExpanded ? "rotate-90" : ""
+                                  }`}
+                                />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatTime(record.checkIn)}</TableCell>
+                        <TableCell>{formatTime(record.checkOut)}</TableCell>
+                        <TableCell>
+                          {record.workingHours > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="font-semibold">
+                                {Math.floor(record.workingHours)}h{" "}
+                                {Math.floor((record.workingHours % 1) * 60)}m
+                              </span>
+                              {hasSessions && record.sessions && (
+                                <span className="text-xs text-muted-foreground">
+                                  {record.sessions.length} session
+                                  {record.sessions.length > 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {record.overtimeHours > 0
+                            ? `${Math.floor(
+                                record.overtimeHours
+                              )}h ${Math.floor(
+                                (record.overtimeHours % 1) * 60
+                              )}m`
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusColor(record.status)}>
+                            {formatStatus(record.status)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      {hasSessions && isExpanded && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="bg-muted/50 p-4">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-sm">
+                                Work Sessions
+                              </h4>
+                              <div className="space-y-2">
+                                {record.sessions?.map((session, idx) => (
+                                  <div
+                                    key={session.id}
+                                    className="flex items-center justify-between p-3 bg-background rounded-md border"
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                          Session {idx + 1}
+                                        </span>
+                                        {session.isActive && (
+                                          <Badge
+                                            variant="default"
+                                            className="text-xs"
+                                          >
+                                            Active
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-2 text-sm">
+                                        <span>
+                                          {formatTime(session.startTime)}
+                                        </span>
+                                        <span>→</span>
+                                        <span>
+                                          {session.endTime
+                                            ? formatTime(session.endTime)
+                                            : "In Progress"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                      {session.totalBreakTime > 0 && (
+                                        <span className="text-xs text-muted-foreground">
+                                          Break:{" "}
+                                          {Math.floor(session.totalBreakTime)}h{" "}
+                                          {Math.floor(
+                                            (session.totalBreakTime % 1) * 60
+                                          )}
+                                          m
+                                        </span>
+                                      )}
+                                      <span className="font-semibold text-primary">
+                                        {session.durationFormatted}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell

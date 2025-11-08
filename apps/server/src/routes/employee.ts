@@ -40,8 +40,19 @@ router.get("/me", async (req, res) => {
         employeeCode: true,
         firstName: true,
         lastName: true,
+        middleName: true,
         role: true,
         department: true,
+        designation: true,
+        dateOfJoining: true,
+        employmentStatus: true,
+        phone: true,
+        user: {
+          select: {
+            email: true,
+            image: true,
+          },
+        },
       },
     });
 
@@ -49,7 +60,21 @@ router.get("/me", async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    res.json(employee);
+    res.json({
+      id: employee.id,
+      employeeCode: employee.employeeCode,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      middleName: employee.middleName,
+      role: employee.role,
+      department: employee.department,
+      designation: employee.designation,
+      dateOfJoining: employee.dateOfJoining.toISOString(),
+      employmentStatus: employee.employmentStatus,
+      phone: employee.phone,
+      email: employee.user.email,
+      image: employee.user.image,
+    });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch employee" });
   }

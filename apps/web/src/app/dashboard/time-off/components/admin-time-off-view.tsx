@@ -27,7 +27,7 @@ import {
   getStatusColor,
   formatDate,
 } from "../utils";
-import { NewLeaveRequestDialog } from "./new-leave-request-dialog";
+import { TimeOffRequestDialog } from "./time-off-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
 import { ApprovalDialog } from "./approval-dialog";
 import { useAllLeaves } from "../hooks";
@@ -260,7 +260,7 @@ export function AdminTimeOffView() {
         </CardContent>
       </Card>
 
-      <NewLeaveRequestDialog
+      <TimeOffRequestDialog
         open={newLeaveDialogOpen}
         onOpenChange={setNewLeaveDialogOpen}
       />

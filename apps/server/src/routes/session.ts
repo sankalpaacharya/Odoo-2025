@@ -287,4 +287,54 @@ router.post("/break/end", async (req, res) => {
   }
 });
 
+router.get("/today-hours", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const today = new Date();
+    const sessions = await sessionService.findSessionsByEmployeeAndDate(
+      employee.id,
+      today
+    );
+
+    let totalMinutes = 0;
+    const activeSession = sessions.find((s) => s.isActive);
+
+    sessions.forEach((session) => {
+      if (session.isActive && session.startTime) {
+        const now = new Date();
+        const sessionMinutes = Math.floor(
+          (now.getTime() - session.startTime.getTime()) / (1000 * 60)
+        );
+        const breakMinutes = session.totalBreakTime
+          ? parseFloat(session.totalBreakTime.toString()) * 60
+          : 0;
+        totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
+      } else if (session.workingHours) {
+        totalMinutes += parseFloat(session.workingHours.toString()) * 60;
+      }
+    });
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.floor(totalMinutes % 60);
+
+    res.json({
+      totalMinutes,
+      hours,
+      minutes,
+      formattedTime: `${hours}h ${minutes}m`,
+      hasActiveSession: !!activeSession,
+      sessionCount: sessions.length,
+    });
+  } catch (error) {
+    console.error("Error fetching today's hours:", error);
+    res.status(500).json({ error: "Failed to fetch today's hours" });
+  }
+});
+
 export default router;
