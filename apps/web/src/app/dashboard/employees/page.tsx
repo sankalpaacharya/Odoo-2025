@@ -1,4 +1,8 @@
-import { headers } from "next/headers";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import EmployeeCard from "@/components/employee-card";
 import { AddEmployeeModal } from "@/components/add-employee-modal";
 
@@ -15,16 +19,12 @@ interface Employee {
   employmentStatus: string;
 }
 
-async function fetchEmployees(sessionToken: string): Promise<Employee[]> {
+async function fetchEmployees(): Promise<Employee[]> {
   try {
     const API_URL =
       process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     const response = await fetch(`${API_URL}/api/employees`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: `better-auth.session_token=${sessionToken}`,
-      },
       credentials: "include",
       cache: "no-store",
     });
@@ -42,18 +42,25 @@ async function fetchEmployees(sessionToken: string): Promise<Employee[]> {
   }
 }
 
-export default async function EmployeesPage() {
-  // Get the session token from cookies
-  const headersList = await headers();
-  const cookies = headersList.get("cookie") || "";
-  const sessionToken =
-    cookies
-      .split(";")
-      .find((c) => c.trim().startsWith("better-auth.session_token="))
-      ?.split("=")[1] || "";
+export default function EmployeesPage() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch employees from the API
-  const employees = await fetchEmployees(sessionToken);
+  useEffect(() => {
+    fetchEmployees().then((data) => {
+      setEmployees(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  const filteredEmployees = employees.filter(
+    (emp) =>
+      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.employeeCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.department?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.designation?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // TODO: Get user role from employee API to check permissions
   const showAll = false;
@@ -68,14 +75,33 @@ export default async function EmployeesPage() {
         {showAll && <AddEmployeeModal />}
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search employees..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div>
-        {employees.length === 0 ? (
+        {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No employees found</p>
+            <p className="text-muted-foreground">Loading employees...</p>
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              {searchQuery
+                ? "No employees found matching your search"
+                : "No employees found"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {employees.map((emp) => (
+            {filteredEmployees.map((emp) => (
               <EmployeeCard
                 key={emp.id}
                 id={emp.id}

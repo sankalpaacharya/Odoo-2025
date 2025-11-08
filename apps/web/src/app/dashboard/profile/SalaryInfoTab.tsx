@@ -192,46 +192,48 @@ export default function SalaryInfoTab({ isEditing }: SalaryInfoTabProps) {
         </div>
       </div>
 
-      {/* Provident Fund Contribution */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">
-          Provident Fund (PF) Contribution
-        </h3>
-        <div className="space-y-4">
-          <SalaryField
-            title="Employee"
-            amount={pfEmployeeContribution}
-            percentage={pfPercentage}
-            isEditing={isEditing}
-            description="Employee contribution to the basic salary"
-          />
-          <SalaryField
-            title="Employer"
-            amount={pfEmployerContribution}
-            percentage={pfPercentage}
-            isEditing={isEditing}
-            description="PF is calculated based on the basic salary"
-          />
-        </div>
-      </div>
-
-      {/* Tax Deductions */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Tax Deductions</h3>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Professional Tax</Label>
-          <div className="flex items-center gap-2 max-w-md">
-            <Input
-              type="number"
-              value={professionalTax.toFixed(2)}
-              readOnly={!isEditing}
-              className="h-10"
+        {/* Provident Fund Contribution */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">
+            Provident Fund (PF) Contribution
+          </h3>
+          <div className="space-y-4">
+            <SalaryField
+              title="Employee"
+              amount={pfEmployeeContribution}
+              percentage={pfPercentage}
+              isEditing={isEditing}
+              description="Employee contribution to the basic salary"
             />
-            <span className="text-sm text-muted-foreground">₹ / month</span>
+            <SalaryField
+              title="Employer"
+              amount={pfEmployerContribution}
+              percentage={pfPercentage}
+              isEditing={isEditing}
+              description="PF is calculated based on the basic salary"
+            />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Professional Tax deducted from the Gross salary
-          </p>
+        </div>
+
+        {/* Tax Deductions */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Tax Deductions</h3>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Professional Tax</Label>
+            <div className="flex items-center gap-2 max-w-md">
+              <Input
+                type="number"
+                value={professionalTax.toFixed(2)}
+                readOnly={!isEditing}
+                className="h-10"
+              />
+              <span className="text-sm text-muted-foreground">₹ / month</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Professional Tax deducted from the Gross salary
+            </p>
+          </div>
         </div>
       </div>
     </div>
