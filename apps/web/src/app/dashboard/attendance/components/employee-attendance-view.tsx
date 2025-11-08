@@ -12,8 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Loader from "@/components/loader";
 import { useMyAttendance } from "../hooks";
 import { formatDate, formatTime, formatStatus, getStatusColor } from "../utils";
+import { toast } from "sonner";
 import type { AttendanceRecord } from "../types";
 
 interface EmployeeAttendanceViewProps {
@@ -30,7 +32,15 @@ export function EmployeeAttendanceView({
   const month = currentMonth.getMonth() + 1;
   const year = currentMonth.getFullYear();
 
-  const { data: attendances = [], isLoading } = useMyAttendance(month, year);
+  const {
+    data: attendances = [],
+    isLoading,
+    error,
+  } = useMyAttendance(month, year);
+
+  if (error) {
+    toast.error("Failed to load attendance records");
+  }
 
   const monthYear = currentMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -66,7 +76,7 @@ export function EmployeeAttendanceView({
   const payableDays = presentDays + halfDays * 0.5;
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
 
   return (

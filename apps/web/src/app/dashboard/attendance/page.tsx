@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEmployee } from "@/lib/employee-context";
 import { EmployeeAttendanceView } from "./components/employee-attendance-view";
 import { AdminAttendanceView } from "./components/admin-attendance-view";
+import Loader from "@/components/loader";
 
 export default function AttendancePage() {
   const { isAdmin, isLoading } = useEmployee();
@@ -22,7 +23,7 @@ export default function AttendancePage() {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
 
   return (

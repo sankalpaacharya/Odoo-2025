@@ -9,6 +9,8 @@ export function useMyAttendance(month: number, year: number) {
       apiClient<AttendanceRecord[]>(
         `/api/attendance/my-attendance?month=${month}&year=${year}`
       ),
+    retry: 1,
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -16,5 +18,7 @@ export function useTodayAttendance() {
   return useQuery({
     queryKey: ["attendance", "today"],
     queryFn: () => apiClient<EmployeeAttendance[]>("/api/attendance/today"),
+    retry: 1,
+    staleTime: 1 * 60 * 1000,
   });
 }

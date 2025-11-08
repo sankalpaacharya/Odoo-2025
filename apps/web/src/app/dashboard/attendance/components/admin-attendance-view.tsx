@@ -20,13 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Loader from "@/components/loader";
 import { useTodayAttendance } from "../hooks";
 import { formatTime, formatStatus, getStatusColor } from "../utils";
+import { toast } from "sonner";
 import type { EmployeeAttendance } from "../types";
 
 export function AdminAttendanceView() {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: attendances = [], isLoading } = useTodayAttendance();
+  const { data: attendances = [], isLoading, error } = useTodayAttendance();
+
+  if (error) {
+    toast.error("Failed to load today's attendance");
+  }
 
   const filteredAttendances = attendances.filter(
     (record: EmployeeAttendance) =>
@@ -47,7 +53,7 @@ export function AdminAttendanceView() {
   ).length;
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
 
   return (
