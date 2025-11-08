@@ -15,9 +15,9 @@ export interface DashboardStats {
   } | null;
 }
 
-export interface MonthlyAttendance {
-  month: string;
-  attendance: number;
+export interface EmployeeStatusDistribution {
+  status: string;
+  count: number;
 }
 
 export interface LeaveDistribution {
@@ -124,74 +124,45 @@ export function useDashboardStats() {
   });
 }
 
-export function useMonthlyAttendanceTrend() {
+export function useEmployeeStatusDistribution() {
   return useQuery({
-    queryKey: ["dashboard", "monthly-attendance"],
+    queryKey: ["dashboard", "employee-status-distribution"],
     queryFn: async () => {
       try {
-        const now = new Date();
-        const months: MonthlyAttendance[] = [];
+        const todayAttendance = await apiClient<TodayAttendance[]>(
+          "/api/attendance/today"
+        );
 
-        const employees = await apiClient<
-          Array<{ id: string; employmentStatus: string }>
-        >("/api/employees").catch(() => []);
+        const statusMap: Record<string, number> = {
+          present: 0,
+          absent: 0,
+          on_leave: 0,
+        };
 
-        const activeEmployeeCount = employees.filter(
-          (emp) => emp.employmentStatus === "ACTIVE"
-        ).length;
-
-        if (activeEmployeeCount === 0) {
-          for (let i = 10; i >= 0; i--) {
-            const targetDate = new Date(
-              now.getFullYear(),
-              now.getMonth() - i,
-              1
-            );
-            const month = targetDate.toLocaleString("en", { month: "short" });
-            months.push({ month, attendance: 0 });
+        todayAttendance.forEach((att) => {
+          if (statusMap[att.status] !== undefined) {
+            statusMap[att.status]++;
           }
-          return months;
-        }
+        });
 
-        for (let i = 10; i >= 0; i--) {
-          const targetDate = new Date(
-            now.getFullYear(),
-            now.getMonth() - i,
-            15
-          );
-          const month = targetDate.toLocaleString("en", { month: "short" });
-          const dateStr = targetDate.toISOString().split("T")[0];
+        const result: EmployeeStatusDistribution[] = [
+          { status: "Present", count: statusMap.present },
+          { status: "Absent", count: statusMap.absent },
+          { status: "On Leave", count: statusMap.on_leave },
+        ];
 
-          try {
-            const attendance = await apiClient<TodayAttendance[]>(
-              `/api/attendance/today?date=${dateStr}`
-            );
-
-            const presentEmployees = attendance.filter(
-              (att) => att.status === "present" || att.status === "on_leave"
-            ).length;
-            const rate =
-              activeEmployeeCount > 0
-                ? (presentEmployees / activeEmployeeCount) * 100
-                : 0;
-
-            months.push({
-              month,
-              attendance: parseFloat(rate.toFixed(1)),
-            });
-          } catch (error) {
-            console.error(`Error fetching attendance for ${month}:`, error);
-            months.push({ month, attendance: 0 });
-          }
-        }
-
-        return months;
+        return result;
       } catch (error) {
-        console.error("Error fetching monthly attendance trend:", error);
-        return [];
+        console.error("Error fetching employee status distribution:", error);
+        return [
+          { status: "Present", count: 0 },
+          { status: "Absent", count: 0 },
+          { status: "On Leave", count: 0 },
+        ];
       }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
   });
 }
 
