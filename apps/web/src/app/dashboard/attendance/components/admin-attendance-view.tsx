@@ -272,12 +272,13 @@ export function AdminAttendanceView() {
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
               <Calendar
-                mode="single"
                 selected={selectedDate}
                 onSelect={(date: Date | undefined) =>
                   date && setSelectedDate(date)
                 }
-                initialFocus
+                mode="single"
+                className="rounded-md border shadow-sm"
+                captionLayout="dropdown"
               />
             </PopoverContent>
           </Popover>

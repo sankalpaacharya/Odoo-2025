@@ -128,6 +128,8 @@ export function EmployeeAttendanceView() {
             <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
+                className="rounded-md border shadow-sm"
+                captionLayout="dropdown"
                 selected={selectedDate}
                 onSelect={(date: Date | undefined) =>
                   date && setSelectedDate(date)
