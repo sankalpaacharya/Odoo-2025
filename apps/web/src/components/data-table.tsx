@@ -6,6 +6,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -69,29 +70,9 @@ export function DataTable<T extends Record<string, any>>({
       })
     : data;
 
-  if (isLoading) {
-    return (
-      <div className="rounded-md border">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{loadingMessage}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="rounded-md border">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{emptyMessage}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-lg border overflow-hidden">
+      <Table className="overflow-x-auto">
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
@@ -103,7 +84,7 @@ export function DataTable<T extends Record<string, any>>({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort(column.key)}
-                      className="h-auto p-0! font-medium hover:bg-transparent"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
                     >
                       {column.label}
                       <ArrowUpDown className="ml-2 size-3.5" />
@@ -115,17 +96,37 @@ export function DataTable<T extends Record<string, any>>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedData.map((item) => (
-            <TableRow key={keyExtractor(item)}>
-              {columns.map((column) => (
-                <TableCell key={column.key} className={column.className}>
-                  {column.render
-                    ? column.render(item)
-                    : String(item[column.key] ?? "—")}
-                </TableCell>
-              ))}
+          {isLoading ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
+                {loadingMessage}
+              </TableCell>
             </TableRow>
-          ))}
+          ) : sortedData.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
+                {emptyMessage}
+              </TableCell>
+            </TableRow>
+          ) : (
+            sortedData.map((item) => (
+              <TableRow key={keyExtractor(item)}>
+                {columns.map((column) => (
+                  <TableCell key={column.key} className={column.className}>
+                    {column.render
+                      ? column.render(item)
+                      : String(item[column.key] ?? "—")}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

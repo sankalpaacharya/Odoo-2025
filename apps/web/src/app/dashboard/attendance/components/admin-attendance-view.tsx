@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,6 +17,7 @@ import { toast } from "sonner";
 import type { EmployeeAttendance } from "../types";
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
+import { StatsCards, type StatItem } from "@/components";
 
 const attendanceColumns: Column<EmployeeAttendance>[] = [
   {
@@ -95,6 +95,36 @@ export function AdminAttendanceView() {
     (e: EmployeeAttendance) => e.status === "ABSENT"
   ).length;
 
+  const statsData: StatItem[] = [
+    {
+      name: "Total Employees",
+      value: totalEmployees,
+      description: "Active employees",
+    },
+    {
+      name: "Present Today",
+      value: presentToday,
+      description: `${
+        totalEmployees > 0
+          ? ((presentToday / totalEmployees) * 100).toFixed(1)
+          : 0
+      }% attendance`,
+      valueClassName: "text-green-600",
+    },
+    {
+      name: "On Leave",
+      value: onLeave,
+      description: "Employees on leave",
+      valueClassName: "text-amber-600",
+    },
+    {
+      name: "Absent",
+      value: absent,
+      description: "Absent employees",
+      valueClassName: "text-red-600",
+    },
+  ];
+
   if (isLoading) {
     return <Loader />;
   }
@@ -137,56 +167,7 @@ export function AdminAttendanceView() {
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Total Employees
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">Active employees</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Present Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {presentToday}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalEmployees > 0
-                ? ((presentToday / totalEmployees) * 100).toFixed(1)
-                : 0}
-              % attendance
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">On Leave</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{onLeave}</div>
-            <p className="text-xs text-muted-foreground">Employees on leave</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Absent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{absent}</div>
-            <p className="text-xs text-muted-foreground">Absent employees</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsCards data={statsData} />
 
       <div className="rounded-lg">
         <div className="py-4">

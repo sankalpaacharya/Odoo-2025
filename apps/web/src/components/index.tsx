@@ -11,3 +11,6 @@ export default function Sidebar03() {
     </SidebarProvider>
   );
 }
+
+export { StatsCards } from "./stats-cards";
+export type { StatItem } from "./stats-cards";

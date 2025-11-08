@@ -2,18 +2,10 @@
 
 import { useState } from "react";
 import { Search, Check, X, Plus } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type Column } from "@/components/data-table";
+import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
 import {
   Select,
   SelectContent,
@@ -21,18 +13,97 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  formatLeaveType,
-  formatLeaveStatus,
-  getStatusColor,
-  formatDate,
-} from "../utils";
+import { formatLeaveType, formatDate } from "../utils";
 import { TimeOffRequestDialog } from "./time-off-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
 import { ApprovalDialog } from "./approval-dialog";
 import { useAllLeaves } from "../hooks";
 import type { Leave } from "../types";
 import Loader from "@/components/loader";
+import { StatsCards, type StatItem } from "@/components";
+
+const createLeaveColumns = (
+  onApprove: (leave: Leave, e: React.MouseEvent) => void,
+  onReject: (leave: Leave, e: React.MouseEvent) => void
+): Column<Leave>[] => [
+  {
+    key: "avatar",
+    sortable: false,
+    render: (leave) => (
+      <EmployeeAvatar name={leave.employeeName || ""} size="sm" />
+    ),
+    className: "w-12",
+  },
+  {
+    key: "employeeName",
+    label: "Name",
+    className: "font-medium",
+  },
+  {
+    key: "employeeCode",
+    label: "Employee ID",
+    className: "font-medium",
+  },
+  {
+    key: "department",
+    label: "Department",
+  },
+  {
+    key: "leaveType",
+    label: "Leave Type",
+    render: (leave) => formatLeaveType(leave.leaveType),
+  },
+  {
+    key: "startDate",
+    label: "Start Date",
+    render: (leave) => formatDate(leave.startDate),
+  },
+  {
+    key: "endDate",
+    label: "End Date",
+    render: (leave) => formatDate(leave.endDate),
+  },
+  {
+    key: "totalDays",
+    label: "Days",
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (leave) => <StatusBadge status={leave.status} />,
+  },
+  {
+    key: "actions",
+    label: "Actions",
+    sortable: false,
+    render: (leave) =>
+      leave.status === "PENDING" ? (
+        <div
+          className="flex items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            size="sm"
+            variant="default"
+            onClick={(e) => onApprove(leave, e)}
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={(e) => onReject(leave, e)}
+          >
+            <X className="h-4 w-4 mr-1" />
+            Reject
+          </Button>
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground">-</span>
+      ),
+  },
+];
 
 export function AdminTimeOffView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,6 +159,34 @@ export function AdminTimeOffView() {
   const rejectedCount = leaves.filter((l) => l.status === "REJECTED").length;
   const totalRequests = leaves.length;
 
+  const statsData: StatItem[] = [
+    {
+      name: "Total Requests",
+      value: totalRequests,
+      description: "All time off requests",
+    },
+    {
+      name: "Pending Approval",
+      value: pendingCount,
+      description: "Awaiting your review",
+      valueClassName: "text-amber-600",
+    },
+    {
+      name: "Approved",
+      value: approvedCount,
+      description: "Approved requests",
+      valueClassName: "text-green-600",
+    },
+    {
+      name: "Rejected",
+      value: rejectedCount,
+      description: "Rejected requests",
+      valueClassName: "text-red-600",
+    },
+  ];
+
+  const leaveColumns = createLeaveColumns(handleApprove, handleReject);
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -119,146 +218,21 @@ export function AdminTimeOffView() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Total Requests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalRequests}</div>
-            <p className="text-xs text-muted-foreground">
-              All time off requests
-            </p>
-          </CardContent>
-        </Card>
+      <StatsCards data={statsData} />
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Pending Approval
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {pendingCount}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting your review
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {approvedCount}
-            </div>
-            <p className="text-xs text-muted-foreground">Approved requests</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {rejectedCount}
-            </div>
-            <p className="text-xs text-muted-foreground">Rejected requests</p>
-          </CardContent>
-        </Card>
+      <div>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">All Leave Requests</h2>
+        </div>
+        <DataTable
+          data={filteredLeaves}
+          columns={leaveColumns}
+          keyExtractor={(leave) => leave.id}
+          emptyMessage="No leave requests found"
+          isLoading={isLoading}
+          loadingMessage="Loading leave requests..."
+        />
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Leave Requests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Leave Type</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLeaves.length > 0 ? (
-                filteredLeaves.map((leave) => (
-                  <TableRow
-                    key={leave.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(leave)}
-                  >
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{leave.employeeName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {leave.employeeCode}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{leave.department}</TableCell>
-                    <TableCell>{formatLeaveType(leave.leaveType)}</TableCell>
-                    <TableCell>{formatDate(leave.startDate)}</TableCell>
-                    <TableCell>{formatDate(leave.endDate)}</TableCell>
-                    <TableCell>{leave.totalDays}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(leave.status)}>
-                        {formatLeaveStatus(leave.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {leave.status === "PENDING" ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={(e) => handleApprove(leave, e)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) => handleReject(leave, e)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center text-muted-foreground"
-                  >
-                    No leave requests found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
 
       <TimeOffRequestDialog
         open={newLeaveDialogOpen}
