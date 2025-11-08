@@ -17,12 +17,41 @@ import { ChevronDown } from "lucide-react";
 import { ROLES } from "../constants";
 import { RolePermissions } from "./role-permissions";
 import { useState } from "react";
+import { toast } from "sonner";
+
+const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
 
 export function UserAccessRightsCard() {
   const [openRoles, setOpenRoles] = useState<Record<string, boolean>>({});
+  const [isResetting, setIsResetting] = useState(false);
 
   const toggleRole = (role: string) => {
     setOpenRoles((prev) => ({ ...prev, [role]: !prev[role] }));
+  };
+
+  const handleResetToDefault = async () => {
+    setIsResetting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/permissions/initialize`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Permissions reset to default successfully");
+        window.location.reload();
+      } else {
+        const errorData = await response.json().catch(() => null);
+        toast.error(errorData?.error?.message || "Failed to reset permissions");
+      }
+    } catch (error) {
+      toast.error("Failed to reset permissions. Please check your connection.");
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -61,8 +90,13 @@ export function UserAccessRightsCard() {
         </div>
 
         <div className="mt-8 flex justify-end gap-4">
-          <Button variant="outline">Reset to Default</Button>
-          <Button>Save Changes</Button>
+          <Button
+            variant="outline"
+            onClick={handleResetToDefault}
+            disabled={isResetting}
+          >
+            {isResetting ? "Resetting..." : "Reset to Default"}
+          </Button>
         </div>
       </CardContent>
     </Card>

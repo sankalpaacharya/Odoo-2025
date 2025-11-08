@@ -19,7 +19,7 @@ import {
   getStatusColor,
   formatDate,
 } from "../utils";
-import { NewLeaveRequestDialog } from "./new-leave-request-dialog";
+import { TimeOffRequestDialog } from "./time-off-request-dialog";
 import { LeaveDetailsDialog } from "./leave-details-dialog";
 import { useMyLeaves, useMyLeaveBalances } from "../hooks";
 import type { Leave } from "../types";
@@ -158,7 +158,7 @@ export function EmployeeTimeOffView() {
         </CardContent>
       </Card>
 
-      <NewLeaveRequestDialog
+      <TimeOffRequestDialog
         open={newLeaveDialogOpen}
         onOpenChange={setNewLeaveDialogOpen}
       />

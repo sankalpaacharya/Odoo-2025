@@ -25,12 +25,12 @@ import { useEmployee } from "@/lib/employee-context";
 import { toast } from "sonner";
 import type { LeaveType } from "../types";
 
-interface NewLeaveRequestDialogProps {
+interface TimeOffRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const leaveTypes: LeaveType[] = [
+const timeOffTypes: LeaveType[] = [
   "CASUAL",
   "SICK",
   "EARNED",
@@ -40,21 +40,31 @@ const leaveTypes: LeaveType[] = [
   "COMPENSATORY",
 ];
 
-export function NewLeaveRequestDialog({
+export function TimeOffRequestDialog({
   open,
   onOpenChange,
-}: NewLeaveRequestDialogProps) {
+}: TimeOffRequestDialogProps) {
   const { isAdmin } = useEmployee();
   const [employeeId, setEmployeeId] = useState("");
-  const [leaveType, setLeaveType] = useState<LeaveType | "">("");
+  const [timeOffType, setTimeOffType] = useState<LeaveType | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
 
-  const createLeave = useCreateLeaveRequest();
+  const createTimeOff = useCreateLeaveRequest();
+
+  const setQuickDate = (daysFromToday: number) => {
+    const today = new Date();
+    const start = new Date(today);
+    const end = new Date(today);
+    end.setDate(end.getDate() + daysFromToday);
+
+    setStartDate(start.toISOString().split("T")[0]);
+    setEndDate(end.toISOString().split("T")[0]);
+  };
 
   const handleSubmit = async () => {
-    if (!leaveType || !startDate || !endDate || !reason.trim()) {
+    if (!timeOffType || !startDate || !endDate || !reason.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -65,17 +75,17 @@ export function NewLeaveRequestDialog({
     }
 
     try {
-      await createLeave.mutateAsync({
+      await createTimeOff.mutateAsync({
         employeeId: isAdmin ? employeeId : undefined,
-        leaveType,
+        leaveType: timeOffType,
         startDate,
         endDate,
         reason,
       });
 
-      toast.success("Leave request created successfully");
+      toast.success("Time off request created successfully");
       setEmployeeId("");
-      setLeaveType("");
+      setTimeOffType("");
       setStartDate("");
       setEndDate("");
       setReason("");
@@ -84,7 +94,7 @@ export function NewLeaveRequestDialog({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to create leave request"
+          : "Failed to create time off request"
       );
     }
   };
@@ -94,7 +104,7 @@ export function NewLeaveRequestDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Time off Type Request</DialogTitle>
+            <DialogTitle>Time Off Request</DialogTitle>
             <Button
               variant="ghost"
               size="icon"
@@ -123,22 +133,73 @@ export function NewLeaveRequestDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="leave-type">Time off Type *</Label>
+            <Label htmlFor="time-off-type">Time Off Type *</Label>
             <Select
-              value={leaveType}
-              onValueChange={(value) => setLeaveType(value as LeaveType)}
+              value={timeOffType}
+              onValueChange={(value) => setTimeOffType(value as LeaveType)}
             >
-              <SelectTrigger id="leave-type">
-                <SelectValue placeholder="Select leave type" />
+              <SelectTrigger id="time-off-type">
+                <SelectValue placeholder="Select time off type" />
               </SelectTrigger>
               <SelectContent>
-                {leaveTypes.map((type) => (
+                {timeOffTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {formatLeaveType(type)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Quick Date Selection</Label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDate(0)}
+                className="text-xs"
+              >
+                Today
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDate(1)}
+                className="text-xs"
+              >
+                Tomorrow
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDate(2)}
+                className="text-xs"
+              >
+                Next 3 Days
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDate(4)}
+                className="text-xs"
+              >
+                Next 5 Days
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDate(6)}
+                className="text-xs"
+              >
+                Next Week
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -174,7 +235,7 @@ export function NewLeaveRequestDialog({
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Explain the reason for leave..."
+              placeholder="Explain the reason for time off..."
               className="min-h-[80px] resize-none"
             />
           </div>
@@ -182,15 +243,15 @@ export function NewLeaveRequestDialog({
           <div className="flex gap-2 pt-4">
             <Button
               onClick={handleSubmit}
-              disabled={createLeave.isPending}
+              disabled={createTimeOff.isPending}
               className="flex-1"
             >
-              {createLeave.isPending ? "Submitting..." : "Submit"}
+              {createTimeOff.isPending ? "Submitting..." : "Submit"}
             </Button>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={createLeave.isPending}
+              disabled={createTimeOff.isPending}
               className="flex-1"
             >
               Cancel
