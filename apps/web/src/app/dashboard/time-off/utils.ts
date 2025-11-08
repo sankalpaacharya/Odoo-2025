@@ -2,13 +2,9 @@ import type { LeaveType, LeaveStatus } from "./types";
 
 export function formatLeaveType(type: LeaveType): string {
   const typeMap: Record<LeaveType, string> = {
-    CASUAL: "Casual Leave",
-    SICK: "Sick Leave",
-    EARNED: "Earned Leave",
-    MATERNITY: "Maternity Leave",
-    PATERNITY: "Paternity Leave",
-    UNPAID: "Unpaid Leave",
-    COMPENSATORY: "Compensatory Leave",
+    PAID_TIME_OFF: "Paid Time Off",
+    SICK_LEAVE: "Sick Leave",
+    UNPAID_LEAVE: "Unpaid Leave",
   };
   return typeMap[type] || type;
 }

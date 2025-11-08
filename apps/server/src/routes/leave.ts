@@ -1,10 +1,56 @@
 import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { authenticateUser } from "../middleware/auth";
 import { employeeService } from "../services/employee.service";
 import { leaveService } from "../services/leave.service";
-import { leaveBalanceService } from "../services/leave-balance.service";
 
 const router: Router = Router();
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, "../../uploads/leave-attachments");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    const nameWithoutExt = path.basename(file.originalname, ext);
+    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
+  },
+  fileFilter: (_req, file, cb) => {
+    // Allow common document and image types
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Invalid file type. Only JPEG, PNG, PDF, DOC, and DOCX files are allowed."
+        )
+      );
+    }
+  },
+});
 
 router.use(authenticateUser);
 
@@ -33,6 +79,7 @@ router.get("/my-leaves", async (req, res) => {
       endDate: leave.endDate.toISOString(),
       totalDays: parseFloat(leave.totalDays.toString()),
       reason: leave.reason,
+      attachment: leave.attachment,
       status: leave.status,
       approvedBy: leave.approvedBy,
       approvedAt: leave.approvedAt?.toISOString() || null,
@@ -47,41 +94,7 @@ router.get("/my-leaves", async (req, res) => {
   }
 });
 
-router.get("/my-balances", async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
-    const employee = await employeeService.findByUserId(userId);
-
-    if (!employee) {
-      return res.status(404).json({ error: "Employee not found" });
-    }
-
-    const { year } = req.query;
-    const targetYear = year
-      ? parseInt(year as string)
-      : new Date().getFullYear();
-
-    const balances = await leaveBalanceService.findByEmployeeAndYear(
-      employee.id,
-      targetYear
-    );
-
-    const formatted = balances.map((balance) => ({
-      id: balance.id,
-      leaveType: balance.leaveType,
-      allocated: parseFloat(balance.allocated.toString()),
-      used: parseFloat(balance.used.toString()),
-      remaining: parseFloat(balance.remaining.toString()),
-    }));
-
-    res.json(formatted);
-  } catch (error) {
-    console.error("Error fetching leave balances:", error);
-    res.status(500).json({ error: "Failed to fetch leave balances" });
-  }
-});
-
-router.post("/request", async (req, res) => {
+router.post("/request", upload.single("attachment"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const employee = await employeeService.findByUserId(userId);
@@ -111,15 +124,7 @@ router.post("/request", async (req, res) => {
         .json({ error: "End date must be after start date" });
     }
 
-    const totalDays = leaveService.calculateTotalDays(start, end);
-    const year = start.getFullYear();
-
-    const validation = await leaveService.validateLeaveBalance(
-      targetEmployeeId,
-      leaveType,
-      totalDays,
-      year
-    );
+    const attachmentPath = req.file ? req.file.filename : null;
 
     const leave = await leaveService.createLeave({
       employeeId: targetEmployeeId,
@@ -127,6 +132,7 @@ router.post("/request", async (req, res) => {
       startDate: start,
       endDate: end,
       reason,
+      attachment: attachmentPath,
     });
 
     res.json({
@@ -138,18 +144,20 @@ router.post("/request", async (req, res) => {
       totalDays: parseFloat(leave.totalDays.toString()),
       reason: leave.reason,
       status: leave.status,
+      attachment: leave.attachment,
       approvedBy: leave.approvedBy,
       approvedAt: leave.approvedAt?.toISOString() || null,
       rejectionReason: leave.rejectionReason,
       createdAt: leave.createdAt.toISOString(),
-      warning: validation.warning,
-      balanceInfo: {
-        remaining: validation.remaining,
-        requested: totalDays,
-      },
     });
   } catch (error) {
     console.error("Error creating leave request:", error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: "File size exceeds 5MB limit" });
+      }
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: "Failed to create leave request" });
   }
 });
@@ -200,6 +208,7 @@ router.get("/all", async (req, res) => {
       endDate: leave.endDate.toISOString(),
       totalDays: parseFloat(leave.totalDays.toString()),
       reason: leave.reason,
+      attachment: leave.attachment,
       status: leave.status,
       approvedBy: leave.approvedBy,
       approvedAt: leave.approvedAt?.toISOString() || null,
@@ -349,6 +358,14 @@ router.delete("/:leaveId", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
+    // Delete attachment file if exists
+    if (leave.attachment) {
+      const filePath = path.join(uploadsDir, leave.attachment);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
     await leaveService.cancelLeave(leaveId);
 
     res.json({ message: "Leave request cancelled successfully" });
@@ -357,6 +374,50 @@ router.delete("/:leaveId", async (req, res) => {
     const message =
       error instanceof Error ? error.message : "Failed to cancel leave";
     res.status(400).json({ error: message });
+  }
+});
+
+router.get("/attachment/:filename", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { filename } = req.params;
+
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const filePath = path.join(uploadsDir, filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    // Verify that the file belongs to a leave request the user can access
+    const leaves = await leaveService.findByEmployee(employee.id, {});
+    const isAdmin = await employeeService.hasRole(userId, [
+      "ADMIN",
+      "HR_OFFICER",
+    ]);
+
+    let hasAccess = false;
+    if (isAdmin) {
+      // Admin can access all attachments
+      hasAccess = true;
+    } else {
+      // Check if this attachment belongs to user's leave
+      hasAccess = leaves.some((leave) => leave.attachment === filename);
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error("Error downloading attachment:", error);
+    res.status(500).json({ error: "Failed to download attachment" });
   }
 });
 

@@ -1,10 +1,53 @@
 import { Router } from "express";
 import type { Router as RouterType } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import prisma from "@my-better-t-app/db";
 import { auth } from "@my-better-t-app/auth";
 import { generateEmployeeCode } from "@my-better-t-app/auth/utils/generate-employee-code";
 
 const router: RouterType = Router();
+
+const uploadsDir = path.join(__dirname, "../../uploads/logos");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `logo-${uniqueSuffix}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|svg|webp/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Invalid file type. Only JPEG, PNG, SVG, and WebP files are allowed."
+        )
+      );
+    }
+  },
+});
 
 // Employee lookup endpoint - converts employee code to email
 router.post("/employee-lookup", async (req, res) => {
@@ -50,7 +93,7 @@ router.post("/employee-lookup", async (req, res) => {
 });
 
 // Signup endpoint with employee creation
-router.post("/signup", async (req, res) => {
+router.post("/signup", upload.single("logo"), async (req, res) => {
   try {
     const { email, firstName, lastName, companyName, password } = req.body;
 
@@ -72,6 +115,27 @@ router.post("/signup", async (req, res) => {
         error: {
           message: "User with this email already exists",
           statusText: "Bad Request",
+        },
+      });
+    }
+
+    let organization = await prisma.organization.findUnique({
+      where: { companyName },
+    });
+
+    if (!organization) {
+      const logoPath = req.file ? `/uploads/logos/${req.file.filename}` : null;
+
+      console.log("Logo upload info:", {
+        hasFile: !!req.file,
+        filename: req.file?.filename,
+        logoPath,
+      });
+
+      organization = await prisma.organization.create({
+        data: {
+          companyName,
+          logo: logoPath,
         },
       });
     }
@@ -102,6 +166,7 @@ router.post("/signup", async (req, res) => {
     const employee = await prisma.employee.create({
       data: {
         userId: signupResult.user.id,
+        organizationId: organization.id,
         employeeCode,
         firstName,
         lastName,
@@ -116,11 +181,16 @@ router.post("/signup", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Account created successfully! You can now sign in.",
+      message: "Account created successfully! Logging you in...",
       data: {
         userId: signupResult.user.id,
         email: signupResult.user.email,
         employeeCode: employee.employeeCode,
+        organization: {
+          id: organization.id,
+          companyName: organization.companyName,
+          logo: organization.logo,
+        },
       },
     });
   } catch (error) {

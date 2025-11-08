@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Download, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +100,24 @@ export function LeaveDetailsDialog({
             <div>
               <div className="text-sm text-muted-foreground mb-1">Reason</div>
               <div className="text-sm">{leave.reason}</div>
+            </div>
+          )}
+
+          {leave.attachment && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">
+                Attachment
+              </div>
+              <a
+                href={`${process.env.NEXT_PUBLIC_SERVER_URL}/api/leaves/attachment/${leave.attachment}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <FileText className="h-4 w-4" />
+                <span>{leave.attachment}</span>
+                <Download className="h-3 w-3" />
+              </a>
             </div>
           )}
 

@@ -1,13 +1,6 @@
 import db from "@my-better-t-app/db";
 
-type LeaveType =
-  | "CASUAL"
-  | "SICK"
-  | "EARNED"
-  | "MATERNITY"
-  | "PATERNITY"
-  | "UNPAID"
-  | "COMPENSATORY";
+type LeaveType = "PAID_TIME_OFF" | "SICK_LEAVE" | "UNPAID_LEAVE";
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
 export const leaveService = {
@@ -135,6 +128,7 @@ export const leaveService = {
     startDate: Date;
     endDate: Date;
     reason: string;
+    attachment?: string | null;
   }) {
     const totalDays = this.calculateTotalDays(data.startDate, data.endDate);
 
@@ -146,6 +140,7 @@ export const leaveService = {
         endDate: data.endDate,
         totalDays,
         reason: data.reason,
+        attachment: data.attachment,
         status: "PENDING",
       },
     });

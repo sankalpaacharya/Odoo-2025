@@ -20,6 +20,7 @@ import {
   Sidebar as SidebarUI,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { apiClient } from "@/lib/api-client";
 import {
   Calendar,
   ChevronsUpDown,
@@ -40,6 +41,7 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "../../../../packages/db/prisma/generated/enums";
+import { useEffect, useState } from "react";
 
 type NavigationItem = {
   name: string;
@@ -94,6 +96,31 @@ export function Sidebar() {
   const { data: session } = authClient.useSession();
   const { theme, setTheme } = useTheme();
   const user = (session as any)?.user as any;
+  const [organization, setOrganization] = useState<{
+    companyName: string;
+    logo: string | null;
+  } | null>(null);
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    const fetchOrganization = async () => {
+      try {
+        const data = await apiClient<{
+          companyName: string;
+          logo: string | null;
+        }>("/api/organization/me");
+        console.log("Fetched organization data:", data);
+        setOrganization(data);
+        setLogoError(false);
+      } catch (error) {
+        console.error("Failed to fetch organization:", error);
+      }
+    };
+
+    if (session) {
+      fetchOrganization();
+    }
+  }, [session]);
 
   const userInitials = user?.name
     ? user.name
@@ -109,11 +136,38 @@ export function Sidebar() {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-3 justify-between">
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground font-bold">W</span>
-            </div>
+            {organization?.logo && !logoError ? (
+              <div className="h-9 w-9 rounded-lg overflow-hidden shrink-0 bg-muted">
+                <img
+                  src={`${
+                    process.env.NEXT_PUBLIC_SERVER_URL ||
+                    "http://localhost:3000"
+                  }${organization.logo}`}
+                  alt={organization.companyName}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    console.error(
+                      "Failed to load logo from:",
+                      `${
+                        process.env.NEXT_PUBLIC_SERVER_URL ||
+                        "http://localhost:3000"
+                      }${organization.logo}`
+                    );
+                    setLogoError(true);
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                <span className="text-primary-foreground font-bold">
+                  {organization?.companyName?.[0]?.toUpperCase() || "W"}
+                </span>
+              </div>
+            )}
             <div className="flex flex-col">
-              <span className="font-semibold text-base">WorkZen</span>
+              <span className="font-semibold text-base">
+                {organization?.companyName || "WorkZen"}
+              </span>
               <span className="text-xs text-muted-foreground">HR Platform</span>
             </div>
           </div>

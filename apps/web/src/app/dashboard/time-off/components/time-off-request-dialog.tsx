@@ -11,7 +11,7 @@ import {
   format,
   addBusinessDays,
 } from "date-fns";
-import { Calendar, X, ChevronsUpDown, Check } from "lucide-react";
+import { Calendar, X, ChevronsUpDown, Check, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -52,16 +52,13 @@ interface TimeOffFormData {
   startDate: string;
   endDate: string;
   reason: string;
+  attachment?: FileList;
 }
 
 const timeOffTypes: LeaveType[] = [
-  "CASUAL",
-  "SICK",
-  "EARNED",
-  "MATERNITY",
-  "PATERNITY",
-  "UNPAID",
-  "COMPENSATORY",
+  "PAID_TIME_OFF",
+  "SICK_LEAVE",
+  "UNPAID_LEAVE",
 ];
 
 const timeOffSchema = yup.object({
@@ -197,6 +194,7 @@ export function TimeOffRequestDialog({
         startDate: data.startDate,
         endDate: data.endDate,
         reason: data.reason,
+        attachment: data.attachment?.[0],
       });
 
       if ((response as any).warning) {
@@ -486,6 +484,40 @@ export function TimeOffRequestDialog({
                     {errors.reason.message}
                   </p>
                 )}
+              </div>
+            )}
+          />
+
+          <Controller
+            name="attachment"
+            control={control}
+            render={({ field: { onChange, value, ...field } }) => (
+              <div className="space-y-2">
+                <Label htmlFor="attachment">
+                  Attachment{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (Optional)
+                  </span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="attachment"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    onChange={(e) => onChange(e.target.files)}
+                    {...field}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </div>
+                {value && value.length > 0 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Upload className="h-3 w-3" />
+                    {value[0].name} ({(value[0].size / 1024).toFixed(2)} KB)
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Accepted formats: JPEG, PNG, PDF, DOC, DOCX (Max 5MB)
+                </p>
               </div>
             )}
           />
