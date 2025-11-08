@@ -228,6 +228,7 @@ router.get(
   requirePermission("Attendance", "View"),
   async (req, res) => {
     try {
+
       const userId = (req as any).user.id;
       const employee = await employeeService.findByUserId(userId);
 
@@ -238,7 +239,6 @@ router.get(
       // Support date parameter, default to today
       const dateParam = req.query.date as string | undefined;
       const targetDate = dateParam ? new Date(dateParam) : new Date();
-      console.log(targetDate);
       targetDate.setHours(0, 0, 0, 0);
 
       const allActiveEmployees = await employeeService.findActiveEmployees(
