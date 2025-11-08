@@ -17,6 +17,7 @@ interface Employee {
   department?: string | null;
   designation?: string | null;
   employmentStatus: string;
+  profileImage?: string | null;
 }
 
 async function fetchEmployees(): Promise<Employee[]> {
@@ -106,7 +107,7 @@ export default function EmployeesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filteredEmployees.map((emp) => (
-              <EmployeeCard key={emp.id} id={emp.id} name={emp.name} role={emp.role} status={emp.status} />
+              <EmployeeCard key={emp.id} id={emp.id} name={emp.name} role={emp.role} status={emp.status} profileImage={emp.profileImage} />
             ))}
           </div>
         )}
