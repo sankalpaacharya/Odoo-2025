@@ -385,6 +385,22 @@ model AuditLog {
     @@map("audit_log")
 }
 
+model RolePermission {
+    id String @id @default(cuid()) @map("_id")
+
+    role       String  // Using String instead of Role enum for flexibility
+    module     String
+    permission String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([role, module, permission])
+    @@index([role])
+    @@index([module])
+    @@map("role_permission")
+}
+
 model SystemSettings {
     id String @id @default(cuid()) @map("_id")
 

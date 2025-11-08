@@ -156,6 +156,7 @@ export function AdminAttendanceView() {
                 <TableHead>Employee Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Designation</TableHead>
                 <TableHead>Check In</TableHead>
                 <TableHead>Check Out</TableHead>
                 <TableHead>Work Hours</TableHead>
@@ -171,6 +172,7 @@ export function AdminAttendanceView() {
                     </TableCell>
                     <TableCell>{record.employeeName}</TableCell>
                     <TableCell>{record.department}</TableCell>
+                    <TableCell>{record.designation || "N/A"}</TableCell>
                     <TableCell>{formatTime(record.checkIn)}</TableCell>
                     <TableCell>{formatTime(record.checkOut)}</TableCell>
                     <TableCell>
@@ -188,7 +190,7 @@ export function AdminAttendanceView() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-muted-foreground"
                   >
                     No employees found

@@ -10,6 +10,7 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 import PrivateInfoTab from "./PrivateInfoTab";
 import ResumeTab from "./ResumeTab";
+import SalaryInfoTab from "./SalaryInfoTab";
 
 export default function ProfilePage() {
   const { employee } = useEmployee();
@@ -154,14 +155,8 @@ export default function ProfilePage() {
               <PrivateInfoTab isEditing={isEditing} />
             </TabsContent>
 
-            <TabsContent value="salary">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground">
-                    Salary information content goes here...
-                  </p>
-                </CardContent>
-              </Card>
+            <TabsContent value="salary" className="mt-8">
+              <SalaryInfoTab isEditing={isEditing} />
             </TabsContent>
 
             <TabsContent value="security">
