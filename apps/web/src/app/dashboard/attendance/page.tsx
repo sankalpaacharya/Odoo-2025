@@ -1,25 +1,52 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { authClient } from "@/lib/auth-client";
+"use client";
 
-export default async function AttendancePage() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
+import { useState } from "react";
+import { useEmployee } from "@/lib/employee-context";
+import { EmployeeAttendanceView } from "./components/employee-attendance-view";
+import { AdminAttendanceView } from "./components/admin-attendance-view";
 
-  if (!session?.user) {
-    redirect("/login");
+export default function AttendancePage() {
+  const { isAdmin, isLoading } = useEmployee();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
+    );
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
+    );
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-        <p className="text-muted-foreground">Track employee attendance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
+          <p className="text-muted-foreground">
+            {isAdmin
+              ? "Monitor employee attendance"
+              : "Track your attendance records"}
+          </p>
+        </div>
       </div>
+
+      {isAdmin ? (
+        <AdminAttendanceView />
+      ) : (
+        <EmployeeAttendanceView
+          currentMonth={currentMonth}
+          onPreviousMonth={goToPreviousMonth}
+          onNextMonth={goToNextMonth}
+        />
+      )}
     </div>
   );
 }

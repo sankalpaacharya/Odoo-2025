@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@my-better-t-app/auth": "workspace:*",
+    "@my-better-t-app/db": "workspace:*",
     "@prisma/client": "catalog:",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-form": "^1.12.3",
