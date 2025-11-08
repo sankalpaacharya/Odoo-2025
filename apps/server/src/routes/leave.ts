@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { authenticateUser } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
 import { employeeService } from "../services/employee.service";
 import { leaveService } from "../services/leave.service";
 
@@ -49,7 +50,7 @@ const upload = multer({
 
 router.use(authenticateUser);
 
-router.get("/my-leaves", async (req, res) => {
+router.get("/my-leaves", requirePermission("Time Off", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const employee = await employeeService.findByUserId(userId);
@@ -89,7 +90,41 @@ router.get("/my-leaves", async (req, res) => {
   }
 });
 
-router.post("/request", upload.single("attachment"), async (req, res) => {
+router.get("/my-balances", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    const { year } = req.query;
+    const targetYear = year
+      ? parseInt(year as string)
+      : new Date().getFullYear();
+
+    const balances = await leaveBalanceService.findByEmployeeAndYear(
+      employee.id,
+      targetYear
+    );
+
+    const formatted = balances.map((balance) => ({
+      id: balance.id,
+      leaveType: balance.leaveType,
+      allocated: parseFloat(balance.allocated.toString()),
+      used: parseFloat(balance.used.toString()),
+      remaining: parseFloat(balance.remaining.toString()),
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error("Error fetching leave balances:", error);
+    res.status(500).json({ error: "Failed to fetch leave balances" });
+  }
+});
+
+router.post("/request", requirePermission("Time Off", "Create"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const employee = await employeeService.findByUserId(userId);
@@ -152,7 +187,7 @@ router.post("/request", upload.single("attachment"), async (req, res) => {
   }
 });
 
-router.get("/all", async (req, res) => {
+router.get("/all", requirePermission("Time Off", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const isAdmin = await employeeService.hasRole(userId, ["ADMIN", "HR_OFFICER"]);
@@ -215,6 +250,7 @@ router.patch("/:leaveId/approve", async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { leaveId } = req.params;
+    const { leaveType, startDate, endDate, totalDays } = req.body;
 
     const employee = await employeeService.findByUserId(userId);
 
@@ -228,7 +264,17 @@ router.patch("/:leaveId/approve", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const updatedLeave = await leaveService.approveLeave(leaveId, employee.employeeCode, true);
+    const updatedLeave = await leaveService.approveLeave(
+      leaveId,
+      employee.employeeCode,
+      true,
+      {
+        leaveType,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        totalDays: totalDays ? parseFloat(totalDays) : undefined,
+      }
+    );
 
     res.json({
       id: updatedLeave.id,
@@ -296,7 +342,7 @@ router.patch("/:leaveId/reject", async (req, res) => {
   }
 });
 
-router.delete("/:leaveId", async (req, res) => {
+router.delete("/:leaveId", requirePermission("Time Off", "Delete"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { leaveId } = req.params;

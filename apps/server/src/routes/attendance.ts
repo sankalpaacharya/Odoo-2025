@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { authenticateUser } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
 import { sessionService } from "../services/session.service";
 import { employeeService } from "../services/employee.service";
+import { leaveService } from "../services/leave.service";
 
 const router: Router = Router();
 
@@ -41,8 +43,10 @@ function calculateWorkingHoursFromSessions(
 
 function determineStatus(
   sessions: any[],
-  workingHours: number
+  workingHours: number,
+  isOnLeave: boolean = false
 ): AttendanceStatus {
+  if (isOnLeave) return "ON_LEAVE";
   if (sessions.length === 0) return "ABSENT";
   if (workingHours < 4) return "HALF_DAY";
 
@@ -52,7 +56,7 @@ function determineStatus(
   return "PRESENT";
 }
 
-router.get("/my-attendance", async (req, res) => {
+router.get("/my-attendance", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { month, year } = req.query;
@@ -73,11 +77,14 @@ router.get("/my-attendance", async (req, res) => {
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0);
 
-    const workSessions = await sessionService.findSessionsByDateRange(
-      employee.id,
-      startDate,
-      endDate
-    );
+    const [workSessions, approvedLeaves] = await Promise.all([
+      sessionService.findSessionsByDateRange(employee.id, startDate, endDate),
+      leaveService.findApprovedLeavesByDateRange(
+        employee.id,
+        startDate,
+        endDate
+      ),
+    ]);
 
     const sessionsByDate = workSessions.reduce((acc, session) => {
       const dateKey = session.date.toISOString().split("T")[0];
@@ -87,6 +94,15 @@ router.get("/my-attendance", async (req, res) => {
       }
       return acc;
     }, {} as Record<string, typeof workSessions>);
+
+    const leaveDates = new Set<string>();
+    approvedLeaves.forEach((leave) => {
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        leaveDates.add(d.toISOString().split("T")[0]!);
+      }
+    });
 
     const datesInMonth: Date[] = [];
     for (
@@ -101,10 +117,11 @@ router.get("/my-attendance", async (req, res) => {
     const attendances = datesInMonth.map((date) => {
       const dateKey = date.toISOString().split("T")[0];
       const sessions = (dateKey && sessionsByDate[dateKey]) || [];
+      const isOnLeave = dateKey ? leaveDates.has(dateKey) : false;
 
       const workingHours = calculateWorkingHoursFromSessions(sessions, now);
       const overtimeHours = Math.max(0, workingHours - 9);
-      const status = determineStatus(sessions, workingHours);
+      const status = determineStatus(sessions, workingHours, isOnLeave);
 
       let checkIn: Date | null = null;
       let checkOut: Date | null = null;
@@ -166,7 +183,7 @@ router.get("/my-attendance", async (req, res) => {
         (a) => a.status === "PRESENT" || a.status === "LATE"
       ).length,
       totalAbsentDays: attendances.filter((a) => a.status === "ABSENT").length,
-      totalLeaveDays: 0,
+      totalLeaveDays: attendances.filter((a) => a.status === "ON_LEAVE").length,
       totalHalfDays: attendances.filter((a) => a.status === "HALF_DAY").length,
       totalLateDays: attendances.filter((a) => a.status === "LATE").length,
       totalWorkingHours: parseFloat(
@@ -191,7 +208,7 @@ router.get("/my-attendance", async (req, res) => {
   }
 });
 
-router.get("/today", async (req, res) => {
+router.get("/today", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const department = req.query.department as string;
 
@@ -212,7 +229,7 @@ router.get("/today", async (req, res) => {
       department === "all" ? undefined : department
     );
 
-    const [activeSessions, todaySessions] = await Promise.all([
+    const [activeSessions, todaySessions, employeeLeaves] = await Promise.all([
       Promise.all(
         allActiveEmployees.map((emp) =>
           sessionService.findActiveSession(emp.id)
@@ -223,6 +240,15 @@ router.get("/today", async (req, res) => {
           sessionService.findSessionsByEmployeeAndDate(emp.id, targetDate)
         )
       ),
+      Promise.all(
+        allActiveEmployees.map((emp) =>
+          leaveService.findApprovedLeavesByDateRange(
+            emp.id,
+            targetDate,
+            targetDate
+          )
+        )
+      ),
     ]);
 
     const activeSessionMap = new Map(
@@ -231,14 +257,19 @@ router.get("/today", async (req, res) => {
     const sessionMap = new Map(
       allActiveEmployees.map((emp, idx) => [emp.id, todaySessions[idx] || []])
     );
+    const leaveMap = new Map(
+      allActiveEmployees.map((emp, idx) => [emp.id, employeeLeaves[idx] || []])
+    );
 
     const now = new Date();
     const formatted = allActiveEmployees.map((emp) => {
       const activeSession = activeSessionMap.get(emp.id);
       const sessions = sessionMap.get(emp.id) || [];
+      const leaves = leaveMap.get(emp.id) || [];
+      const isOnLeave = leaves.length > 0;
 
       const workingHours = calculateWorkingHoursFromSessions(sessions, now);
-      const status = determineStatus(sessions, workingHours);
+      const status = determineStatus(sessions, workingHours, isOnLeave);
 
       let checkIn: Date | null = null;
       let checkOut: Date | null = null;
@@ -302,7 +333,7 @@ router.get("/today", async (req, res) => {
   }
 });
 
-router.get("/employee/:employeeId", async (req, res) => {
+router.get("/employee/:employeeId", requirePermission("Attendance", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { employeeId } = req.params;
@@ -329,9 +360,14 @@ router.get("/employee/:employeeId", async (req, res) => {
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0);
 
-    const [targetEmployee, workSessions] = await Promise.all([
+    const [targetEmployee, workSessions, approvedLeaves] = await Promise.all([
       employeeService.findById(employeeId),
       sessionService.findSessionsByDateRange(employeeId, startDate, endDate),
+      leaveService.findApprovedLeavesByDateRange(
+        employeeId,
+        startDate,
+        endDate
+      ),
     ]);
 
     if (!targetEmployee) {
@@ -347,6 +383,15 @@ router.get("/employee/:employeeId", async (req, res) => {
       return acc;
     }, {} as Record<string, typeof workSessions>);
 
+    const leaveDates = new Set<string>();
+    approvedLeaves.forEach((leave) => {
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        leaveDates.add(d.toISOString().split("T")[0]!);
+      }
+    });
+
     const datesInMonth: Date[] = [];
     for (
       let d = new Date(startDate);
@@ -360,10 +405,11 @@ router.get("/employee/:employeeId", async (req, res) => {
     const attendances = datesInMonth.map((date) => {
       const dateKey = date.toISOString().split("T")[0];
       const sessions = (dateKey && sessionsByDate[dateKey]) || [];
+      const isOnLeave = dateKey ? leaveDates.has(dateKey) : false;
 
       const workingHours = calculateWorkingHoursFromSessions(sessions, now);
       const overtimeHours = Math.max(0, workingHours - 9);
-      const status = determineStatus(sessions, workingHours);
+      const status = determineStatus(sessions, workingHours, isOnLeave);
 
       let checkIn: Date | null = null;
       let checkOut: Date | null = null;
@@ -394,7 +440,7 @@ router.get("/employee/:employeeId", async (req, res) => {
         (a) => a.status === "PRESENT" || a.status === "LATE"
       ).length,
       totalAbsentDays: attendances.filter((a) => a.status === "ABSENT").length,
-      totalLeaveDays: 0,
+      totalLeaveDays: attendances.filter((a) => a.status === "ON_LEAVE").length,
       totalHalfDays: attendances.filter((a) => a.status === "HALF_DAY").length,
       totalLateDays: attendances.filter((a) => a.status === "LATE").length,
       totalWorkingHours: parseFloat(

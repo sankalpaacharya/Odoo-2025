@@ -3,10 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Plus, X, Edit2 } from "lucide-react";
 import { EditableSection } from "@/components/editable-section";
-import { EditableTextarea } from "@/components/editable-textarea";
 import type { ProfileData, Skill, Certification } from "@/types/profile";
 import { useUpdateProfile } from "@/hooks/useProfile";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,32 +119,126 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
     }
   };
 
+  const [aboutText, setAboutText] = useState(profile.about || "");
+  const [jobLoveText, setJobLoveText] = useState(profile.jobLove || "");
+  const [interestsText, setInterestsText] = useState(profile.interests || "");
+  const [isSavingAbout, setIsSavingAbout] = useState(false);
+  const [isSavingJobLove, setIsSavingJobLove] = useState(false);
+  const [isSavingInterests, setIsSavingInterests] = useState(false);
+
+  useEffect(() => {
+    setAboutText(profile.about || "");
+  }, [profile.about]);
+
+  useEffect(() => {
+    setJobLoveText(profile.jobLove || "");
+  }, [profile.jobLove]);
+
+  useEffect(() => {
+    setInterestsText(profile.interests || "");
+  }, [profile.interests]);
+
+  const handleSaveAbout = async () => {
+    if (aboutText === profile.about) return;
+    setIsSavingAbout(true);
+    try {
+      await handleFieldSave("about", aboutText);
+      toast.success("About updated");
+    } catch (error) {
+      toast.error("Failed to update");
+      setAboutText(profile.about || "");
+    } finally {
+      setIsSavingAbout(false);
+    }
+  };
+
+  const handleSaveJobLove = async () => {
+    if (jobLoveText === profile.jobLove) return;
+    setIsSavingJobLove(true);
+    try {
+      await handleFieldSave("jobLove", jobLoveText);
+      toast.success("Job love updated");
+    } catch (error) {
+      toast.error("Failed to update");
+      setJobLoveText(profile.jobLove || "");
+    } finally {
+      setIsSavingJobLove(false);
+    }
+  };
+
+  const handleSaveInterests = async () => {
+    if (interestsText === profile.interests) return;
+    setIsSavingInterests(true);
+    try {
+      await handleFieldSave("interests", interestsText);
+      toast.success("Interests updated");
+    } catch (error) {
+      toast.error("Failed to update");
+      setInterestsText(profile.interests || "");
+    } finally {
+      setIsSavingInterests(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-6">
-        <EditableTextarea
-          label="About"
-          value={profile.about || ""}
-          onSave={(value) => handleFieldSave("about", value)}
-          placeholder="Tell us about yourself..."
-          rows={5}
-        />
+        <EditableSection
+          title="About"
+          actionButton={
+            <Button
+              onClick={handleSaveAbout}
+              disabled={aboutText === profile.about || isSavingAbout}
+              size="sm"
+              variant={aboutText !== profile.about ? "default" : "outline"}>
+              {isSavingAbout ? "Saving..." : "Save"}
+            </Button>
+          }>
+          <textarea
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
+            placeholder="Tell us about yourself..."
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </EditableSection>
 
-        <EditableTextarea
-          label="What I love about my job"
-          value={profile.jobLove || ""}
-          onSave={(value) => handleFieldSave("jobLove", value)}
-          placeholder="Share what you love about your work..."
-          rows={5}
-        />
+        <EditableSection
+          title="What I love about my job"
+          actionButton={
+            <Button
+              onClick={handleSaveJobLove}
+              disabled={jobLoveText === profile.jobLove || isSavingJobLove}
+              size="sm"
+              variant={jobLoveText !== profile.jobLove ? "default" : "outline"}>
+              {isSavingJobLove ? "Saving..." : "Save"}
+            </Button>
+          }>
+          <textarea
+            value={jobLoveText}
+            onChange={(e) => setJobLoveText(e.target.value)}
+            placeholder="Share what you love about your work..."
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </EditableSection>
 
-        <EditableTextarea
-          label="My interests and hobbies"
-          value={profile.interests || ""}
-          onSave={(value) => handleFieldSave("interests", value)}
-          placeholder="Tell us about your interests and hobbies..."
-          rows={5}
-        />
+        <EditableSection
+          title="My interests and hobbies"
+          actionButton={
+            <Button
+              onClick={handleSaveInterests}
+              disabled={interestsText === profile.interests || isSavingInterests}
+              size="sm"
+              variant={interestsText !== profile.interests ? "default" : "outline"}>
+              {isSavingInterests ? "Saving..." : "Save"}
+            </Button>
+          }>
+          <textarea
+            value={interestsText}
+            onChange={(e) => setInterestsText(e.target.value)}
+            placeholder="Tell us about your interests and hobbies..."
+            className="w-full h-[150px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </EditableSection>
       </div>
 
       {/* Column 2 - Skills and Certifications (2 rows) */}
@@ -198,28 +291,30 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
               </DialogContent>
             </Dialog>
           }>
-          {profile.skills && profile.skills.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {profile.skills.map((skill, index) => (
-                <Badge key={skill.id || index} variant="secondary" className="text-sm py-1.5 px-3 gap-2">
-                  <span>
-                    {skill.name}
-                    {skill.level && <span className="text-muted-foreground ml-1">• {skill.level}</span>}
-                  </span>
-                  <div className="flex gap-1">
-                    <button onClick={() => handleEditSkill(index)} className="hover:text-primary transition-colors" title="Edit skill">
-                      <Edit2 className="h-3 w-3" />
-                    </button>
-                    <button onClick={() => handleDeleteSkill(index)} className="hover:text-destructive transition-colors" title="Delete skill">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">No skills added yet</div>
-          )}
+          <div className="h-[200px] overflow-y-auto">
+            {profile.skills && profile.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map((skill, index) => (
+                  <Badge key={skill.id || index} variant="secondary" className="text-sm py-1.5 px-3 gap-2">
+                    <span>
+                      {skill.name}
+                      {skill.level && <span className="text-muted-foreground ml-1">• {skill.level}</span>}
+                    </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => handleEditSkill(index)} className="hover:text-primary transition-colors" title="Edit skill">
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => handleDeleteSkill(index)} className="hover:text-destructive transition-colors" title="Delete skill">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No skills added yet</div>
+            )}
+          </div>
         </EditableSection>
 
         <EditableSection
@@ -274,29 +369,31 @@ export default function ResumeTab({ profile }: { profile: ProfileData }) {
               </DialogContent>
             </Dialog>
           }>
-          {profile.certifications && profile.certifications.length > 0 ? (
-            <div className="space-y-3">
-              {profile.certifications.map((cert, index) => (
-                <div key={cert.id || index} className="flex items-start justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{cert.name}</h4>
-                    {cert.issuer && <p className="text-sm text-muted-foreground">{cert.issuer}</p>}
-                    {cert.date && <p className="text-xs text-muted-foreground mt-1">{new Date(cert.date).toLocaleDateString()}</p>}
+          <div className="h-[200px] overflow-y-auto">
+            {profile.certifications && profile.certifications.length > 0 ? (
+              <div className="space-y-3">
+                {profile.certifications.map((cert, index) => (
+                  <div key={cert.id || index} className="flex items-start justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{cert.name}</h4>
+                      {cert.issuer && <p className="text-sm text-muted-foreground">{cert.issuer}</p>}
+                      {cert.date && <p className="text-xs text-muted-foreground mt-1">{new Date(cert.date).toLocaleDateString()}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditCertification(index)} className="h-8 w-8">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteCertification(index)} className="h-8 w-8 hover:text-destructive">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditCertification(index)} className="h-8 w-8">
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteCertification(index)} className="h-8 w-8 hover:text-destructive">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">No certifications added yet</div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No certifications added yet</div>
+            )}
+          </div>
         </EditableSection>
       </div>
     </div>
