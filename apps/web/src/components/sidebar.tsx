@@ -46,6 +46,7 @@ type NavigationItem = {
   name: string;
   href: Route;
   icon: React.ComponentType<{ className?: string }>;
+  allowedRoles?: Role[];
 };
 
 const navigationItems: NavigationItem[] = [
@@ -58,6 +59,7 @@ const navigationItems: NavigationItem[] = [
     name: "Employees",
     href: "/dashboard/employees" as Route,
     icon: Users,
+    allowedRoles: ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"],
   },
   {
     name: "Attendance",
@@ -73,6 +75,7 @@ const navigationItems: NavigationItem[] = [
     name: "Payroll",
     href: "/dashboard/payroll" as Route,
     icon: Wallet,
+    allowedRoles: ["ADMIN", "PAYROLL_OFFICER"],
   },
   {
     name: "Reports",

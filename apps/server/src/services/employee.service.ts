@@ -19,10 +19,11 @@ export const employeeService = {
     });
   },
 
-  async findActiveEmployees() {
+  async findActiveEmployees(organizationId?: string) {
     return db.employee.findMany({
       where: {
         employmentStatus: "ACTIVE",
+        ...(organizationId && { organizationId }),
       },
       select: {
         id: true,
@@ -31,6 +32,7 @@ export const employeeService = {
         lastName: true,
         department: true,
         designation: true,
+        organizationId: true,
       },
     });
   },

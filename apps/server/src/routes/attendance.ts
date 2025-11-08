@@ -13,12 +13,8 @@ router.get("/my-attendance", async (req, res) => {
     const userId = (req as any).user.id;
     const { month, year } = req.query;
 
-    const targetMonth = month
-      ? parseInt(month as string)
-      : new Date().getMonth() + 1;
-    const targetYear = year
-      ? parseInt(year as string)
-      : new Date().getFullYear();
+    const targetMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+    const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
 
     const employee = await employeeService.findByUserId(userId);
 
@@ -30,11 +26,7 @@ router.get("/my-attendance", async (req, res) => {
     const endDate = new Date(targetYear, targetMonth, 0);
 
     const [attendances, workSessions] = await Promise.all([
-      attendanceService.findByEmployeeAndDateRange(
-        employee.id,
-        startDate,
-        endDate
-      ),
+      attendanceService.findByEmployeeAndDateRange(employee.id, startDate, endDate),
       sessionService.findSessionsByDateRange(employee.id, startDate, endDate),
     ]);
 
@@ -57,12 +49,8 @@ router.get("/my-attendance", async (req, res) => {
         checkIn: att.checkIn?.toISOString() || null,
         checkOut: att.checkOut?.toISOString() || null,
         status: att.status,
-        workingHours: att.workingHours
-          ? parseFloat(att.workingHours.toString())
-          : 0,
-        overtimeHours: att.overtimeHours
-          ? parseFloat(att.overtimeHours.toString())
-          : 0,
+        workingHours: att.workingHours ? parseFloat(att.workingHours.toString()) : 0,
+        overtimeHours: att.overtimeHours ? parseFloat(att.overtimeHours.toString()) : 0,
         notes: att.notes,
         sessions: sessions.map((s: any) => {
           const startTime = new Date(s.startTime);
@@ -98,11 +86,7 @@ router.get("/my-attendance", async (req, res) => {
       };
     });
 
-    const summary = await attendanceService.calculateMonthlySummary(
-      employee.id,
-      targetMonth,
-      targetYear
-    );
+    const summary = await attendanceService.calculateMonthlySummary(employee.id, targetMonth, targetYear);
 
     res.json({
       attendances: enriched,
@@ -132,16 +116,12 @@ router.get("/today", async (req, res) => {
 
     const [attendances, allActiveEmployees] = await Promise.all([
       attendanceService.findByDateWithEmployees(today),
-      employeeService.findActiveEmployees(),
+      employeeService.findActiveEmployees(employee.organizationId || undefined),
     ]);
 
-    const activeSessions = await Promise.all(
-      allActiveEmployees.map((emp) => sessionService.findActiveSession(emp.id))
-    );
+    const activeSessions = await Promise.all(allActiveEmployees.map((emp) => sessionService.findActiveSession(emp.id)));
 
-    const sessionMap = new Map(
-      activeSessions.filter((s) => s !== null).map((s) => [s!.employeeId, s])
-    );
+    const sessionMap = new Map(activeSessions.filter((s) => s !== null).map((s) => [s!.employeeId, s]));
 
     const formatted = allActiveEmployees.map((emp) => {
       const attendance = attendances.find((a) => a.employeeId === emp.id);
@@ -154,9 +134,7 @@ router.get("/today", async (req, res) => {
         department: emp.department || "N/A",
         checkIn: attendance?.checkIn?.toISOString() || null,
         checkOut: attendance?.checkOut?.toISOString() || null,
-        workingHours: attendance?.workingHours
-          ? parseFloat(attendance.workingHours.toString())
-          : 0,
+        workingHours: attendance?.workingHours ? parseFloat(attendance.workingHours.toString()) : 0,
         status: attendance?.status || "ABSENT",
         isCurrentlyActive: !!activeSession,
         activeSessionStart: activeSession?.startTime.toISOString() || null,
@@ -178,15 +156,7 @@ router.get("/all", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const {
-      startDate: startDateStr,
-      endDate: endDateStr,
-      department,
-      status,
-      employeeCode,
-      page,
-      limit,
-    } = req.query;
+    const { startDate: startDateStr, endDate: endDateStr, department, status, employeeCode, page, limit } = req.query;
 
     const result = await attendanceService.findAllWithFilters({
       startDate: startDateStr ? new Date(startDateStr as string) : undefined,
@@ -209,9 +179,7 @@ router.get("/all", async (req, res) => {
       checkIn: a.checkIn?.toISOString() || null,
       checkOut: a.checkOut?.toISOString() || null,
       workingHours: a.workingHours ? parseFloat(a.workingHours.toString()) : 0,
-      overtimeHours: a.overtimeHours
-        ? parseFloat(a.overtimeHours.toString())
-        : 0,
+      overtimeHours: a.overtimeHours ? parseFloat(a.overtimeHours.toString()) : 0,
       status: a.status,
       notes: a.notes,
     }));
@@ -248,23 +216,15 @@ router.get("/employee/:employeeId", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const targetMonth = month
-      ? parseInt(month as string)
-      : new Date().getMonth() + 1;
-    const targetYear = year
-      ? parseInt(year as string)
-      : new Date().getFullYear();
+    const targetMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+    const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
 
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0);
 
     const [targetEmployee, attendances] = await Promise.all([
       employeeService.findById(employeeId),
-      attendanceService.findByEmployeeAndDateRange(
-        employeeId,
-        startDate,
-        endDate
-      ),
+      attendanceService.findByEmployeeAndDateRange(employeeId, startDate, endDate),
     ]);
 
     if (!targetEmployee) {
@@ -278,17 +238,11 @@ router.get("/employee/:employeeId", async (req, res) => {
       checkOut: a.checkOut?.toISOString() || null,
       status: a.status,
       workingHours: a.workingHours ? parseFloat(a.workingHours.toString()) : 0,
-      overtimeHours: a.overtimeHours
-        ? parseFloat(a.overtimeHours.toString())
-        : 0,
+      overtimeHours: a.overtimeHours ? parseFloat(a.overtimeHours.toString()) : 0,
       notes: a.notes,
     }));
 
-    const summary = await attendanceService.calculateMonthlySummary(
-      employeeId,
-      targetMonth,
-      targetYear
-    );
+    const summary = await attendanceService.calculateMonthlySummary(employeeId, targetMonth, targetYear);
 
     res.json({
       employee: {
@@ -319,17 +273,10 @@ router.get("/summary", async (req, res) => {
     }
 
     const { month, year } = req.query;
-    const targetMonth = month
-      ? parseInt(month as string)
-      : new Date().getMonth() + 1;
-    const targetYear = year
-      ? parseInt(year as string)
-      : new Date().getFullYear();
+    const targetMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+    const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
 
-    const summary = await attendanceService.calculateOrganizationSummary(
-      targetMonth,
-      targetYear
-    );
+    const summary = await attendanceService.calculateOrganizationSummary(targetMonth, targetYear);
 
     res.json({
       month: targetMonth,

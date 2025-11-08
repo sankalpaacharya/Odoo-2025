@@ -34,6 +34,7 @@ interface CreateEmployeeInput {
 
   // Optional
   reportingManagerId?: string;
+  organizationId?: string;
 }
 
 export async function createEmployee(input: CreateEmployeeInput) {
@@ -80,6 +81,27 @@ export async function createEmployee(input: CreateEmployeeInput) {
       },
     });
 
+    // Find or create organization
+    let organizationId = input.organizationId;
+
+    if (!organizationId) {
+      // Try to find existing organization by company name
+      let organization = await prisma.organization.findUnique({
+        where: { companyName: input.companyName },
+      });
+
+      // If organization doesn't exist, create it
+      if (!organization) {
+        organization = await prisma.organization.create({
+          data: {
+            companyName: input.companyName,
+          },
+        });
+      }
+
+      organizationId = organization.id;
+    }
+
     // Create employee record
     const employee = await prisma.employee.create({
       data: {
@@ -105,6 +127,7 @@ export async function createEmployee(input: CreateEmployeeInput) {
         professionalTax: input.professionalTax || 0,
         reportingManagerId: input.reportingManagerId,
         employmentStatus: "ACTIVE",
+        organizationId,
       },
     });
 
