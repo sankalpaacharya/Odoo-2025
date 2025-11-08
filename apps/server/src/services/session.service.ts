@@ -19,18 +19,17 @@ export const sessionService = {
   },
 
   async findSessionsByEmployeeAndDate(employeeId: string, date: Date) {
-    const startOfDay = new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-    );
     const endOfDay = new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1)
     );
+
+    console.log(date, endOfDay);
 
     return db.workSession.findMany({
       where: {
         employeeId,
         date: {
-          gte: startOfDay,
+          gte: date,
           lt: endOfDay,
         },
       },
@@ -70,10 +69,7 @@ export const sessionService = {
     });
   },
 
-  async updateSession(
-    id: string,
-    data: Prisma.WorkSessionUpdateInput
-  ) {
+  async updateSession(id: string, data: Prisma.WorkSessionUpdateInput) {
     return db.workSession.update({
       where: { id },
       data,
@@ -145,7 +141,9 @@ export const sessionService = {
     const breakDurationMinutes = Math.floor(
       (now.getTime() - session.breakStartTime.getTime()) / (1000 * 60)
     );
-    const breakDurationHours = parseFloat((breakDurationMinutes / 60).toFixed(2));
+    const breakDurationHours = parseFloat(
+      (breakDurationMinutes / 60).toFixed(2)
+    );
 
     const currentTotalBreak = session.totalBreakTime
       ? parseFloat(session.totalBreakTime.toString())
