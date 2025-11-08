@@ -60,7 +60,9 @@ export default function ProfilePage() {
         queryClient.invalidateQueries({ queryKey: ["employee", "me"] });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload image"
+      );
     } finally {
       setIsUploading(false);
     }
@@ -80,96 +82,133 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 space-y-4">
-        <h1 className="text-3xl font-semibold tracking-tight">My Profile</h1>
+      <div className="mx-auto max-w-5xl px-6  space-y-12">
+        {/* Profile Header Section */}
+        <div className="space-y-8">
+          {/* Profile Photo */}
+          <div className="flex justify-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleImageUpload}
+              className="hidden"
+              aria-label="Upload profile photo"
+            />
+            <button
+              type="button"
+              title="Upload profile photo"
+              onClick={handleImageClick}
+              disabled={isUploading}
+              className="group relative h-36 w-36 overflow-hidden top-20 z-2 rounded-full bg-linear-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 transition-all hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {getProfileImageUrl(profile.profileImage, profile.image) ? (
+                <>
+                  <img
+                    src={
+                      getProfileImageUrl(profile.profileImage, profile.image)!
+                    }
+                    alt={`${profile.firstName} ${profile.lastName}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all duration-200">
+                    <Pencil className="h-7 w-7 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Pencil className="h-7 w-7 text-gray-500 transition-transform group-hover:scale-110" />
+                </div>
+              )}
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                  <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/30 border-t-white"></div>
+                </div>
+              )}
+            </button>
+          </div>
 
-        <Card className="overflow-hidden">
-          <CardContent className="p-8">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[auto_1fr]">
-              {/* Column 1 - Profile Photo */}
-              <div className="flex items-start justify-center lg:justify-start">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  aria-label="Upload profile photo"
-                />
-                <button
-                  type="button"
-                  title="Upload profile photo"
-                  onClick={handleImageClick}
-                  disabled={isUploading}
-                  className="group relative h-30 w-30 overflow-hidden rounded-full bg-pink-100 transition-all hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {getProfileImageUrl(profile.profileImage, profile.image) ? (
-                    <>
-                      <img
-                        src={getProfileImageUrl(profile.profileImage, profile.image)!}
-                        alt={`${profile.firstName} ${profile.lastName}`}
-                        className="h-full w-full object-cover z-100 relative"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all">
-                        <Pencil className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Pencil className="h-8 w-8 text-pink-600 transition-transform group-hover:scale-110" />
-                    </div>
-                  )}
-                  {isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent"></div>
-                    </div>
-                  )}
-                </button>
+          {/* Profile Info Card */}
+          <Card className="overflow-hidden backdrop-blur-sm rounded-2xl">
+            <CardContent className="p-0">
+              {/* Name and ID Section */}
+              <div className="px-8 py-8 text-center border-b border-border/50">
+                <h1 className="text-3xl font-semibold tracking-tight mb-1">
+                  {profile.firstName} {profile.lastName}
+                </h1>
+                <p className="text-sm text-muted-foreground font-mono tracking-wide">
+                  {profile.employeeCode}
+                </p>
               </div>
 
-              {/* Column 2 - Profile Fields */}
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField
-                    label="Full Name"
-                    value={`${profile.firstName} ${profile.lastName}`}
-                    onSave={async (value) => {
-                      const names = value.split(" ");
-                      await handleFieldSave("firstName", names[0] || "");
-                      if (names.length > 1) {
-                        await handleFieldSave("lastName", names.slice(1).join(" "));
-                      }
-                    }}
-                    placeholder="Enter your full name"
-                  />
-
-                  <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
+              {/* Contact Info Section */}
+              <div className="grid grid-cols-1 divide-y divide-border/50">
+                <div className="px-8 py-5 flex items-center justify-between group hover:bg-muted/30 transition-colors">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Email
+                  </span>
+                  <span className="text-sm font-mono text-foreground">
+                    {profile.email}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
-
+                <div className="px-8 py-5 flex items-center justify-between group hover:bg-muted/30 transition-colors">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Mobile
+                  </span>
                   <EditableField
-                    label="Mobile"
-                    value={profile.phone || ""}
+                    label=""
+                    value={profile.phone || "+1 234 567 8900"}
                     type="tel"
                     onSave={(value) => handleFieldSave("phone", value)}
                     placeholder="+1 234 567 8900"
+                    className="flex-1 max-w-xs"
                   />
                 </div>
 
-                <EditableField label="Company" value={profile.organization?.companyName || "No Company"} onSave={async () => {}} readOnly />
+                {profile.organization?.companyName && (
+                  <div className="px-8 py-5 flex items-center justify-between group hover:bg-muted/30 transition-colors">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Company
+                    </span>
+                    <span className="text-sm text-foreground">
+                      {profile.organization.companyName}
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
+        {/* Tabs Section */}
         <div>
           <Tabs defaultValue="resume" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="resume">Resume</TabsTrigger>
-              <TabsTrigger value="private">Private Info</TabsTrigger>
-              <TabsTrigger value="salary">Salary Info</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 h-auto">
+              <TabsTrigger
+                value="resume"
+                className="py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Resume
+              </TabsTrigger>
+              <TabsTrigger
+                value="private"
+                className="py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Private Info
+              </TabsTrigger>
+              <TabsTrigger
+                value="salary"
+                className="py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Salary Info
+              </TabsTrigger>
+              <TabsTrigger
+                value="security"
+                className="py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                Security
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="resume" className="mt-8">
@@ -181,10 +220,11 @@ export default function ProfilePage() {
 
             <TabsContent value="salary" className="mt-8">
               {profile.currentUserRole === "EMPLOYEE" && (
-                <div className="mb-4 p-4 bg-muted/50 border border-border rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Note:</span> Salary information is read-only. Only administrators and payroll officers can modify
-                    salary details.
+                <div className="mb-6 p-4 bg-muted/30 border border-border/50 rounded-xl">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-foreground">Note:</span>{" "}
+                    Salary information is read-only. Only administrators and
+                    payroll officers can modify salary details.
                   </p>
                 </div>
               )}

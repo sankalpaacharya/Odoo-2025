@@ -183,8 +183,8 @@ router.get("/payruns/recent", async (req, res) => {
       : undefined;
 
     const payruns = await payrollService.getRecentPayruns(
-      employee.organizationId || undefined,
-      limit
+      limit,
+      employee.organizationId || undefined
     );
 
     res.json(payruns);
@@ -206,14 +206,34 @@ router.get("/statistics", async (req, res) => {
     const view = (req.query.view as "monthly" | "annually") || "monthly";
 
     const statistics = await payrollService.getPayrollStatistics(
-      employee.organizationId || undefined,
-      view
+      view,
+      employee.organizationId || undefined
     );
 
     res.json(statistics);
   } catch (error) {
     console.error("Error fetching payroll statistics:", error);
     res.status(500).json({ error: "Failed to fetch payroll statistics" });
+  }
+});
+
+router.get("/pending-count", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const employee = await employeeService.findByUserId(userId);
+
+    if (!employee || !(await employeeService.isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const counts = await payrollService.getPendingPayslipsCounts(
+      employee.organizationId || undefined
+    );
+
+    res.json(counts);
+  } catch (error) {
+    console.error("Error fetching pending payslips count:", error);
+    res.status(500).json({ error: "Failed to fetch pending payslips count" });
   }
 });
 

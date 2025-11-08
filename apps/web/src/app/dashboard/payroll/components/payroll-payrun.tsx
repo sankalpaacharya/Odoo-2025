@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -86,11 +87,18 @@ interface Payrun {
 
 export function PayrollPayrun() {
   const currentDate = new Date();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get initial values from URL params or use current date
+  const monthParam = searchParams.get("month");
+  const yearParam = searchParams.get("year");
+
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    currentDate.getMonth() + 1
+    monthParam ? parseInt(monthParam) : currentDate.getMonth() + 1
   );
   const [selectedYear, setSelectedYear] = useState<number>(
-    currentDate.getFullYear()
+    yearParam ? parseInt(yearParam) : currentDate.getFullYear()
   );
   const [payrun, setPayrun] = useState<Payrun | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,6 +108,22 @@ export function PayrollPayrun() {
   );
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Update from URL params if they change
+    if (monthParam) {
+      const month = parseInt(monthParam);
+      if (month >= 1 && month <= 12) {
+        setSelectedMonth(month);
+      }
+    }
+    if (yearParam) {
+      const year = parseInt(yearParam);
+      if (year >= 2000) {
+        setSelectedYear(year);
+      }
+    }
+  }, [monthParam, yearParam]);
 
   useEffect(() => {
     const loadPayrun = async () => {
@@ -221,6 +245,25 @@ export function PayrollPayrun() {
       currency: "INR",
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const updateUrlParams = (month: number, year: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("month", month.toString());
+    params.set("year", year.toString());
+    router.push(`/dashboard/payroll?${params.toString()}`, { scroll: false });
+  };
+
+  const handleMonthChange = (value: string) => {
+    const month = Number(value);
+    setSelectedMonth(month);
+    updateUrlParams(month, selectedYear);
+  };
+
+  const handleYearChange = (value: string) => {
+    const year = Number(value);
+    setSelectedYear(year);
+    updateUrlParams(selectedMonth, year);
   };
 
   const payslips = payrun?.payslips || [];
@@ -377,7 +420,7 @@ export function PayrollPayrun() {
             <label className="text-sm font-medium mb-2 block">Month</label>
             <Select
               value={selectedMonth.toString()}
-              onValueChange={(value) => setSelectedMonth(Number(value))}
+              onValueChange={handleMonthChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select month" />
@@ -396,7 +439,7 @@ export function PayrollPayrun() {
             <label className="text-sm font-medium mb-2 block">Year</label>
             <Select
               value={selectedYear.toString()}
-              onValueChange={(value) => setSelectedYear(Number(value))}
+              onValueChange={handleYearChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select year" />

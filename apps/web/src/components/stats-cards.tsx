@@ -25,7 +25,7 @@ export function StatsCards({ data, className }: StatsCardsProps) {
     >
       {data.map((stat) => (
         <Card key={stat.name} className="overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground truncate">
