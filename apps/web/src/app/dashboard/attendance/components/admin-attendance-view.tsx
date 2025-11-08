@@ -268,10 +268,6 @@ export function AdminAttendanceView() {
     timeZone: "Asia/Kathmandu",
   });
 
-  if (isLoading) {
-    return <Loader />;
-  }
-
   const isTableView = activeTab === "table";
 
   return (
