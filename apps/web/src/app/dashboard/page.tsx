@@ -89,10 +89,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <LeaveDistributionChart />
-        <DepartmentHeadcountChart />
-      </div>
 
-      <div className="grid gap-6">
         <WeeklyAttendanceChart />
       </div>
     </div>
