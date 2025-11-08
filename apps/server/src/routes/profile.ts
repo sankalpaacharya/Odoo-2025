@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import db, { type Gender, UPLOADS_CONFIG, getUploadPath, getUploadUrl } from "@my-better-t-app/db";
+import { auth } from "@my-better-t-app/auth";
 import { authenticateUser } from "../middleware/auth";
 
 const router: RouterType = Router();
@@ -46,6 +47,118 @@ const upload = multer({
 
 router.use(authenticateUser);
 
+// Reset password endpoint
+router.post("/reset-password", async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { oldPassword, newPassword } = req.body;
+
+    // Validation
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Old password and new password are required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters long" });
+    }
+
+    // Get user's email for authentication
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Verify old password using better-auth's signIn method (same verification as login)
+    try {
+      const signInResult = await auth.api.signInEmail({
+        body: {
+          email: user.email,
+          password: oldPassword,
+        },
+      });
+
+      if (!signInResult?.user) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+    } catch (error) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    // Use better-auth's internal password hashing by creating a new signup with the new password
+    // Then we'll copy that hashed password to the existing account
+    // This ensures we use the exact same hashing method as better-auth
+
+    // Create a temporary unique email to get the password hash
+    const tempEmail = `temp_${Date.now()}_${Math.random()}@temp.local`;
+    const tempSignup = await auth.api.signUpEmail({
+      body: {
+        email: tempEmail,
+        password: newPassword,
+        name: "Temp User",
+      },
+    });
+
+    if (!tempSignup?.user) {
+      throw new Error("Failed to hash password");
+    }
+
+    // Get the hashed password from the temporary account
+    const tempAccount = await db.account.findFirst({
+      where: {
+        userId: tempSignup.user.id,
+        providerId: "credential",
+      },
+      select: {
+        password: true,
+      },
+    });
+
+    if (!tempAccount?.password) {
+      throw new Error("Failed to get hashed password");
+    }
+
+    const hashedPassword = tempAccount.password;
+
+    // Delete the temporary user and account
+    await db.account.deleteMany({
+      where: { userId: tempSignup.user.id },
+    });
+    await db.user.delete({
+      where: { id: tempSignup.user.id },
+    });
+
+    // Get the real account record
+    const account = await db.account.findFirst({
+      where: {
+        userId,
+        providerId: "credential",
+      },
+    });
+
+    if (!account) {
+      return res.status(404).json({ error: "Password authentication not found for this user" });
+    }
+
+    // Update password in account table with the properly hashed password
+    await db.account.update({
+      where: { id: account.id },
+      data: { password: hashedPassword },
+    });
+
+    res.json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
 // Get complete profile data
 router.get("/", async (req, res) => {
   try {
@@ -63,19 +176,15 @@ router.get("/", async (req, res) => {
     }
 
     // Check if requesting another employee's profile
-    const isViewingOtherProfile =
-      targetEmployeeId && targetEmployeeId !== currentEmployee.id;
+    const isViewingOtherProfile = targetEmployeeId && targetEmployeeId !== currentEmployee.id;
 
     // If viewing other profile, check permissions
     if (isViewingOtherProfile) {
       const allowedRoles = ["ADMIN", "HR_OFFICER", "PAYROLL_OFFICER"];
       if (!allowedRoles.includes(currentEmployee.role)) {
-        return res
-          .status(403)
-          .json({
-            error:
-              "You don't have permission to view other employees' profiles",
-          });
+        return res.status(403).json({
+          error: "You don't have permission to view other employees' profiles",
+        });
       }
     }
 
@@ -243,9 +352,7 @@ router.get("/", async (req, res) => {
 
       // Include role info for permission checks on frontend
       currentUserRole: currentEmployee.role,
-      canEditSalary: ["ADMIN", "PAYROLL_OFFICER"].includes(
-        currentEmployee.role
-      ),
+      canEditSalary: ["ADMIN", "PAYROLL_OFFICER"].includes(currentEmployee.role),
     };
 
     res.json(profileData);
@@ -386,16 +493,13 @@ router.put("/salary", async (req, res) => {
 
     const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res
-        .status(403)
-        .json({
-          error: "You don't have permission to update salary information",
-        });
+      return res.status(403).json({
+        error: "You don't have permission to update salary information",
+      });
     }
 
     // Get target employee ID from query param or use current user
-    const targetEmployeeId =
-      (req.query.employeeId as string) || currentEmployee.id;
+    const targetEmployeeId = (req.query.employeeId as string) || currentEmployee.id;
 
     // Update salary data
     const updatedEmployee = await db.employee.update({
@@ -596,15 +700,7 @@ router.post("/upload-image", upload.single("profileImage"), async (req, res) => 
 router.post("/salary-components", async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const {
-      employeeId,
-      name,
-      type,
-      amount,
-      isPercentage,
-      isRecurring,
-      description,
-    } = req.body;
+    const { employeeId, name, type, amount, isPercentage, isRecurring, description } = req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({
@@ -618,11 +714,9 @@ router.post("/salary-components", async (req, res) => {
 
     const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res
-        .status(403)
-        .json({
-          error: "You don't have permission to manage salary components",
-        });
+      return res.status(403).json({
+        error: "You don't have permission to manage salary components",
+      });
     }
 
     const targetEmployeeId = employeeId || currentEmployee.id;
@@ -657,8 +751,7 @@ router.put("/salary-components/:componentId", async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const { componentId } = req.params;
-    const { name, type, amount, isPercentage, isRecurring, description } =
-      req.body;
+    const { name, type, amount, isPercentage, isRecurring, description } = req.body;
 
     // Check if user has permission
     const currentEmployee = await db.employee.findUnique({
@@ -672,11 +765,9 @@ router.put("/salary-components/:componentId", async (req, res) => {
 
     const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res
-        .status(403)
-        .json({
-          error: "You don't have permission to update salary components",
-        });
+      return res.status(403).json({
+        error: "You don't have permission to update salary components",
+      });
     }
 
     const component = await db.salaryComponent.update({
@@ -722,11 +813,9 @@ router.delete("/salary-components/:componentId", async (req, res) => {
 
     const allowedRoles = ["ADMIN", "PAYROLL_OFFICER"];
     if (!allowedRoles.includes(currentEmployee.role)) {
-      return res
-        .status(403)
-        .json({
-          error: "You don't have permission to delete salary components",
-        });
+      return res.status(403).json({
+        error: "You don't have permission to delete salary components",
+      });
     }
 
     await db.salaryComponent.update({
