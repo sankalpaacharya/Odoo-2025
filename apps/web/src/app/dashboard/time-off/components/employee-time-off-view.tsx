@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,8 @@ import {
   getStatusColor,
   formatDate,
 } from "../utils";
+import { NewLeaveRequestDialog } from "./new-leave-request-dialog";
+import { LeaveDetailsDialog } from "./leave-details-dialog";
 import type { Leave, LeaveBalance } from "../types";
 
 const mockLeaveBalances: LeaveBalance[] = [
@@ -72,6 +75,15 @@ const mockLeaves: Leave[] = [
 ];
 
 export function EmployeeTimeOffView() {
+  const [newLeaveDialogOpen, setNewLeaveDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+
+  const handleRowClick = (leave: Leave) => {
+    setSelectedLeave(leave);
+    setDetailsDialogOpen(true);
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -81,7 +93,7 @@ export function EmployeeTimeOffView() {
             Your available leave balances for 2025
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setNewLeaveDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Request Leave
         </Button>
@@ -142,7 +154,11 @@ export function EmployeeTimeOffView() {
             <TableBody>
               {mockLeaves.length > 0 ? (
                 mockLeaves.map((leave) => (
-                  <TableRow key={leave.id}>
+                  <TableRow
+                    key={leave.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(leave)}
+                  >
                     <TableCell className="font-medium">
                       {formatLeaveType(leave.leaveType)}
                     </TableCell>
@@ -173,6 +189,17 @@ export function EmployeeTimeOffView() {
           </Table>
         </CardContent>
       </Card>
+
+      <NewLeaveRequestDialog
+        open={newLeaveDialogOpen}
+        onOpenChange={setNewLeaveDialogOpen}
+      />
+
+      <LeaveDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        leave={selectedLeave}
+      />
     </>
   );
 }
