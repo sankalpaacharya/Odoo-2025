@@ -16,7 +16,15 @@ interface EditableFieldProps {
   className?: string;
 }
 
-export function EditableField({ label, value, onSave, type = "text", placeholder, readOnly = false, className = "" }: EditableFieldProps) {
+export function EditableField({
+  label,
+  value,
+  onSave,
+  type = "text",
+  placeholder,
+  readOnly = false,
+  className = "",
+}: EditableFieldProps) {
   const [localValue, setLocalValue] = useState(value);
   const [isSaving, setIsSaving] = useState(false);
   const hasChanged = localValue !== value;
@@ -48,9 +56,41 @@ export function EditableField({ label, value, onSave, type = "text", placeholder
     }
   };
 
+  // If no label, render inline (for use in profile page)
+  if (!label) {
+    return (
+      <div className={`flex gap-2 items-center ${className}`}>
+        <Input
+          type={type}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          className={`h-9 text-sm font-mono border-0 bg-transparent text-right focus-visible:ring-1 transition-all ${
+            readOnly ? "cursor-not-allowed" : ""
+          }`}
+        />
+        {!readOnly && (
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanged || isSaving}
+            size="sm"
+            variant={hasChanged ? "default" : "ghost"}
+            className="h-7 w-7 p-0 shrink-0"
+          >
+            <Save className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-2 ${className}`}>
-      <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
+      <Label className="text-sm font-medium text-muted-foreground">
+        {label}
+      </Label>
       <div className="flex gap-2">
         <Input
           type={type}
@@ -59,10 +99,18 @@ export function EditableField({ label, value, onSave, type = "text", placeholder
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           readOnly={readOnly}
-          className={`h-10 flex-1 transition-colors ${readOnly ? "bg-muted/50 cursor-not-allowed" : ""}`}
+          className={`h-10 flex-1 transition-colors ${
+            readOnly ? "bg-muted/50 cursor-not-allowed" : ""
+          }`}
         />
         {!readOnly && (
-          <Button onClick={handleSave} disabled={!hasChanged || isSaving} size="sm" variant={hasChanged ? "default" : "secondary"} className="px-3">
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanged || isSaving}
+            size="sm"
+            variant={hasChanged ? "default" : "secondary"}
+            className="px-3"
+          >
             <Save className="h-4 w-4" />
           </Button>
         )}
