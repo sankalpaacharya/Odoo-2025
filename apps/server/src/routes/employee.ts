@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Router as RouterType } from "express";
 import db from "@my-better-t-app/db";
 import { authenticateUser } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
 import { createEmployee } from "@my-better-t-app/auth/services/employee.service";
 import { generateEmployeeCode } from "@my-better-t-app/auth/utils/generate-employee-code";
 import { sendNewEmployeeEmail } from "../services/email.service";
@@ -114,7 +115,7 @@ router.get("/me", async (req, res) => {
 });
 
 // Get all employees with their latest attendance status
-router.get("/", async (req, res) => {
+router.get("/", requirePermission("Employees", "View"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
 
@@ -281,7 +282,7 @@ router.get("/active-list", async (req, res) => {
 });
 
 // Create employee endpoint (for HR/Admin)
-router.post("/create", async (req, res) => {
+router.post("/create", requirePermission("Employees", "Create"), async (req, res) => {
   try {
     const userId = (req as any).user.id;
 
