@@ -61,4 +61,5 @@ export interface EmployeeAttendance {
   status: AttendanceStatus;
   isCurrentlyActive: boolean;
   activeSessionStart: string | null;
+  sessions?: WorkSessionInfo[];
 }

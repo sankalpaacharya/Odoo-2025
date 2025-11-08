@@ -202,8 +202,10 @@ router.get("/today", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Support date parameter, default to today
+    const dateParam = req.query.date as string | undefined;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    targetDate.setHours(0, 0, 0, 0);
 
     const allActiveEmployees = await employeeService.findActiveEmployees(
       employee.organizationId || undefined,
@@ -218,7 +220,7 @@ router.get("/today", async (req, res) => {
       ),
       Promise.all(
         allActiveEmployees.map((emp) =>
-          sessionService.findSessionsByEmployeeAndDate(emp.id, today)
+          sessionService.findSessionsByEmployeeAndDate(emp.id, targetDate)
         )
       ),
     ]);
@@ -259,6 +261,37 @@ router.get("/today", async (req, res) => {
         status,
         isCurrentlyActive: !!activeSession,
         activeSessionStart: activeSession?.startTime.toISOString() || null,
+        sessions: sessions.map((s) => {
+          const startTime = new Date(s.startTime);
+          const endTime = s.endTime ? new Date(s.endTime) : now;
+          const breakMinutes = s.totalBreakTime
+            ? parseFloat(s.totalBreakTime.toString()) * 60
+            : 0;
+          const totalMinutes = Math.floor(
+            (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+          );
+          const workingMinutes = Math.max(0, totalMinutes - breakMinutes);
+          const hours = Math.floor(workingMinutes / 60);
+          const minutes = Math.floor(workingMinutes % 60);
+
+          return {
+            id: s.id,
+            startTime: s.startTime.toISOString(),
+            endTime: s.endTime?.toISOString() || null,
+            isActive: s.isActive,
+            totalBreakTime: s.totalBreakTime
+              ? parseFloat(s.totalBreakTime.toString())
+              : 0,
+            workingHours: s.workingHours
+              ? parseFloat(s.workingHours.toString())
+              : null,
+            overtimeHours: s.overtimeHours
+              ? parseFloat(s.overtimeHours.toString())
+              : 0,
+            durationMinutes: workingMinutes,
+            durationFormatted: `${hours}h ${minutes}m`,
+          };
+        }),
       };
     });
 
