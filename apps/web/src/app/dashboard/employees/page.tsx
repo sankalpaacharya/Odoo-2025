@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { authClient } from "@/lib/auth-client";
 import EmployeeCard from "@/components/employee-card";
+import { AddEmployeeModal } from "@/components/add-employee-modal";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -40,9 +41,12 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
-        <p className="text-muted-foreground">Manage your team members</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+          <p className="text-muted-foreground">Manage your team members</p>
+        </div>
+        {showAll && <AddEmployeeModal />}
       </div>
 
       <div>
