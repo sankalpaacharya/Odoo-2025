@@ -14,7 +14,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { use } from "react";
 
-export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EmployeeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const { id } = use(params);
   const { data: profile, isLoading } = useProfile(id);
@@ -30,7 +34,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg text-muted-foreground mb-4">Employee not found</p>
+          <p className="text-lg text-muted-foreground mb-4">
+            Employee not found
+          </p>
           <Button onClick={() => router.push("/dashboard/employees")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Employees
@@ -43,27 +49,36 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 space-y-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard/employees")} title="Back to Employees">
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard/employees")}
+            title="Back to Employees"
+          >
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <h1 className="text-3xl font-semibold tracking-tight">Employee Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            Employee Profile
+          </h1>
         </div>
 
         <Card className="overflow-hidden">
-          <CardContent className="p-8">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[auto_1fr]">
+          <CardContent className="p-4 sm:p-6 lg:p-8">
+            <div className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-[auto_1fr]">
               {/* Column 1 - Profile Photo (Read-only) */}
               <div className="flex items-start justify-center lg:justify-start">
-                <div className="h-30 w-30 overflow-hidden rounded-full bg-pink-100">
+                <div className="h-24 w-24 sm:h-30 sm:w-30 overflow-hidden rounded-full bg-pink-100">
                   {getProfileImageUrl(profile.profileImage, profile.image) ? (
                     <img
-                      src={getProfileImageUrl(profile.profileImage, profile.image)!}
+                      src={
+                        getProfileImageUrl(profile.profileImage, profile.image)!
+                      }
                       alt={`${profile.firstName} ${profile.lastName}`}
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-4xl font-semibold text-pink-600">
+                    <div className="flex h-full w-full items-center justify-center text-3xl sm:text-4xl font-semibold text-pink-600">
                       {profile.firstName[0]}
                       {profile.lastName[0]}
                     </div>
@@ -72,7 +87,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
               </div>
 
               {/* Column 2 - Profile Fields (Read-only) */}
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <EditableField
                     label="Full Name"
@@ -82,11 +97,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     readOnly
                   />
 
-                  <EditableField label="Login ID" value={profile.employeeCode} onSave={async () => {}} readOnly />
+                  <EditableField
+                    label="Login ID"
+                    value={profile.employeeCode}
+                    onSave={async () => {}}
+                    readOnly
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField label="Email" value={profile.email} type="email" onSave={async () => {}} readOnly />
+                  <EditableField
+                    label="Email"
+                    value={profile.email}
+                    type="email"
+                    onSave={async () => {}}
+                    readOnly
+                  />
 
                   <EditableField
                     label="Mobile"
@@ -98,7 +124,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                   />
                 </div>
 
-                <EditableField label="Company" value={profile.organization?.companyName || "No Company"} onSave={async () => {}} readOnly />
+                <EditableField
+                  label="Company"
+                  value={profile.organization?.companyName || "No Company"}
+                  onSave={async () => {}}
+                  readOnly
+                />
               </div>
             </div>
           </CardContent>
@@ -106,23 +137,39 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         <div>
           <Tabs defaultValue="resume" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="resume">Resume</TabsTrigger>
-              <TabsTrigger value="private">Private Info</TabsTrigger>
-              <TabsTrigger value="salary">Salary Info</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-auto">
+              <TabsTrigger
+                value="resume"
+                className="text-xs sm:text-sm py-2 sm:py-2.5"
+              >
+                Resume
+              </TabsTrigger>
+              <TabsTrigger
+                value="private"
+                className="text-xs sm:text-sm py-2 sm:py-2.5"
+              >
+                Private Info
+              </TabsTrigger>
+              <TabsTrigger
+                value="salary"
+                className="text-xs sm:text-sm py-2 sm:py-2.5"
+              >
+                Salary Info
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="resume" className="mt-8">
+            <TabsContent value="resume" className="mt-6 sm:mt-8">
               <ResumeTab profile={profile} readOnly />
             </TabsContent>
-            <TabsContent value="private" className="mt-8">
+            <TabsContent value="private" className="mt-6 sm:mt-8">
               <PrivateInfoTab profile={profile} readOnly />
             </TabsContent>
 
-            <TabsContent value="salary" className="mt-8">
-              <div className="mb-4 p-4 bg-muted/50 border border-border rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Note:</span> You are viewing this employee's profile in read-only mode.
+            <TabsContent value="salary" className="mt-6 sm:mt-8">
+              <div className="mb-4 p-3 sm:p-4 bg-muted/50 border border-border rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  <span className="font-medium">Note:</span> You are viewing
+                  this employee's profile in read-only mode.
                 </p>
               </div>
               <SalaryInfoTab profile={profile} />

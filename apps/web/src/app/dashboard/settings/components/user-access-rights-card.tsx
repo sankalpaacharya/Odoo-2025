@@ -57,8 +57,8 @@ export function UserAccessRightsCard() {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <CardTitle>User Access Rights</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-lg sm:text-xl">User Access Rights</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
           Configure module-based permissions for each user role. Access rights
           define what users are allowed to access and what they are restricted
           from accessing.
@@ -72,28 +72,29 @@ export function UserAccessRightsCard() {
               open={openRoles[role]}
               onOpenChange={() => toggleRole(role)}
             >
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-4 hover:bg-accent">
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 sm:p-4 hover:bg-accent">
                 <div className="text-left">
-                  <h3 className="text-base font-semibold">{role}</h3>
+                  <h3 className="text-sm sm:text-base font-semibold">{role}</h3>
                 </div>
                 <ChevronDown
-                  className={`h-5 w-5 transition-transform ${
+                  className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 transition-transform ${
                     openRoles[role] ? "rotate-180" : ""
                   }`}
                 />
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-4">
+              <CollapsibleContent className="mt-2 sm:mt-4">
                 <RolePermissions role={role} />
               </CollapsibleContent>
             </Collapsible>
           ))}
         </div>
 
-        <div className="mt-8 flex justify-end gap-4">
+        <div className="mt-6 sm:mt-8 flex justify-start sm:justify-end">
           <Button
             variant="outline"
             onClick={handleResetToDefault}
             disabled={isResetting}
+            className="w-full sm:w-auto text-sm"
           >
             {isResetting ? "Resetting..." : "Reset to Default"}
           </Button>

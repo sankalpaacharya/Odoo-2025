@@ -5,6 +5,7 @@ import { SidebarWrapper } from "@/components/sidebar-wrapper";
 import DashboardClientLayout from "./dashboard-client-layout";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthGuard } from "@/components/auth-guard";
+import { MobileNavbar } from "@/components/mobile-navbar";
 
 export default async function DashboardLayout({
   children,
@@ -25,11 +26,10 @@ export default async function DashboardLayout({
   return (
     <DashboardClientLayout>
       <SidebarWrapper />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col">
+        <MobileNavbar />
         <AuthGuard>
-          <main className="flex-1 overflow-auto p-4 md:p-6 max-w-[100vw]">
-            {children}
-          </main>
+          <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
         </AuthGuard>
       </SidebarInset>
     </DashboardClientLayout>

@@ -3,10 +3,12 @@ import { UserAccessRightsCard } from "./components/user-access-rights-card";
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Settings
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Manage users and configure access rights
         </p>
       </div>

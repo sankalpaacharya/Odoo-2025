@@ -749,16 +749,16 @@ export function PayrollPayrun() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex-1 flex gap-3 items-center">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Month</label>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 sm:gap-4">
+        <div className="flex flex-1 gap-3 items-center">
+          <div className="flex-1">
+            <label className="text-xs sm:text-sm font-medium mb-2 block">Month</label>
             <Select
               value={selectedMonth.toString()}
               onValueChange={handleMonthChange}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-xs sm:text-sm">
                 <SelectValue placeholder="Select month" />
               </SelectTrigger>
               <SelectContent>
@@ -771,13 +771,13 @@ export function PayrollPayrun() {
             </Select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">Year</label>
+          <div className="flex-1">
+            <label className="text-xs sm:text-sm font-medium mb-2 block">Year</label>
             <Select
               value={selectedYear.toString()}
               onValueChange={handleYearChange}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-xs sm:text-sm">
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
               <SelectContent>
@@ -791,14 +791,15 @@ export function PayrollPayrun() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
             onClick={handleGeneratePayrun}
             disabled={isLoading || payrun !== null}
+            className="text-xs sm:text-sm w-full sm:w-auto"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                 Generating...
               </>
             ) : (
@@ -809,10 +810,11 @@ export function PayrollPayrun() {
             <Button
               onClick={handleApprovePayrun}
               disabled={isMarkingDone || approvingPayslipId !== null}
+              className="text-xs sm:text-sm w-full sm:w-auto"
             >
               {isMarkingDone ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                   Completing...
                 </>
               ) : (
@@ -850,15 +852,15 @@ export function PayrollPayrun() {
       {!isLoading && payrun && payslips.length > 0 && (
         <>
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="pb-3 sm:pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div>
-                  <CardTitle>
+                  <CardTitle className="text-base sm:text-lg">
                     Payrun{" "}
                     {months.find((m) => m.value === selectedMonth)?.label}{" "}
                     {selectedYear}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     {payslips.length} employee(s)
                     {!isDone && (
                       <span className="ml-2">
@@ -882,22 +884,22 @@ export function PayrollPayrun() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <div className="text-muted-foreground">Employer Cost</div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Employer Cost</div>
+                  <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalEmployerCost)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Gross Wage</div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Gross Wage</div>
+                  <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalGrossWage)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Net Wage</div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Net Wage</div>
+                  <div className="text-xl sm:text-2xl font-bold">
                     {formatCurrency(totalNetWage)}
                   </div>
                 </div>

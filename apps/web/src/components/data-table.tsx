@@ -82,9 +82,10 @@ export function DataTable<T extends Record<string, any>>({
     : dataArray;
 
   return (
-    <div className="rounded-lg border overflow-hidden">
-      <Table className="overflow-x-auto">
-        <TableHeader>
+    <div className="w-full max-w-full">
+      <div className="rounded-lg border overflow-x-auto">
+        <Table>
+          <TableHeader>
           <TableRow>
             {columns.map((column) => (
               <TableHead key={column.key} className={column.headerClassName}>
@@ -161,6 +162,7 @@ export function DataTable<T extends Record<string, any>>({
         </TableBody>
         {footer && <TableFooter>{footer}</TableFooter>}
       </Table>
+      </div>
     </div>
   );
 }

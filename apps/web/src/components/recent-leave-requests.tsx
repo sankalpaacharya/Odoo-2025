@@ -91,10 +91,12 @@ export function RecentLeaveRequests() {
   }, []);
 
   return (
-    <Card className="w-full h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>Recent Leave Requests</CardTitle>
-        <CardDescription>
+    <Card className="w-full flex flex-col">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base sm:text-lg">
+          Recent Leave Requests
+        </CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
           Latest pending leave applications requiring attention
         </CardDescription>
       </CardHeader>
@@ -112,30 +114,33 @@ export function RecentLeaveRequests() {
             No pending leave requests
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {leaves.map((leave) => (
               <div
                 key={leave.id}
-                className="flex items-center justify-between gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 rounded-lg border p-2 sm:p-3 transition-colors hover:bg-muted/50"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="shrink-0">
-                    <AvatarFallback>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <Avatar className="shrink-0 h-8 w-8 sm:h-10 sm:w-10">
+                    <AvatarFallback className="text-xs">
                       {getInitials(leave.employeeName)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-sm font-medium leading-none truncate">
+                  <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium leading-none truncate">
                       {leave.employeeName}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs px-1.5 py-0"
+                      >
                         {formatLeaveType(leave.leaveType)}
                       </Badge>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
+                <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0 pl-10 sm:pl-0">
                   <div className="flex items-center gap-1 whitespace-nowrap">
                     <Calendar className="h-3 w-3" />
                     {formatDate(leave.startDate)}

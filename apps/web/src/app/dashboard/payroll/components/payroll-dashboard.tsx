@@ -166,29 +166,29 @@ export function PayrollDashboard() {
   } satisfies ChartConfig;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4 sm:gap-6">
       <PayrollWarningModal
         open={warningModalOpen}
         onOpenChange={setWarningModalOpen}
         warning={selectedWarning}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="size-5 text-yellow-600" />
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <AlertCircle className="size-4 sm:size-5 text-yellow-600" />
               Warning
             </CardTitle>
-            <CardDescription>Employee setup issues</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Employee setup issues</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col">
             {isLoadingWarnings ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Loading warnings...
               </p>
             ) : warnings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 No warnings found. All employees have complete information.
               </p>
             ) : (
@@ -199,7 +199,7 @@ export function PayrollDashboard() {
                   className="flex w-fit justify-start text-left h-auto py-1 transition-colors hover:cursor-pointer hover:underline text-blue-600 hover:text-blue-600 hover:bg-transparent px-0!"
                   onClick={() => handleWarningClick(warning)}
                 >
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
                     {warning.count} {warning.message}
                   </div>
                 </Button>
@@ -209,17 +209,17 @@ export function PayrollDashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="size-5" />
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FileText className="size-4 sm:size-5" />
               Recent Pay Runs
             </CardTitle>
-            <CardDescription>Latest payroll processing history</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Latest payroll processing history</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-1">
               {recentPayruns.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   No recent payruns found.
                 </p>
               ) : (
@@ -230,7 +230,7 @@ export function PayrollDashboard() {
                     className="flex w-full justify-start text-left h-auto py-1 transition-colors hover:cursor-pointer hover:underline text-blue-600"
                   >
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium">
+                      <span className="text-xs sm:text-sm font-medium">
                         Payrun for{" "}
                         {formatPayrunMonth(payrun.month, payrun.year)} (
                         {payrun._count.payslips} Payslips)
@@ -246,11 +246,11 @@ export function PayrollDashboard() {
 
       {/* Statistics Section */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle>Payroll Statistics</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base sm:text-lg">Payroll Statistics</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Employer cost and employee count trends{" "}
                 {employerCostView === "annually" ? "annually" : "monthly"}
               </CardDescription>
@@ -259,7 +259,7 @@ export function PayrollDashboard() {
               <Label
                 htmlFor="payroll-view"
                 className={cn(
-                  "text-sm cursor-pointer",
+                  "text-xs sm:text-sm cursor-pointer",
                   employerCostView === "annually"
                     ? "text-muted-foreground"
                     : "text-foreground font-medium"
@@ -278,7 +278,7 @@ export function PayrollDashboard() {
               <Label
                 htmlFor="payroll-view"
                 className={cn(
-                  "text-sm cursor-pointer",
+                  "text-xs sm:text-sm cursor-pointer",
                   employerCostView === "annually"
                     ? "text-foreground font-medium"
                     : "text-muted-foreground"
@@ -289,8 +289,8 @@ export function PayrollDashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[350px] w-full">
+        <CardContent className="px-2 sm:px-6">
+          <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] lg:h-[350px] w-full">
             {isLoadingStatistics ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-sm text-muted-foreground">
