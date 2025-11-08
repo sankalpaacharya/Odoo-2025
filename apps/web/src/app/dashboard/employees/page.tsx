@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import EmployeeCard from "@/components/employee-card";
 import { AddEmployeeModal } from "@/components/add-employee-modal";
-import { DataTable, type Column } from "@/components/data-table";
-import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -18,13 +17,11 @@ interface Employee {
   department?: string | null;
   designation?: string | null;
   employmentStatus: string;
-  profileImage?: string | null;
 }
 
 async function fetchEmployees(): Promise<Employee[]> {
   try {
-    const API_URL =
-      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+    const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     const response = await fetch(`${API_URL}/api/employees`, {
       method: "GET",
       credentials: "include",
@@ -43,42 +40,6 @@ async function fetchEmployees(): Promise<Employee[]> {
     return [];
   }
 }
-
-const employeeColumns: Column<Employee>[] = [
-  {
-    key: "avatar",
-    // No label for avatar column
-    sortable: false,
-    render: (emp) => <EmployeeAvatar name={emp.name} size="sm" profileImage={emp.profileImage} />,
-    className: "w-12",
-  },
-  {
-    key: "name",
-    label: "Name",
-    className: "font-medium",
-  },
-  {
-    key: "employeeCode",
-    label: "Employee ID",
-    className: "font-medium",
-  },
-  {
-    key: "department",
-    label: "Department",
-    render: (emp) => emp.department || "—",
-  },
-  {
-    key: "designation",
-    label: "Designation",
-    className: "capitalize",
-    render: (emp) => emp.designation?.replace(/_/g, " ") || "—",
-  },
-  {
-    key: "status",
-    label: "Status",
-    render: (emp) => <StatusBadge status={emp.status} />,
-  },
-];
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -103,35 +64,53 @@ export default function EmployeesPage() {
   // TODO: Get user role from employee API to check permissions
   const showAll = false;
 
+  const handleEmployeeAdded = () => {
+    // Refresh the employees list after adding a new employee
+    fetchEmployees().then((data) => {
+      setEmployees(data);
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
           <p className="text-muted-foreground">Manage your team members</p>
         </div>
-        {showAll && <AddEmployeeModal />}
+
+        <div className="flex items-center gap-4">
+          <div className="relative w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search employees..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+        </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search employees..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      <div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading employees...</p>
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">{searchQuery ? "No employees found matching your search" : "No employees found"}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {filteredEmployees.map((emp) => (
+              <EmployeeCard key={emp.id} id={emp.id} name={emp.name} role={emp.role} status={emp.status} />
+            ))}
+          </div>
+        )}
       </div>
-
-      <DataTable
-        data={filteredEmployees}
-        columns={employeeColumns}
-        keyExtractor={(emp) => emp.id}
-        emptyMessage={searchQuery ? "No employees found matching your search" : "No employees found"}
-        isLoading={isLoading}
-        loadingMessage="Loading employees..."
-      />
     </div>
   );
 }
