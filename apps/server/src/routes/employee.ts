@@ -364,4 +364,132 @@ router.post("/generate-code", async (req, res) => {
   }
 });
 
+// Bulk import employees endpoint
+router.post(
+  "/bulk-import",
+  requirePermission("Employees", "Create"),
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+
+      // Fetch the logged-in user's company information
+      const currentUser = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          companyName: true,
+        },
+      });
+
+      if (!currentUser || !currentUser.companyName) {
+        return res.status(400).json({
+          successful: 0,
+          failed: 0,
+          errors: [
+            {
+              email: "N/A",
+              error:
+                "Your account doesn't have a company name set. Please contact your administrator.",
+            },
+          ],
+        });
+      }
+
+      const { employees } = req.body;
+
+      if (!Array.isArray(employees) || employees.length === 0) {
+        return res.status(400).json({
+          successful: 0,
+          failed: 0,
+          errors: [{ email: "N/A", error: "No employees provided for import" }],
+        });
+      }
+
+      const results = {
+        successful: 0,
+        failed: 0,
+        errors: [] as Array<{ email: string; error: string }>,
+      };
+
+      // Process all employees in parallel
+      const employeePromises = employees.map(async (employeeData) => {
+        try {
+          const result = await createEmployee({
+            ...employeeData,
+            companyName: currentUser.companyName,
+          });
+
+          if (result.success && result.data) {
+            // Send welcome email with credentials (don't await to avoid blocking)
+            sendNewEmployeeEmail({
+              employeeName: result.data.name,
+              email: result.data.email,
+              employeeCode: result.data.employeeCode,
+              temporaryPassword: result.data.temporaryPassword,
+              companyName: result.data.companyName,
+            }).catch((error) =>
+              console.warn(
+                `Failed to send welcome email to ${result.data!.email}:`,
+                error
+              )
+            );
+
+            return { success: true, email: employeeData.email };
+          } else {
+            return {
+              success: false,
+              email: employeeData.email,
+              error: "Failed to create employee",
+            };
+          }
+        } catch (error) {
+          console.error(
+            `Error creating employee ${employeeData.email}:`,
+            error
+          );
+          return {
+            success: false,
+            email: employeeData.email,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to create employee",
+          };
+        }
+      });
+
+      const employeeResults = await Promise.all(employeePromises);
+
+      // Aggregate results
+      employeeResults.forEach((result) => {
+        if (result.success) {
+          results.successful++;
+        } else {
+          results.failed++;
+          results.errors.push({
+            email: result.email,
+            error: result.error || "Unknown error",
+          });
+        }
+      });
+
+      res.json(results);
+    } catch (error) {
+      console.error("Bulk import error:", error);
+      res.status(500).json({
+        successful: 0,
+        failed: 0,
+        errors: [
+          {
+            email: "N/A",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to process bulk import",
+          },
+        ],
+      });
+    }
+  }
+);
+
 export default router;

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import EmployeeCard from "@/components/employee-card";
 import { AddEmployeeModal } from "@/components/add-employee-modal";
+import { BulkImportEmployeesModal } from "@/components/bulk-import-employees-modal";
 import { useModulePermissions } from "@/hooks/use-module-permissions";
 
 type Status = "present" | "on_leave" | "absent";
@@ -114,7 +115,12 @@ export default function EmployeesPage() {
             />
           </div>
           {canCreate && (
-            <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+            <div className="flex gap-2">
+              <BulkImportEmployeesModal
+                onImportComplete={handleEmployeeAdded}
+              />
+              <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+            </div>
           )}
         </div>
       </div>
