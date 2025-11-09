@@ -96,12 +96,6 @@ export default function DashboardPage() {
             Welcome back! Here's an overview of your organization
           </p>
         </div>
-        <Can I="Export Data" a="Dashboard">
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export Data
-          </Button>
-        </Can>
       </div>
 
       <StatsCards data={statsData} />
