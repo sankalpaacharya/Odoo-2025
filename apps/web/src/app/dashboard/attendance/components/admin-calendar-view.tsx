@@ -60,17 +60,6 @@ export function AdminCalendarView({
     return "border-l-2 border-l-red-500/50";
   };
 
-  const getBackgroundColor = (rate: number, isCurrentMonth: boolean) => {
-    if (!isCurrentMonth) return "bg-secondary/30";
-    if (rate >= 90)
-      return "bg-green-50/50 hover:bg-green-50/80 dark:bg-green-950/30 dark:hover:bg-green-950/50";
-    if (rate >= 70)
-      return "bg-blue-50/50 hover:bg-blue-50/80 dark:bg-blue-950/30 dark:hover:bg-blue-950/50";
-    if (rate >= 50)
-      return "bg-amber-50/50 hover:bg-amber-50/80 dark:bg-amber-950/30 dark:hover:bg-amber-950/50";
-    return "bg-red-50/50 hover:bg-red-50/80 dark:bg-red-950/30 dark:hover:bg-red-950/50";
-  };
-
   const getRateBadgeColor = (rate: number) => {
     if (rate >= 90) return "bg-green-500/15 text-green-700 dark:text-green-400";
     if (rate >= 70) return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
@@ -83,7 +72,7 @@ export function AdminCalendarView({
   return (
     <div className="w-full">
       <Card className="mb-4">
-        <CardContent className="p-3">
+        <CardContent>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <span className="text-muted-foreground font-medium">
               Attendance Rate:
@@ -217,7 +206,7 @@ export function AdminCalendarView({
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs p-4">
+              <TooltipContent side="top" className="max-w-xs p-3">
                 <div className="space-y-3">
                   <div className="font-semibold text-base">
                     {format(day, "EEEE, MMMM d, yyyy")}

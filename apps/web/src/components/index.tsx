@@ -15,3 +15,4 @@ export default function Sidebar03() {
 export { StatsCards } from "./stats-cards";
 export type { StatItem } from "./stats-cards";
 export { MonthlyAttendanceTrendChart } from "./monthly-attendance-trend-chart";
+export { EmployeeActivityChart } from "./employee-activity-chart";

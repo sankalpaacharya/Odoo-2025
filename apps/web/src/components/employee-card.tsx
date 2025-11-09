@@ -30,14 +30,19 @@ export default function EmployeeCard({
     switch (status) {
       case "present":
         return (
-          <div className="flex items-center gap-1.5" title="Present">
+          <div
+            className="flex items-center gap-1.5"
+            title="Present - Currently working"
+          >
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-emerald-600">Active</span>
+            <span className="text-xs font-medium text-emerald-600">
+              Present
+            </span>
           </div>
         );
       case "on_leave":
         return (
-          <div className="flex items-center gap-1.5" title="On leave">
+          <div className="flex items-center gap-1.5" title="On approved leave">
             <Plane className="size-4 text-blue-500" />
             <span className="text-xs font-medium text-blue-600">On Leave</span>
           </div>
@@ -45,7 +50,10 @@ export default function EmployeeCard({
       case "absent":
       default:
         return (
-          <div className="flex items-center gap-1.5" title="Absent">
+          <div
+            className="flex items-center gap-1.5"
+            title="Absent - No activity today"
+          >
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
             <span className="text-xs font-medium text-amber-600">Absent</span>
           </div>
