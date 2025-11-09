@@ -19,6 +19,7 @@ const defaultPermissions = {
     "Time Off": ["View", "Create"],
     Payroll: ["View"],
     Reports: [],
+    Profile: ["View", "Edit"],
   },
   HR_OFFICER: {
     Dashboard: [],
@@ -28,6 +29,7 @@ const defaultPermissions = {
     Payroll: ["View", "Create", "Edit", "Process", "Export"],
     Reports: [],
     Settings: [],
+    Profile: ["View", "Edit"],
   },
   PAYROLL_OFFICER: {
     Dashboard: [],
@@ -37,6 +39,7 @@ const defaultPermissions = {
     Payroll: ["View", "Create", "Edit", "Process", "Export"],
     Reports: [],
     Settings: [],
+    Profile: ["View", "Edit"],
   },
   ADMIN: {
     Dashboard: ["View", "Export Data"],
@@ -46,6 +49,7 @@ const defaultPermissions = {
     Payroll: ["View", "Create", "Edit", "Delete", "Process", "Export"],
     Reports: ["View", "Generate", "Export", "Schedule"],
     Settings: ["View", "Edit", "Manage Users", "System Configuration"],
+    Profile: ["View", "Edit"],
   },
 };
 
