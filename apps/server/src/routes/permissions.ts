@@ -120,6 +120,7 @@ router.post("/initialize", authenticateUser, async (_req, res) => {
         "Time Off": ["View", "Create"],
         Payroll: ["View"],
         Reports: ["View"],
+        Profile: ["View", "Edit"],
       },
       HR_OFFICER: {
         Dashboard: ["View", "Export Data"],
@@ -129,6 +130,7 @@ router.post("/initialize", authenticateUser, async (_req, res) => {
         Payroll: ["View"],
         Reports: ["View", "Generate", "Export"],
         Settings: ["View"],
+        Profile: ["View", "Edit"],
       },
       PAYROLL_OFFICER: {
         Dashboard: ["View", "Export Data"],
@@ -138,6 +140,8 @@ router.post("/initialize", authenticateUser, async (_req, res) => {
         Payroll: ["View", "Create", "Edit", "Process", "Export"],
         Reports: ["View", "Generate", "Export"],
         Settings: ["View"],
+        Profile: ["View", "Edit"],
+
       },
       ADMIN: {
         Dashboard: ["View", "Export Data"],
@@ -147,6 +151,8 @@ router.post("/initialize", authenticateUser, async (_req, res) => {
         Payroll: ["View", "Create", "Edit", "Delete", "Process", "Export"],
         Reports: ["View", "Generate", "Export", "Schedule"],
         Settings: ["View", "Edit", "Manage Users", "System Configuration"],
+        Profile: ["View", "Edit"],
+
       },
     };
 

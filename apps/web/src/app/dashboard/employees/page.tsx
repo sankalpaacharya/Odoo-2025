@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import EmployeeCard from "@/components/employee-card";
 import { AddEmployeeModal } from "@/components/add-employee-modal";
+import { useModulePermissions } from "@/hooks/use-module-permissions";
 
 type Status = "present" | "on_leave" | "absent";
 
@@ -48,6 +49,8 @@ export default function EmployeesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const { canView, canCreate } = useModulePermissions("Employees");
+
   useEffect(() => {
     fetchEmployees().then((data) => {
       setEmployees(data);
@@ -67,11 +70,25 @@ export default function EmployeesPage() {
   const showAll = false;
 
   const handleEmployeeAdded = () => {
-    // Refresh the employees list after adding a new employee
     fetchEmployees().then((data) => {
       setEmployees(data);
     });
   };
+
+  if (!canView) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-muted-foreground">
+            Access Denied
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            You don't have permission to view employees.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -96,7 +113,9 @@ export default function EmployeesPage() {
               className="pl-9"
             />
           </div>
-          <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+          {canCreate && (
+            <AddEmployeeModal onEmployeeAdded={handleEmployeeAdded} />
+          )}
         </div>
       </div>
 

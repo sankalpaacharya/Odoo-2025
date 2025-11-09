@@ -314,12 +314,6 @@ export const leaveService = {
       );
     }
 
-    console.log({
-      startDate,
-      endDate,
-      timeFilters,
-    });
-
     return db.leave.findMany({
       where: {
         employeeId,

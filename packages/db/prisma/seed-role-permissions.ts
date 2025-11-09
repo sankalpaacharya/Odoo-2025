@@ -1,4 +1,13 @@
 import { PrismaClient } from "../prisma/generated/client";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+config({ path: resolve(__dirname, "../../../apps/server/.env") });
+
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    "postgresql://postgres:password@localhost:5432/my-better-t-app";
+}
 
 const prisma = new PrismaClient();
 
@@ -12,22 +21,22 @@ const defaultPermissions = {
     Reports: [],
   },
   HR_OFFICER: {
-    Dashboard: ["View", "Export Data"],
-    Employees: ["View", "Create", "Edit", "Export"],
+    Dashboard: [],
+    Employees: [],
     Attendance: ["View", "Create", "Edit", "Approve", "Export"],
     "Time Off": ["View", "Create", "Edit", "Approve", "Export"],
-    Payroll: ["View"],
-    Reports: ["View", "Generate", "Export"],
-    Settings: ["View"],
+    Payroll: ["View", "Create", "Edit", "Process", "Export"],
+    Reports: [],
+    Settings: [],
   },
   PAYROLL_OFFICER: {
-    Dashboard: ["View", "Export Data"],
-    Employees: ["View", "Export"],
+    Dashboard: [],
+    Employees: [],
     Attendance: ["View", "Export"],
     "Time Off": ["View", "Export"],
     Payroll: ["View", "Create", "Edit", "Process", "Export"],
-    Reports: ["View", "Generate", "Export"],
-    Settings: ["View"],
+    Reports: [],
+    Settings: [],
   },
   ADMIN: {
     Dashboard: ["View", "Export Data"],
