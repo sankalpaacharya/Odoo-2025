@@ -23,10 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Eye, Pencil, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { apiClient } from "@/lib/api-client";
 
 interface Employee {
@@ -63,6 +64,7 @@ export function UserListTable() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchEmployees();
@@ -78,6 +80,24 @@ export function UserListTable() {
     }
     setLoading(false);
   };
+
+  // Filter employees based on search query
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return employees;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return employees.filter((employee) => {
+      const displayRole = roleMap[employee.role] || employee.role;
+      return (
+        employee.name.toLowerCase().includes(query) ||
+        employee.employeeCode.toLowerCase().includes(query) ||
+        (employee.department?.toLowerCase() || "").includes(query) ||
+        displayRole.toLowerCase().includes(query)
+      );
+    });
+  }, [employees, searchQuery]);
 
   const handleRoleChange = async (employeeId: string, newRole: string) => {
     setUpdatingRole(employeeId);
@@ -139,6 +159,18 @@ export function UserListTable() {
           Manage users and assign roles to control access rights
         </CardDescription>
       </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search by name, employee code, department, or role..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div className="rounded-md border overflow-x-auto">
         <div className="min-w-[640px]">
           <Table>
@@ -151,14 +183,18 @@ export function UserListTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.length === 0 ? (
+              {filteredEmployees.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12">
-                    <p className="text-muted-foreground">No employees found</p>
+                    <p className="text-muted-foreground">
+                      {searchQuery
+                        ? "No employees match your search"
+                        : "No employees found"}
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
-                employees.map((employee) => (
+                filteredEmployees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell>{employee.name}</TableCell>
                     <TableCell>{employee.employeeCode}</TableCell>
