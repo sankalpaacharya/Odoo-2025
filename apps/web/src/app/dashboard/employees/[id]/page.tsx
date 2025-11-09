@@ -23,9 +23,6 @@ export default function EmployeeDetailPage({
   const { id } = use(params);
   const { data: profile, isLoading } = useProfile(id);
 
-  console.log("Employee ID from params:", id);
-  console.log("Profile data:", profile);
-
   if (isLoading) {
     return <Loader />;
   }

@@ -133,6 +133,8 @@ export function EmployeeAttendanceView() {
     error,
   } = useMyAttendance(month, year);
 
+  const isTableView = activeTab === "table";
+
   if (error) {
     toast.error("Failed to load attendance records");
   }
@@ -154,13 +156,14 @@ export function EmployeeAttendanceView() {
         d <= end;
         d.setUTCDate(d.getUTCDate() + 1)
       ) {
-        leaveDateSet.add(d.toISOString());
+        const dateStr = d.toISOString().split("T")[0];
+        leaveDateSet.add(dateStr);
       }
     });
 
-    // Group sessions by date
+    // Group sessions by date (normalize to YYYY-MM-DD format)
     const sessionsByDate = sessions.reduce((acc, session) => {
-      const dateKey = session.date;
+      const dateKey = new Date(session.date).toISOString().split("T")[0];
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
@@ -183,7 +186,7 @@ export function EmployeeAttendanceView() {
     ) {
       const currentDate = new Date(d);
       const dayOfWeek = currentDate.getUTCDay();
-      const dateKey = currentDate.toISOString();
+      const dateKey = currentDate.toISOString().split("T")[0];
 
       // Skip weekends (Sunday = 0, Saturday = 6)
       if (dayOfWeek === 0 || dayOfWeek === 6) {
@@ -214,7 +217,7 @@ export function EmployeeAttendanceView() {
 
         records.push({
           id: dateKey,
-          date: dateKey,
+          date: currentDate.toISOString(),
           checkIn,
           checkOut,
           workingHours: totalWorkingHours,
@@ -224,8 +227,8 @@ export function EmployeeAttendanceView() {
         });
       } else if (isOnLeave) {
         records.push({
-          id: dateKey,
-          date: dateKey,
+          id: `${dateKey}-leave`,
+          date: currentDate.toISOString(),
           checkIn: null,
           checkOut: null,
           workingHours: 0,
@@ -235,8 +238,8 @@ export function EmployeeAttendanceView() {
         });
       } else {
         records.push({
-          id: dateKey,
-          date: dateKey,
+          id: `${dateKey}-absent`,
+          date: currentDate.toISOString(),
           checkIn: null,
           checkOut: null,
           workingHours: 0,
@@ -262,6 +265,22 @@ export function EmployeeAttendanceView() {
     });
   };
 
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setUTCDate(newDate.getUTCDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setUTCDate(newDate.getUTCDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
   const goToPreviousMonth = () => {
     const newDate = new Date(selectedDate);
     newDate.setUTCMonth(newDate.getUTCMonth() - 1);
@@ -282,10 +301,35 @@ export function EmployeeAttendanceView() {
     selectedDate.getUTCMonth() === new Date().getUTCMonth() &&
     selectedDate.getUTCFullYear() === new Date().getUTCFullYear();
 
+  const isToday =
+    selectedDate.toISOString().split("T")[0] ===
+    new Date().toISOString().split("T")[0];
+
   const summary = attendanceData?.summary;
 
-  // No filtering needed now as we already exclude weekends and future dates
-  const filteredAttendances = attendanceRecords;
+  // Filter by selected date for table view, show all for calendar view
+  const filteredAttendances = isTableView
+    ? attendanceRecords.filter((record) => {
+      // Normalize both dates to YYYY-MM-DD format for comparison
+      const recordDateObj = new Date(record.date);
+      const recordDate = `${recordDateObj.getUTCFullYear()}-${String(
+        recordDateObj.getUTCMonth() + 1
+      ).padStart(2, "0")}-${String(recordDateObj.getUTCDate()).padStart(
+        2,
+        "0"
+      )}`;
+
+      const selectedDateObj = new Date(selectedDate);
+      const selectedDateStr = `${selectedDateObj.getFullYear()}-${String(
+        selectedDateObj.getMonth() + 1
+      ).padStart(2, "0")}-${String(selectedDateObj.getDate()).padStart(
+        2,
+        "0"
+      )}`;
+
+      return recordDate === selectedDateStr;
+    })
+    : attendanceRecords;
 
   const statsData: StatItem[] = [
     {
@@ -323,51 +367,98 @@ export function EmployeeAttendanceView() {
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "min-w-[200px] justify-center font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? (
-                  format(selectedDate, "MMMM yyyy")
-                ) : (
-                  <span>Pick a month</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                className="rounded-md border shadow-sm"
-                captionLayout="dropdown"
-                selected={selectedDate}
-                onSelect={(date: Date | undefined) =>
-                  date && setSelectedDate(date)
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Button variant="outline" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {!isCurrentMonth && (
-            <Button variant="outline" onClick={goToCurrentMonth}>
-              Current Month
+        {isTableView ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[300px] justify-center font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "EEEE, MMMM d, yyyy")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  selected={selectedDate}
+                  onSelect={(date: Date | undefined) =>
+                    date && setSelectedDate(date)
+                  }
+                  mode="single"
+                  className="rounded-md border shadow-sm"
+                  captionLayout="dropdown"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button variant="outline" size="icon" onClick={goToNextDay}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isToday && (
+              <Button variant="outline" onClick={goToToday}>
+                Today
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[200px] justify-center font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "MMMM yyyy")
+                  ) : (
+                    <span>Pick a month</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  className="rounded-md border shadow-sm"
+                  captionLayout="dropdown"
+                  selected={selectedDate}
+                  onSelect={(date: Date | undefined) =>
+                    date && setSelectedDate(date)
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button variant="outline" size="icon" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isCurrentMonth && (
+              <Button variant="outline" onClick={goToCurrentMonth}>
+                Current Month
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <StatsCards data={statsData} />
@@ -389,9 +480,7 @@ export function EmployeeAttendanceView() {
             <div className="py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Attendance Records</h2>
               <span className="text-sm text-muted-foreground">
-                {format(selectedDate, "MMMM yyyy")} -{" "}
-                {filteredAttendances.length}{" "}
-                {filteredAttendances.length === 1 ? "record" : "records"}
+                {format(selectedDate, "EEEE, MMMM d, yyyy")}
               </span>
             </div>
 

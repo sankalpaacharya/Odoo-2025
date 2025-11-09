@@ -21,10 +21,12 @@ import { useAllLeaves } from "../hooks";
 import type { Leave } from "../types";
 import Loader from "@/components/loader";
 import { StatsCards, type StatItem } from "@/components";
+import { useAbility } from "@/components/ability-provider";
 
 const createLeaveColumns = (
   onApprove: (leave: Leave, e: React.MouseEvent) => void,
-  onReject: (leave: Leave, e: React.MouseEvent) => void
+  onReject: (leave: Leave, e: React.MouseEvent) => void,
+  canApprove: boolean
 ): Column<Leave>[] => [
   {
     key: "avatar",
@@ -77,7 +79,7 @@ const createLeaveColumns = (
     label: "Actions",
     sortable: false,
     render: (leave) =>
-      leave.status === "PENDING" ? (
+      leave.status === "PENDING" && canApprove ? (
         <div
           className="flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
@@ -115,6 +117,10 @@ export function AdminTimeOffView() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">(
     "approve"
   );
+
+  const ability = useAbility();
+  const canApprove = ability.can("Approve", "Time Off");
+  const canCreate = ability.can("Create", "Time Off");
 
   const { data: leavesData, isLoading } = useAllLeaves({
     status: statusFilter === "all" ? undefined : statusFilter.toUpperCase(),
@@ -185,7 +191,11 @@ export function AdminTimeOffView() {
     },
   ];
 
-  const leaveColumns = createLeaveColumns(handleApprove, handleReject);
+  const leaveColumns = createLeaveColumns(
+    handleApprove,
+    handleReject,
+    canApprove
+  );
 
   return (
     <>
@@ -212,10 +222,12 @@ export function AdminTimeOffView() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setNewLeaveDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setNewLeaveDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New
+          </Button>
+        )}
       </div>
 
       <StatsCards data={statsData} />

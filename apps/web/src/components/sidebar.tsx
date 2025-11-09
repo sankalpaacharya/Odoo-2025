@@ -20,10 +20,12 @@ import {
   Sidebar as SidebarUI,
 } from "@/components/ui/sidebar";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAbility } from "@/components/ability-provider";
 import { apiClient } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
 import { getProfileImageUrl } from "@/lib/image-utils";
 import { useProfile } from "@/hooks/useProfile";
+import type { Actions, Subjects } from "@/lib/ability";
 import {
   Calendar,
   ChevronsUpDown,
@@ -49,8 +51,8 @@ type NavigationItem = {
   name: string;
   href: Route;
   icon: React.ComponentType<{ className?: string }>;
-  module: string;
-  permission: string;
+  module: Subjects;
+  permission: Actions;
 };
 
 const navigationItems: NavigationItem[] = [
@@ -125,7 +127,6 @@ export function Sidebar() {
           companyName: string;
           logo: string | null;
         }>("/api/organization/me");
-        console.log("Fetched organization data:", data);
         setOrganization(data);
         setLogoError(false);
       } catch (error) {
@@ -138,7 +139,8 @@ export function Sidebar() {
     }
   }, [session]);
 
-  const { hasPermission, loading } = usePermissions();
+  const { loading } = usePermissions();
+  const ability = useAbility();
 
   const userInitials = user?.name
     ? user.name
@@ -204,7 +206,7 @@ export function Sidebar() {
             <div className="text-sm text-muted-foreground p-4">Loading...</div>
           ) : (
             navigationItems
-              .filter((item) => hasPermission(item.module, item.permission))
+              .filter((item) => ability.can(item.permission, item.module))
               .map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;

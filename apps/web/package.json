@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@casl/ability": "^6.7.3",
+    "@casl/react": "^5.0.0",
     "@fontsource/inter": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@my-better-t-app/auth": "workspace:*",
