@@ -1,7 +1,7 @@
 "use client";
 
 import { StatsCards } from "@/components/stats-cards";
-import { AttendanceTrendChart } from "@/components/attendance-trend-chart";
+import { MonthlyAttendanceTrendChart } from "@/components/monthly-attendance-trend-chart";
 import { LeaveDistributionChart } from "@/components/leave-distribution-chart";
 import { DepartmentHeadcountChart } from "@/components/department-headcount-chart";
 import { RecentLeaveRequests } from "@/components/recent-leave-requests";
@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 w-full min-w-0">
-          <AttendanceTrendChart />
+          <MonthlyAttendanceTrendChart />
         </div>
         <div className="lg:col-span-1 w-full min-w-0">
           <RecentLeaveRequests />

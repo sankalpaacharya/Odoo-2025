@@ -49,7 +49,7 @@ const auth = betterAuth({
   },
 });
 
-const ORGANIZATION_NAME = "TechCorp Solutions";
+const ORGANIZATION_NAME = "The Experience Company";
 const TOTAL_USERS = 100;
 const USERS_PER_ROLE = 25;
 const DEFAULT_PASSWORD = "Welcome@123"; // Default password for all seeded employees
@@ -258,7 +258,7 @@ async function main() {
     for (let i = 0; i < USERS_PER_ROLE; i++) {
       const firstName = getRandomElement(FIRST_NAMES);
       const lastName = getRandomElement(LAST_NAMES);
-      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${employeeCount}@techcorp.com`;
+      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${employeeCount}@experience.inc`;
       const employeeCode = `EMP${String(employeeCount).padStart(4, "0")}`;
       const profileImageUrl = getNotionistsAvatar(email);
 
@@ -522,13 +522,31 @@ async function main() {
   console.log("Creating work sessions for the past 2 months...");
   const workSessionsData: any[] = [];
 
+  // Define special high-attendance dates (Nov 8, 9, 10, 2025)
+  const highAttendanceDates = [
+    new Date(2025, 10, 8), // November 8, 2025 (Saturday - special working day)
+    new Date(2025, 10, 9), // November 9, 2025 (Sunday - special working day)
+    new Date(2025, 10, 10), // November 10, 2025
+  ];
+
+  // Helper function to check if date is a special working weekend
+  const isSpecialWorkingWeekend = (date: Date): boolean => {
+    return highAttendanceDates.some((specialDate) => {
+      return (
+        date.getFullYear() === specialDate.getFullYear() &&
+        date.getMonth() === specialDate.getMonth() &&
+        date.getDate() === specialDate.getDate()
+      );
+    });
+  };
+
   for (const employee of employees) {
     const employeeLeaves = employeeApprovedLeaves.get(employee.id) || [];
 
     let currentDate = new Date(twoMonthsAgo);
     while (currentDate <= now) {
-      // Skip weekends
-      if (isWeekend(currentDate)) {
+      // Skip weekends unless it's a special working weekend
+      if (isWeekend(currentDate) && !isSpecialWorkingWeekend(currentDate)) {
         currentDate = addDays(currentDate, 1);
         continue;
       }
@@ -543,8 +561,13 @@ async function main() {
         continue;
       }
 
-      // 90% attendance rate (10% random absences)
-      if (Math.random() < 0.9) {
+      // Check if this is one of our special high-attendance dates
+      const isHighAttendanceDate = isSpecialWorkingWeekend(currentDate);
+
+      // For special working weekends (Nov 8 & 9): 98% attendance, otherwise 90% attendance
+      const attendanceRate = isHighAttendanceDate ? 0.98 : 0.9;
+
+      if (Math.random() < attendanceRate) {
         // Work hours: 9 AM to 6 PM with variations
         const startHour = 8 + Math.random() * 2; // 8-10 AM
         const workDuration = 8 + Math.random() * 2; // 8-10 hours
@@ -979,7 +1002,7 @@ async function main() {
   console.log(
     `  All users can login with their email and password: ${DEFAULT_PASSWORD}`
   );
-  console.log(`  Example: amit.sharma1@techcorp.com / ${DEFAULT_PASSWORD}`);
+  console.log(`  Example: amit.sharma1@experience.inc / ${DEFAULT_PASSWORD}`);
   console.log(`\n🖼️  Profile Pictures:`);
   console.log(`  All users have profile pictures from Notionists avatars`);
   console.log(`\n✅ Seeding completed successfully!`);
