@@ -331,15 +331,15 @@ export function useWeeklyAttendance() {
   });
 }
 
-export function useMonthlyAttendanceTrend() {
+export function useMonthlyAttendanceTrend(days: number = 30) {
   return useQuery({
-    queryKey: ["dashboard", "monthly-attendance-trend"],
+    queryKey: ["dashboard", "monthly-attendance-trend", days],
     queryFn: async () => {
       const now = new Date();
       const monthlyData: MonthlyAttendanceTrend[] = [];
 
-      // Get data for the past 30 days
-      for (let i = 29; i >= 0; i--) {
+      // Get data for the specified number of days
+      for (let i = days - 1; i >= 0; i--) {
         const targetDate = new Date(now);
         targetDate.setDate(now.getDate() - i);
 

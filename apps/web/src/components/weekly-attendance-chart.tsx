@@ -21,15 +21,15 @@ import Loader from "./loader";
 const chartConfig = {
   present: {
     label: "Present",
-    color: "hsl(217, 91%, 60%)",
+    color: "hsl(142, 76%, 36%, 0.8)",
   },
   late: {
     label: "Late",
-    color: "hsl(199, 89%, 48%)",
+    color: "hsl(25, 95%, 53%, 0.8)",
   },
   absent: {
     label: "Absent",
-    color: "hsl(205, 87%, 29%)",
+    color: "hsl(0, 84%, 60%, 0.8)",
   },
 };
 
@@ -83,11 +83,19 @@ export function WeeklyAttendanceChart() {
             <ChartLegend content={<ChartLegendContent />} />
             <Bar
               dataKey="present"
-              fill="var(--chart-3)"
+              fill="var(--color-present)"
               radius={[4, 4, 0, 0]}
             />
-            <Bar dataKey="late" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="absent" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="late"
+              fill="var(--color-late)"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              dataKey="absent"
+              fill="var(--color-absent)"
+              radius={[4, 4, 0, 0]}
+            />
           </BarChart>
         </ChartContainer>
       </CardContent>

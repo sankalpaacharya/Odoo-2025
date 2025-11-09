@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   Card,
@@ -34,21 +34,28 @@ const chartConfig = {
   },
   present: {
     label: "Present",
-    color: "var(--chart-1)",
+    color: "hsl(142, 76%, 36%)",
   },
   on_leave: {
     label: "On Leave",
-    color: "var(--chart-2)",
+    color: "hsl(32, 95%, 44%)",
   },
   absent: {
     label: "Absent",
-    color: "var(--chart-3)",
+    color: "hsl(0, 84%, 60%)",
   },
 } satisfies ChartConfig;
 
 export function MonthlyAttendanceTrendChart() {
-  const { data: chartData, isLoading } = useMonthlyAttendanceTrend();
   const [timeRange, setTimeRange] = React.useState("30d");
+
+  const days = React.useMemo(() => {
+    if (timeRange === "90d") return 90;
+    if (timeRange === "7d") return 7;
+    return 30;
+  }, [timeRange]);
+
+  const { data: chartData, isLoading } = useMonthlyAttendanceTrend(days);
 
   if (isLoading || !chartData) {
     return (
@@ -59,28 +66,15 @@ export function MonthlyAttendanceTrendChart() {
             Daily attendance patterns over the past 30 days
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-[350px]">
+        <CardContent className="flex items-center justify-center">
           <Loader />
         </CardContent>
       </Card>
     );
   }
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date);
-    const now = new Date();
-    let daysToSubtract = 30;
-    if (timeRange === "90d") {
-      daysToSubtract = 90;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
-    }
-    const startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-    return date >= startDate;
-  });
-
-  console.log(filteredData, "filteredData");
+  // Data is already filtered by the hook based on the days parameter
+  const filteredData = chartData || [];
 
   return (
     <Card className="pt-0 h-full">
@@ -111,11 +105,8 @@ export function MonthlyAttendanceTrendChart() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-full flex-1 w-full"
-        >
+      <CardContent className="px-2 sm:px-6 h-full max-h-80">
+        <ChartContainer config={chartConfig} className="h-full w-full">
           <AreaChart data={filteredData}>
             <defs>
               <linearGradient id="fillPresent" x1="0" y1="0" x2="0" y2="1">
@@ -170,6 +161,12 @@ export function MonthlyAttendanceTrendChart() {
                 });
               }}
             />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => `${value}`}
+            />
             <ChartTooltip
               cursor={false}
               content={
@@ -202,7 +199,11 @@ export function MonthlyAttendanceTrendChart() {
               fill="url(#fillPresent)"
               stroke="var(--color-present)"
             />
-            <ChartLegend content={<ChartLegendContent />} />
+            <ChartLegend
+              content={<ChartLegendContent />}
+              verticalAlign="top"
+              align="right"
+            />
           </AreaChart>
         </ChartContainer>
       </CardContent>
