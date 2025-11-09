@@ -36,6 +36,8 @@ const chartConfig = {
 export function WeeklyAttendanceChart() {
   const { data: chartData, isLoading } = useWeeklyAttendance();
 
+  console.log(chartData);
+
   if (isLoading || !chartData) {
     return (
       <Card className="w-full h-full">
@@ -81,19 +83,11 @@ export function WeeklyAttendanceChart() {
             <ChartLegend content={<ChartLegendContent />} />
             <Bar
               dataKey="present"
-              fill="var(--color-present)"
+              fill="var(--chart-3)"
               radius={[4, 4, 0, 0]}
             />
-            <Bar
-              dataKey="late"
-              fill="var(--color-late)"
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar
-              dataKey="absent"
-              fill="var(--color-absent)"
-              radius={[4, 4, 0, 0]}
-            />
+            <Bar dataKey="late" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="absent" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartContainer>
       </CardContent>
