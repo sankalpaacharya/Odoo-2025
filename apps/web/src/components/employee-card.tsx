@@ -32,12 +32,10 @@ export default function EmployeeCard({
         return (
           <div
             className="flex items-center gap-1.5"
-            title="Present - Currently working"
+            title="Online - Currently checked in"
           >
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-emerald-600">
-              Present
-            </span>
+            <span className="text-xs font-medium text-emerald-600">Online</span>
           </div>
         );
       case "on_leave":
@@ -52,10 +50,10 @@ export default function EmployeeCard({
         return (
           <div
             className="flex items-center gap-1.5"
-            title="Absent - No activity today"
+            title="Offline - Not currently checked in"
           >
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-400" />
-            <span className="text-xs font-medium text-amber-600">Absent</span>
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-400" />
+            <span className="text-xs font-medium text-gray-600">Offline</span>
           </div>
         );
     }

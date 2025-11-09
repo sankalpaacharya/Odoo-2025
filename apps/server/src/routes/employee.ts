@@ -11,35 +11,24 @@ import { sessionService } from "../services/session.service";
 const router: RouterType = Router();
 
 // Helper to calculate status from sessions and leaves
+// Note: "present" now means currently online (has active session)
+// This aligns with the sidebar online/offline status
 const calculateEmployeeStatus = async (
   employeeId: string,
   sessions: any[],
   today: Date
 ): Promise<string> => {
-  const now = new Date();
-  let totalMinutes = 0;
   let hasActiveSession = false;
 
-  // First, check if employee has any sessions today
+  // Check if employee has any ACTIVE sessions right now
   sessions.forEach((session) => {
     if (session.isActive) {
       hasActiveSession = true;
-      const sessionMinutes = Math.floor(
-        (now.getTime() - session.startTime.getTime()) / (1000 * 60)
-      );
-      const breakMinutes = session.totalBreakTime
-        ? parseFloat(session.totalBreakTime.toString()) * 60
-        : 0;
-      totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
-    } else if (session.workingHours) {
-      totalMinutes += parseFloat(session.workingHours.toString()) * 60;
     }
   });
 
-  const workingHours = totalMinutes / 60;
-
-  // If they have an active session or worked today, they're present (regardless of leave)
-  if (hasActiveSession || workingHours > 0) {
+  // Only show as present if they are currently checked in (have active session)
+  if (hasActiveSession) {
     return "present";
   }
 
@@ -154,8 +143,9 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     // If user can't view all, return only their own data
     if (!canViewAll) {
       // Get today's sessions for current employee
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use UTC date to match how sessions are stored
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
       const todaySessions = await sessionService.findSessionsByEmployeeAndDate(
         currentEmployee.id,
@@ -204,8 +194,9 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     });
 
     // Get today's sessions for all employees
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Use UTC date to match how sessions are stored
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const allSessionsToday = await Promise.all(
       employees.map((emp) =>
