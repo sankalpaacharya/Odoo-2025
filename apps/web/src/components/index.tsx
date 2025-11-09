@@ -14,3 +14,4 @@ export default function Sidebar03() {
 
 export { StatsCards } from "./stats-cards";
 export type { StatItem } from "./stats-cards";
+export { Can, useAbility } from "./ability-provider";

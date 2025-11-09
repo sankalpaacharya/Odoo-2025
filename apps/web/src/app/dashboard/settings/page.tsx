@@ -1,5 +1,8 @@
+"use client";
+
 import { UserListTable } from "./components/user-list-table";
 import { UserAccessRightsCard } from "./components/user-access-rights-card";
+import { Can } from "@/components/ability-provider";
 
 export default function SettingsPage() {
   return (
@@ -11,8 +14,10 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <UserListTable />
-      <UserAccessRightsCard />
+      <Can I="View" a="Settings">
+        <UserListTable />
+        <UserAccessRightsCard />
+      </Can>
     </div>
   );
 }

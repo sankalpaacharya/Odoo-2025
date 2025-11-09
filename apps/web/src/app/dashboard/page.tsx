@@ -8,11 +8,31 @@ import { RecentLeaveRequests } from "@/components/recent-leave-requests";
 import { WeeklyAttendanceChart } from "@/components/weekly-attendance-chart";
 import { useDashboardStats } from "./hooks";
 import Loader from "@/components/loader";
+import { Can, useAbility } from "@/components/ability-provider";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
+import { getDefaultPageForRole } from "@/lib/role-defaults";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = useDashboardStats();
+  const { userRole, canAccessRoute, loading } = usePermissions();
+  const router = useRouter();
 
-  if (isLoading || !stats) {
+  useEffect(() => {
+    if (!loading && !canAccessRoute("/dashboard")) {
+      const defaultPage = getDefaultPageForRole(userRole as any);
+      router.push(defaultPage);
+    }
+  }, [loading, canAccessRoute, userRole, router]);
+
+  if (isLoading || !stats || loading) {
+    return <Loader />;
+  }
+
+  if (!canAccessRoute("/dashboard")) {
     return <Loader />;
   }
 
@@ -69,11 +89,19 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here's an overview of your organization
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back! Here's an overview of your organization
+          </p>
+        </div>
+        <Can I="Export Data" a="Dashboard">
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Export Data
+          </Button>
+        </Can>
       </div>
 
       <StatsCards data={statsData} />
