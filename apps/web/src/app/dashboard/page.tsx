@@ -1,13 +1,13 @@
 "use client";
 
-import { StatsCards } from "@/components/stats-cards";
-import { MonthlyAttendanceTrendChart } from "@/components/monthly-attendance-trend-chart";
+import { EmployeeActivityChart } from "@/components/employee-activity-chart";
 import { LeaveDistributionChart } from "@/components/leave-distribution-chart";
-import { DepartmentHeadcountChart } from "@/components/department-headcount-chart";
+import Loader from "@/components/loader";
+import { MonthlyAttendanceTrendChart } from "@/components/monthly-attendance-trend-chart";
 import { RecentLeaveRequests } from "@/components/recent-leave-requests";
+import { StatsCards } from "@/components/stats-cards";
 import { WeeklyAttendanceChart } from "@/components/weekly-attendance-chart";
 import { useDashboardStats } from "./hooks";
-import Loader from "@/components/loader";
 import { Can, useAbility } from "@/components/ability-provider";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -112,13 +112,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        <div className="w-full min-w-0">
-          <LeaveDistributionChart />
-        </div>
-        <div className="w-full min-w-0">
-          <WeeklyAttendanceChart />
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+        <LeaveDistributionChart />
+        <WeeklyAttendanceChart />
+        <EmployeeActivityChart />
       </div>
 
       <div className="lg:col-span-1 w-full min-w-0">

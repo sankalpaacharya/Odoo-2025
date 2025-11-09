@@ -43,9 +43,11 @@ function determineStatus(
   sessions: any[],
   isOnLeave: boolean = false
 ): AttendanceStatus {
+  // Check sessions first - if they worked, they're present regardless of leave
+  if (sessions.length > 0) return "PRESENT";
+  // Only show as on leave if they didn't work
   if (isOnLeave) return "ON_LEAVE";
-  if (sessions.length === 0) return "ABSENT";
-  return "PRESENT";
+  return "ABSENT";
 }
 
 router.get(
@@ -207,6 +209,15 @@ router.get(
       const startTargetDate = new Date(targetDate);
       startTargetDate.setUTCHours(0, 0, 0, 0);
 
+      // Create UTC date for leave comparison
+      const targetDateUTC = new Date(
+        Date.UTC(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          targetDate.getDate()
+        )
+      );
+
       const allActiveEmployees = await employeeService.findActiveEmployees(
         employee.organizationId || undefined
       );
@@ -228,7 +239,7 @@ router.get(
           ),
           Promise.all(
             allActiveEmployees.map((emp) =>
-              leaveService.findApprovedLeavesByDateRange(emp.id, targetDate)
+              leaveService.findApprovedLeavesByDateRange(emp.id, targetDateUTC)
             )
           ),
         ]
@@ -549,12 +560,13 @@ router.get(
           const isOnLeave = empLeaves.length > 0;
           const hasSession = empSessions.length > 0;
 
-          if (isOnLeave) {
-            leaveCount++;
-          } else if (hasSession) {
+          // Sessions take priority - if they worked, they're present
+          if (hasSession) {
             presentCount++;
             const hours = calculateWorkingHoursFromSessions(empSessions);
             totalHours += hours;
+          } else if (isOnLeave) {
+            leaveCount++;
           } else {
             absentCount++;
           }

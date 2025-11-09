@@ -11,43 +11,46 @@ import { sessionService } from "../services/session.service";
 const router: RouterType = Router();
 
 // Helper to calculate status from sessions and leaves
-const calculateEmployeeStatus = async (employeeId: string, sessions: any[], today: Date): Promise<string> => {
+// Note: "present" now means currently online (has active session)
+// This aligns with the sidebar online/offline status
+const calculateEmployeeStatus = async (
+  employeeId: string,
+  sessions: any[],
+  today: Date
+): Promise<string> => {
+  let hasActiveSession = false;
+
+  // Check if employee has any ACTIVE sessions right now
+  sessions.forEach((session) => {
+    if (session.isActive) {
+      hasActiveSession = true;
+    }
+  });
+
+  // Only show as present if they are currently checked in (have active session)
+  if (hasActiveSession) {
+    return "present";
+  }
+
+  // Create UTC date for proper comparison with database dates
+  const todayUTC = new Date(
+    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  );
+  const tomorrowUTC = new Date(todayUTC);
+  tomorrowUTC.setUTCDate(tomorrowUTC.getUTCDate() + 1);
+
   // Check if employee has approved leave for today
   const approvedLeave = await db.leave.findFirst({
     where: {
       employeeId,
       status: "APPROVED",
-      startDate: { lte: today },
-      endDate: { gte: today },
+      startDate: { lt: tomorrowUTC },
+      endDate: { gte: todayUTC },
     },
   });
 
   if (approvedLeave) {
     return "on_leave";
-  }
-
-  if (sessions.length === 0) return "absent";
-
-  const now = new Date();
-  let totalMinutes = 0;
-  let hasActiveSession = false;
-
-  sessions.forEach((session) => {
-    if (session.isActive) {
-      hasActiveSession = true;
-      const sessionMinutes = Math.floor((now.getTime() - session.startTime.getTime()) / (1000 * 60));
-      const breakMinutes = session.totalBreakTime ? parseFloat(session.totalBreakTime.toString()) * 60 : 0;
-      totalMinutes += Math.max(0, sessionMinutes - breakMinutes);
-    } else if (session.workingHours) {
-      totalMinutes += parseFloat(session.workingHours.toString()) * 60;
-    }
-  });
-
-  const workingHours = totalMinutes / 60;
-
-  // If they have an active session or worked today, they're present
-  if (hasActiveSession || workingHours > 0) {
-    return "present";
   }
 
   return "absent";
@@ -140,17 +143,27 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     // If user can't view all, return only their own data
     if (!canViewAll) {
       // Get today's sessions for current employee
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use UTC date to match how sessions are stored
+      const now = new Date();
+      const today = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+      );
 
-      const todaySessions = await sessionService.findSessionsByEmployeeAndDate(currentEmployee.id, today);
+      const todaySessions = await sessionService.findSessionsByEmployeeAndDate(
+        currentEmployee.id,
+        today
+      );
 
       return res.json([
         {
           id: currentEmployee.id,
           name: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
           role: currentEmployee.role.toLowerCase(),
-          status: await calculateEmployeeStatus(currentEmployee.id, todaySessions, today),
+          status: await calculateEmployeeStatus(
+            currentEmployee.id,
+            todaySessions,
+            today
+          ),
           employeeCode: currentEmployee.employeeCode,
           department: currentEmployee.department,
           designation: currentEmployee.designation,
@@ -183,13 +196,22 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     });
 
     // Get today's sessions for all employees
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Use UTC date to match how sessions are stored
+    const now = new Date();
+    const today = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    );
 
-    const allSessionsToday = await Promise.all(employees.map((emp) => sessionService.findSessionsByEmployeeAndDate(emp.id, today)));
+    const allSessionsToday = await Promise.all(
+      employees.map((emp) =>
+        sessionService.findSessionsByEmployeeAndDate(emp.id, today)
+      )
+    );
 
     // Create a map of employee ID to sessions
-    const sessionsMap = new Map(employees.map((emp, idx) => [emp.id, allSessionsToday[idx] || []]));
+    const sessionsMap = new Map(
+      employees.map((emp, idx) => [emp.id, allSessionsToday[idx] || []])
+    );
 
     // Format the response
     const formattedEmployees = await Promise.all(
@@ -265,63 +287,74 @@ router.get("/active-list", async (req, res) => {
 });
 
 // Create employee endpoint (for HR/Admin)
-router.post("/create", requirePermission("Employees", "Create"), async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
+router.post(
+  "/create",
+  requirePermission("Employees", "Create"),
+  async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
 
-    // Fetch the logged-in user's company information
-    const currentUser = await db.user.findUnique({
-      where: { id: userId },
-      select: {
-        companyName: true,
-      },
-    });
-
-    if (!currentUser || !currentUser.companyName) {
-      return res.status(400).json({
-        success: false,
-        error: "Your account doesn't have a company name set. Please contact your administrator.",
-      });
-    }
-
-    // Add company name from the current user's session
-    const employeeData = {
-      ...req.body,
-      companyName: currentUser.companyName,
-    };
-
-    const result = await createEmployee(employeeData);
-
-    if (result.success && result.data) {
-      // Send welcome email with credentials
-      const emailResult = await sendNewEmployeeEmail({
-        employeeName: result.data.name,
-        email: result.data.email,
-        employeeCode: result.data.employeeCode,
-        temporaryPassword: result.data.temporaryPassword,
-        companyName: result.data.companyName,
+      // Fetch the logged-in user's company information
+      const currentUser = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          companyName: true,
+        },
       });
 
-      if (!emailResult.success) {
-        console.warn("Failed to send welcome email:", emailResult.error);
-        // Don't fail the entire request if email fails
+      if (!currentUser || !currentUser.companyName) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Your account doesn't have a company name set. Please contact your administrator.",
+        });
       }
-    }
 
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create employee",
-    });
+      // Add company name from the current user's session
+      const employeeData = {
+        ...req.body,
+        companyName: currentUser.companyName,
+      };
+
+      const result = await createEmployee(employeeData);
+
+      if (result.success && result.data) {
+        // Send welcome email with credentials
+        const emailResult = await sendNewEmployeeEmail({
+          employeeName: result.data.name,
+          email: result.data.email,
+          employeeCode: result.data.employeeCode,
+          temporaryPassword: result.data.temporaryPassword,
+          companyName: result.data.companyName,
+        });
+
+        if (!emailResult.success) {
+          console.warn("Failed to send welcome email:", emailResult.error);
+          // Don't fail the entire request if email fails
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to create employee",
+      });
+    }
   }
-});
+);
 
 // Generate employee code endpoint (for preview/testing)
 router.post("/generate-code", async (req, res) => {
   try {
     const { firstName, lastName, companyName, dateOfJoining } = req.body;
-    const code = await generateEmployeeCode(firstName, lastName, companyName, new Date(dateOfJoining));
+    const code = await generateEmployeeCode(
+      firstName,
+      lastName,
+      companyName,
+      new Date(dateOfJoining)
+    );
     res.json({ success: true, employeeCode: code });
   } catch (error) {
     res.status(500).json({

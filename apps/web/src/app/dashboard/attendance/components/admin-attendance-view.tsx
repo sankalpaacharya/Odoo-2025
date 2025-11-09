@@ -274,50 +274,76 @@ export function AdminAttendanceView() {
     <>
       <div className="flex items-center justify-between mb-4">
         {isTableView ? (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={goToPreviousDay}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "min-w-[300px] justify-center font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? (
-                    format(selectedDate, "EEEE, MMMM d, yyyy")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  selected={selectedDate}
-                  onSelect={(date: Date | undefined) =>
-                    date && setSelectedDate(date)
-                  }
-                  mode="single"
-                  className="rounded-md border shadow-sm"
-                  captionLayout="dropdown"
+          <>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 min-w-[250px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search employees..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
                 />
-              </PopoverContent>
-            </Popover>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="on_leave">On Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Button variant="outline" size="icon" onClick={goToNextDay}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            {!isToday && (
-              <Button variant="outline" onClick={goToToday}>
-                Today
+            <div className="flex items-center gap-2">
+              {!isToday && (
+                <Button variant="outline" onClick={goToToday}>
+                  Today
+                </Button>
+              )}
+
+              <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-            )}
-          </div>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-fit justify-center font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? (
+                      format(selectedDate, "EEEE, MMMM d, yyyy")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    selected={selectedDate}
+                    onSelect={(date: Date | undefined) =>
+                      date && setSelectedDate(date)
+                    }
+                    mode="single"
+                    className="rounded-md border shadow-sm"
+                    captionLayout="dropdown"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Button variant="outline" size="icon" onClick={goToNextDay}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
         ) : (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
@@ -367,35 +393,14 @@ export function AdminAttendanceView() {
         )}
       </div>
 
-      {isTableView && (
-        <div className="flex items-center gap-4 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search employees..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="present">Present</SelectItem>
-              <SelectItem value="absent">Absent</SelectItem>
-              <SelectItem value="on_leave">On Leave</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       <StatsCards data={statsData} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full mt-10"
+      >
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="table" className="flex items-center gap-2">
             <TableIcon className="h-4 w-4" />
             Daily View
@@ -406,7 +411,7 @@ export function AdminAttendanceView() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="table" className="mt-6">
+        <TabsContent value="table">
           <div className="rounded-lg">
             <div className="py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Attendance Records</h2>
@@ -454,7 +459,7 @@ export function AdminAttendanceView() {
 
             {isCalendarLoading ? (
               <Loader />
-            ) : calendarData && calendarData.days ? (
+            ) : calendarData?.days ? (
               <AdminCalendarView
                 selectedDate={selectedDate}
                 calendarData={calendarData.days}
