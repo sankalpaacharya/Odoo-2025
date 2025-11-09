@@ -1,12 +1,9 @@
-<div align="center">
-  <h1>WorkZen</h1>
-  <p><strong>Smart Human Resource Management System</strong></p>
-  <p>A comprehensive HRMS platform for managing people, processes, and payroll with role-based access control.</p>
-</div>
+> # ⭐ Our YouTube Demo: [click here](https://www.youtube.com/watch?v=OOF5YIXxxbM)
 
----
 
-## About
+# WorkZen - Smart Human Resource Management System
+
+A comprehensive HRMS platform for managing people, processes, and payroll with role-based access control.
 
 WorkZen is a modern, all-in-one Human Resource Management System designed to simplify HR operations for startups, institutions, and SMEs. Built with a focus on clean architecture and user experience, it provides seamless management of attendance, leave, payroll, and analytics through a unified interface. The platform emphasizes robust role-based access control, data-driven insights, and reducing manual dependency to empower organizations with transparent, efficient workforce management.
 
