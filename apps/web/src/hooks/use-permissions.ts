@@ -19,6 +19,7 @@ const ROUTE_PERMISSIONS: Record<
   "/dashboard/payroll": { module: "Payroll", permission: "View" },
   "/dashboard/reports": { module: "Reports", permission: "View" },
   "/dashboard/settings": { module: "Settings", permission: "View" },
+  "/dashboard/profile": { module: "Profile", permission: "View" },
 };
 
 export function usePermissions() {
