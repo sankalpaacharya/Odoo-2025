@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -132,9 +132,8 @@ export function DataTable<T extends Record<string, any>>({
                 const isExpanded = expandedRows?.has(itemKey);
 
                 return (
-                  <>
+                  <React.Fragment key={itemKey}>
                     <TableRow
-                      key={itemKey}
                       onClick={() => onRowClick?.(item)}
                       className={
                         onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
@@ -158,7 +157,7 @@ export function DataTable<T extends Record<string, any>>({
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })
             )}

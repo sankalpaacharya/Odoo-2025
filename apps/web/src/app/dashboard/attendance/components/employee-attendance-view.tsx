@@ -145,17 +145,13 @@ export function EmployeeAttendanceView() {
 
     const { sessions, leaves, summary } = attendanceData;
 
-    // Create a set of leave dates
+    // Create a set of leave dates (YYYY-MM-DD format)
     const leaveDateSet = new Set<string>();
     leaves.forEach((leave) => {
       const start = new Date(leave.startDate);
       const end = new Date(leave.endDate);
 
-      for (
-        let d = new Date(start);
-        d <= end;
-        d.setUTCDate(d.getUTCDate() + 1)
-      ) {
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split("T")[0];
         leaveDateSet.add(dateStr);
       }
@@ -172,27 +168,26 @@ export function EmployeeAttendanceView() {
     }, {} as Record<string, WorkSessionInfo[]>);
 
     // Generate all dates in the month (excluding weekends and future dates)
-    const startDate = new Date(Date.UTC(summary.year, summary.month - 1, 1));
-    const endDate = new Date(Date.UTC(summary.year, summary.month, 0));
+    const startDate = new Date(summary.year, summary.month - 1, 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(summary.year, summary.month, 0);
+    endDate.setHours(23, 59, 59, 999);
+
     const today = new Date();
-    today.setUTCHours(23, 59, 59, 999); // Include today
+    today.setHours(23, 59, 59, 999);
 
     const records: AttendanceRecord[] = [];
 
     for (
       let d = new Date(startDate);
       d <= endDate && d <= today;
-      d.setUTCDate(d.getUTCDate() + 1)
+      d.setDate(d.getDate() + 1)
     ) {
       const currentDate = new Date(d);
-      const dayOfWeek = currentDate.getUTCDay();
+      const dayOfWeek = currentDate.getDay();
+
       const dateKey = currentDate.toISOString().split("T")[0];
-
-      // Skip weekends (Sunday = 0, Saturday = 6)
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        continue;
-      }
-
       const daySessions = sessionsByDate[dateKey] || [];
       const isOnLeave = leaveDateSet.has(dateKey);
 
@@ -222,7 +217,7 @@ export function EmployeeAttendanceView() {
           checkOut,
           workingHours: totalWorkingHours,
           overtimeHours: totalOvertimeHours,
-          status: isOnLeave ? "ON_LEAVE" : "PRESENT",
+          status: "PRESENT",
           sessions: sortedSessions,
         });
       } else if (isOnLeave) {
@@ -237,6 +232,9 @@ export function EmployeeAttendanceView() {
           sessions: [],
         });
       } else {
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          continue;
+        }
         records.push({
           id: `${dateKey}-absent`,
           date: currentDate.toISOString(),
@@ -311,22 +309,10 @@ export function EmployeeAttendanceView() {
   const filteredAttendances = isTableView
     ? attendanceRecords.filter((record) => {
       // Normalize both dates to YYYY-MM-DD format for comparison
-      const recordDateObj = new Date(record.date);
-      const recordDate = `${recordDateObj.getUTCFullYear()}-${String(
-        recordDateObj.getUTCMonth() + 1
-      ).padStart(2, "0")}-${String(recordDateObj.getUTCDate()).padStart(
-        2,
-        "0"
-      )}`;
-
-      const selectedDateObj = new Date(selectedDate);
-      const selectedDateStr = `${selectedDateObj.getFullYear()}-${String(
-        selectedDateObj.getMonth() + 1
-      ).padStart(2, "0")}-${String(selectedDateObj.getDate()).padStart(
-        2,
-        "0"
-      )}`;
-
+      const recordDate = new Date(record.date).toISOString().split("T")[0];
+      const selectedDateStr = new Date(selectedDate)
+        .toISOString()
+        .split("T")[0];
       return recordDate === selectedDateStr;
     })
     : attendanceRecords;
@@ -335,7 +321,7 @@ export function EmployeeAttendanceView() {
     {
       name: "Days Present",
       value: summary?.totalPresentDays || 0,
-      description: `Out of ${summary?.totalWorkingDays || 0} working days`,
+      description: `Days attended`,
       valueClassName: "text-green-600",
     },
     {

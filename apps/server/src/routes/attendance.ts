@@ -76,7 +76,11 @@ router.get(
 
       const [workSessions, approvedLeaves] = await Promise.all([
         sessionService.findSessionsByDateRange(employee.id, startDate, endDate),
-        leaveService.findApprovedLeavesByDateRange(employee.id, startDate),
+        leaveService.findApprovedLeavesByDateRange(
+          employee.id,
+          startDate,
+          endDate
+        ),
       ]);
 
       const now = new Date();
@@ -122,7 +126,12 @@ router.get(
       });
 
       // Calculate summary from actual sessions
-      const uniqueWorkDays = new Set(formattedSessions.map((s) => s.date)).size;
+      const uniqueWorkDaysSet = new Set(
+        formattedSessions
+          .filter((s) => s.workingHours > 0)
+          .map((s) => new Date(s.date).toISOString().split("T")[0])
+      );
+      const uniqueWorkDays = uniqueWorkDaysSet.size;
 
       const totalWorkingHours = formattedSessions.reduce(
         (sum, s) => sum + s.workingHours,
@@ -131,27 +140,54 @@ router.get(
 
       // Calculate total working days in month (excluding weekends and future dates)
       const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
       let totalWorkingDaysInMonth = 0;
       for (
         let d = new Date(startDate);
         d <= endDate && d <= today;
-        d.setUTCDate(d.getUTCDate() + 1)
+        d.setDate(d.getDate() + 1)
       ) {
-        const dayOfWeek = d.getUTCDay();
+        const dayOfWeek = d.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          // Not Sunday or Saturday
+          totalWorkingDaysInMonth++;
+        }
+        if (
+          uniqueWorkDaysSet.has(d.toISOString().split("T")[0]) &&
+          (dayOfWeek === 0 || dayOfWeek === 6)
+        ) {
           totalWorkingDaysInMonth++;
         }
       }
 
+      // Calculate actual leave days in the month (excluding weekends)
+      let totalLeaveDays = 0;
+      approvedLeaves.forEach((leave) => {
+        const leaveStart = new Date(leave.startDate);
+        leaveStart.setHours(0, 0, 0, 0);
+        const leaveEnd = new Date(leave.endDate);
+        leaveEnd.setHours(23, 59, 59, 999);
+
+        for (
+          let d = new Date(Math.max(leaveStart.getTime(), startDate.getTime()));
+          d <= leaveEnd && d <= endDate;
+          d.setDate(d.getDate() + 1)
+        ) {
+          const dayOfWeek = d.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            totalLeaveDays++;
+          }
+        }
+      });
+
       const totalAbsentDays =
-        totalWorkingDaysInMonth - uniqueWorkDays - approvedLeaves.length;
+        totalWorkingDaysInMonth - uniqueWorkDays - totalLeaveDays;
 
       const summary = {
         totalWorkingDays: totalWorkingDaysInMonth,
         totalPresentDays: uniqueWorkDays,
         totalAbsentDays: Math.max(0, totalAbsentDays),
-        totalLeaveDays: approvedLeaves.length,
+        totalLeaveDays,
         totalWorkingHours: parseFloat(totalWorkingHours.toFixed(2)),
         totalOvertimeHours: parseFloat(
           formattedSessions
@@ -380,7 +416,7 @@ router.get(
       }
 
       const sessionsByDate = workSessions.reduce((acc, session) => {
-        const dateKey = session.date.toISOString();
+        const dateKey = session.date.toISOString().split("T")[0];
         if (dateKey) {
           if (!acc[dateKey]) acc[dateKey] = [];
           acc[dateKey].push(session);
@@ -391,14 +427,15 @@ router.get(
       const leaveDates = new Set<string>();
       approvedLeaves.forEach((leave) => {
         const start = new Date(leave.startDate);
-        start.setUTCHours(0, 0, 0, 0);
+        start.setHours(0, 0, 0, 0);
         const end = new Date(leave.endDate);
-        end.setUTCHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
 
         const current = new Date(start);
         while (current <= end) {
-          leaveDates.add(current.toISOString());
-          current.setUTCDate(current.getUTCDate() + 1);
+          const dateStr = current.toISOString().split("T")[0];
+          if (dateStr) leaveDates.add(dateStr);
+          current.setDate(current.getDate() + 1);
         }
       });
 
@@ -406,16 +443,16 @@ router.get(
       for (
         let d = new Date(startDate);
         d <= endDate;
-        d.setUTCDate(d.getUTCDate() + 1)
+        d.setDate(d.getDate() + 1)
       ) {
         datesInMonth.push(new Date(d));
       }
 
       const now = new Date();
       const attendances = datesInMonth.map((date) => {
-        const dateKey = date.toISOString();
-        const sessions = (dateKey && sessionsByDate[dateKey]) || [];
-        const isOnLeave = dateKey ? leaveDates.has(dateKey) : false;
+        const dateKey = date.toISOString().split("T")[0] || "";
+        const sessions = sessionsByDate[dateKey] || [];
+        const isOnLeave = leaveDates.has(dateKey);
 
         const workingHours = calculateWorkingHoursFromSessions(sessions, now);
         const overtimeHours = Math.max(0, workingHours - 9);
@@ -530,9 +567,9 @@ router.get(
       for (
         let d = new Date(startDate);
         d <= endDate;
-        d.setUTCDate(d.getUTCDate() + 1)
+        d.setDate(d.getDate() + 1)
       ) {
-        const dayOfWeek = d.getUTCDay();
+        const dayOfWeek = d.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
           datesInMonth.push(new Date(d));
         }
