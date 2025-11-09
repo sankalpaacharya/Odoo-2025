@@ -148,7 +148,6 @@ export function UserListTable() {
                 <TableHead className="min-w-[120px]">Employee Code</TableHead>
                 <TableHead className="min-w-[120px]">Department</TableHead>
                 <TableHead className="min-w-[150px]">Role</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,34 +182,6 @@ export function UserListTable() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            router.push(
-                              `/dashboard/settings/users/${employee.id}` as any
-                            )
-                          }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            router.push(
-                              `/dashboard/settings/users/${employee.id}/edit` as any
-                            )
-                          }
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))
