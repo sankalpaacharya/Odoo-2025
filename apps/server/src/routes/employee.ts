@@ -145,7 +145,9 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
       // Get today's sessions for current employee
       // Use UTC date to match how sessions are stored
       const now = new Date();
-      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const today = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+      );
 
       const todaySessions = await sessionService.findSessionsByEmployeeAndDate(
         currentEmployee.id,
@@ -196,7 +198,9 @@ router.get("/", requirePermission("Employees", "View"), async (req, res) => {
     // Get today's sessions for all employees
     // Use UTC date to match how sessions are stored
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const today = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    );
 
     const allSessionsToday = await Promise.all(
       employees.map((emp) =>

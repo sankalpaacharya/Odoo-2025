@@ -5,6 +5,11 @@ import { Search, Check, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/data-table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StatusBadge, EmployeeAvatar } from "@/components/status-badge";
 import {
   Select,
@@ -82,22 +87,34 @@ const createLeaveColumns = (
           className="flex items-center gap-2"
           onClick={(e) => e.stopPropagation()}
         >
-          <Button
-            size="sm"
-            variant="default"
-            onClick={(e) => onApprove(leave, e)}
-          >
-            <Check className="h-4 w-4 mr-1" />
-            Approve
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={(e) => onReject(leave, e)}
-          >
-            <X className="h-4 w-4 mr-1" />
-            Reject
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="default"
+                onClick={(e) => onApprove(leave, e)}
+              >
+                <Check className="h-4 w-4 mr-1" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Approve leave request</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="destructive"
+                onClick={(e) => onReject(leave, e)}
+              >
+                <X className="h-4 w-4 mr-1" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reject leave request</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       ) : (
         <span className="text-sm text-muted-foreground">-</span>
@@ -214,7 +231,7 @@ export function AdminTimeOffView() {
         </div>
         <Button onClick={() => setNewLeaveDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          New
+          New Leave Request
         </Button>
       </div>
 
