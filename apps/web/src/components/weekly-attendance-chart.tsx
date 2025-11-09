@@ -21,20 +21,22 @@ import Loader from "./loader";
 const chartConfig = {
   present: {
     label: "Present",
-    color: "hsl(217, 91%, 60%)",
+    color: "hsl(142, 76%, 36%, 0.8)",
   },
   late: {
     label: "Late",
-    color: "hsl(199, 89%, 48%)",
+    color: "hsl(25, 95%, 53%, 0.8)",
   },
   absent: {
     label: "Absent",
-    color: "hsl(205, 87%, 29%)",
+    color: "hsl(0, 84%, 60%, 0.8)",
   },
 };
 
 export function WeeklyAttendanceChart() {
   const { data: chartData, isLoading } = useWeeklyAttendance();
+
+  console.log(chartData);
 
   if (isLoading || !chartData) {
     return (

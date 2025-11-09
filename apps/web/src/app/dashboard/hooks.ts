@@ -50,6 +50,13 @@ export interface TodayAttendance {
   isCurrentlyActive: boolean;
 }
 
+export interface MonthlyAttendanceTrend {
+  date: string;
+  present: number;
+  absent: number;
+  on_leave: number;
+}
+
 export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard", "stats"],
@@ -73,7 +80,7 @@ export function useDashboardStats() {
           (emp) => emp.employmentStatus === "ACTIVE"
         ).length;
         const presentToday = todayAttendance.filter(
-          (att) => att.status === "present"
+          (att) => att.status.toLowerCase() === "present"
         ).length;
         const attendanceRate =
           activeEmployees > 0 ? (presentToday / activeEmployees) * 100 : 0;
@@ -140,8 +147,9 @@ export function useEmployeeStatusDistribution() {
         };
 
         todayAttendance.forEach((att) => {
-          if (statusMap[att.status] !== undefined) {
-            statusMap[att.status]++;
+          const status = att.status.toLowerCase();
+          if (statusMap[status] !== undefined) {
+            statusMap[status]++;
           }
         });
 
@@ -177,7 +185,7 @@ export function useLeaveDistribution() {
         const response = await apiClient<{
           leaves: Array<{ leaveType: string; status: string }>;
           pagination: any;
-        }>(`/api/leaves/all?status=APPROVED&year=${year}&limit=1000`);
+        }>(`/api/leaves/all?status=APPROVED&limit=1000`);
 
         const leaves = response.leaves || [];
 
@@ -273,19 +281,33 @@ export function useWeeklyAttendance() {
             `/api/attendance/today?date=${dateStr}`
           );
 
-          const present = attendance.filter(
-            (att) => att.status === "present"
-          ).length;
-          const absent = attendance.filter(
-            (att) => att.status === "absent"
-          ).length;
-          const late = attendance.filter((att) => {
-            if (!att.checkIn) return false;
-            const checkInTime = new Date(att.checkIn);
-            const hours = checkInTime.getHours();
-            const minutes = checkInTime.getMinutes();
-            return hours > 9 || (hours === 9 && minutes > 30);
-          }).length;
+          let present = 0;
+          let late = 0;
+          let absent = 0;
+
+          attendance.forEach((att) => {
+            const status = att.status.toUpperCase();
+
+            if (status === "ABSENT") {
+              absent++;
+            } else if (status === "PRESENT" || status === "ON_LEAVE") {
+              // Check if they were late
+              if (att.checkIn) {
+                const checkInTime = new Date(att.checkIn);
+                const hours = checkInTime.getHours();
+                const minutes = checkInTime.getMinutes();
+                const isLate = hours > 9 || (hours === 9 && minutes > 30);
+
+                if (isLate && status === "PRESENT") {
+                  late++;
+                } else if (status === "PRESENT") {
+                  present++;
+                }
+              } else if (status === "PRESENT") {
+                present++;
+              }
+            }
+          });
 
           weekData.push({
             day: days[i],
@@ -306,5 +328,65 @@ export function useWeeklyAttendance() {
       return weekData;
     },
     staleTime: 60 * 1000,
+  });
+}
+
+export function useMonthlyAttendanceTrend(days: number = 30) {
+  return useQuery({
+    queryKey: ["dashboard", "monthly-attendance-trend", days],
+    queryFn: async () => {
+      const now = new Date();
+      const monthlyData: MonthlyAttendanceTrend[] = [];
+
+      // Get data for the specified number of days
+      for (let i = days - 1; i >= 0; i--) {
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() - i);
+
+        // Skip weekends
+        const dayOfWeek = targetDate.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          continue;
+        }
+
+        try {
+          const dateStr = targetDate.toISOString().split("T")[0];
+          const attendance = await apiClient<TodayAttendance[]>(
+            `/api/attendance/today?date=${dateStr}`
+          );
+
+          const statusMap = {
+            present: 0,
+            absent: 0,
+            on_leave: 0,
+          };
+
+          attendance.forEach((att) => {
+            const status = att.status.toLowerCase();
+            if (status === "present") statusMap.present++;
+            else if (status === "absent") statusMap.absent++;
+            else if (status === "on_leave") statusMap.on_leave++;
+          });
+
+          monthlyData.push({
+            date: targetDate.toISOString().split("T")[0],
+            present: statusMap.present,
+            absent: statusMap.absent,
+            on_leave: statusMap.on_leave,
+          });
+        } catch (error) {
+          monthlyData.push({
+            date: targetDate.toISOString().split("T")[0],
+            present: 0,
+            absent: 0,
+            on_leave: 0,
+          });
+        }
+      }
+
+      return monthlyData;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 }

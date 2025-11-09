@@ -85,72 +85,126 @@ export async function sendNewEmployeeEmail(data: NewEmployeeEmailData) {
     <head>
       <style>
         body {
-          font-family: Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
           line-height: 1.6;
-          color: #333;
+          color: #1a1a1a;
           max-width: 600px;
           margin: 0 auto;
           padding: 20px;
+          background-color: #ffffff;
         }
         .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          background: #1a1a1a;
+          color: #ffffff;
           padding: 30px;
           text-align: center;
-          border-radius: 8px 8px 0 0;
+          border-bottom: 3px solid #000000;
+        }
+        .header h1 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 600;
+          letter-spacing: -0.5px;
         }
         .content {
-          background: #f9f9f9;
-          padding: 30px;
-          border-radius: 0 0 8px 8px;
+          padding: 30px 0;
+        }
+        .content h2 {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-top: 0;
+        }
+        .content h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-top: 24px;
+        }
+        .content p {
+          color: #4a4a4a;
+          margin: 12px 0;
         }
         .credentials {
-          background: white;
-          padding: 20px;
-          border-radius: 8px;
-          margin: 20px 0;
-          border-left: 4px solid #667eea;
+          background: #f8f8f8;
+          padding: 24px;
+          margin: 24px 0;
+          border: 2px solid #e0e0e0;
+          border-left: 4px solid #1a1a1a;
+        }
+        .credentials h3 {
+          margin-top: 0;
+          margin-bottom: 16px;
         }
         .credential-item {
-          margin: 10px 0;
-          padding: 10px;
-          background: #f5f5f5;
-          border-radius: 4px;
+          margin: 12px 0;
+          padding: 12px;
+          background: #ffffff;
+          border: 1px solid #e0e0e0;
         }
         .credential-label {
-          font-weight: bold;
-          color: #667eea;
+          font-weight: 600;
+          color: #1a1a1a;
           display: block;
-          margin-bottom: 5px;
+          margin-bottom: 6px;
+          font-size: 13px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
         .credential-value {
           font-size: 16px;
-          font-family: 'Courier New', monospace;
-          color: #333;
+          font-family: 'Courier New', Consolas, monospace;
+          color: #1a1a1a;
+          font-weight: 500;
         }
         .warning {
-          background: #fff3cd;
-          border: 1px solid #ffc107;
-          padding: 15px;
-          border-radius: 4px;
-          margin: 20px 0;
+          background: #f8f8f8;
+          border: 2px solid #1a1a1a;
+          padding: 16px;
+          margin: 24px 0;
+        }
+        .warning strong {
+          display: block;
+          margin-bottom: 8px;
+          color: #1a1a1a;
+        }
+        .warning p {
+          margin: 0;
+          color: #4a4a4a;
         }
         .footer {
-          margin-top: 30px;
+          margin-top: 40px;
           padding-top: 20px;
-          border-top: 1px solid #ddd;
+          border-top: 2px solid #e0e0e0;
           text-align: center;
-          color: #666;
+          color: #737373;
           font-size: 12px;
+        }
+        .footer p {
+          color: #737373;
+          margin: 8px 0;
         }
         .button {
           display: inline-block;
-          padding: 12px 30px;
-          background: #667eea;
-          color: white;
+          padding: 14px 32px;
+          background: #1a1a1a;
+          color: #ffffff;
           text-decoration: none;
-          border-radius: 6px;
-          margin: 20px 0;
+          font-weight: 600;
+          margin: 24px 0;
+          border: 2px solid #1a1a1a;
+          transition: all 0.2s ease;
+        }
+        .button:hover {
+          background: #ffffff;
+          color: #1a1a1a;
+        }
+        ol {
+          color: #4a4a4a;
+          padding-left: 24px;
+        }
+        ol li {
+          margin: 8px 0;
         }
       </style>
     </head>
