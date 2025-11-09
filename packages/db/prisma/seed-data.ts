@@ -5,6 +5,7 @@ import {
   LeaveStatus,
   EmploymentStatus,
   Gender,
+  ComponentType,
 } from "../prisma/generated/enums";
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -52,6 +53,9 @@ const ORGANIZATION_NAME = "TechCorp Solutions";
 const TOTAL_USERS = 100;
 const USERS_PER_ROLE = 25;
 const DEFAULT_PASSWORD = "Welcome@123"; // Default password for all seeded employees
+
+// Notionists API endpoint for avatars
+const NOTIONISTS_API = "https://api.dicebear.com/7.x/notionists/svg";
 
 // Departments and designations
 const DEPARTMENTS = [
@@ -179,11 +183,34 @@ function isWeekend(date: Date): boolean {
   return day === 0 || day === 6; // Sunday or Saturday
 }
 
+function getNotionistsAvatar(seed: string): string {
+  return `${NOTIONISTS_API}?seed=${encodeURIComponent(seed)}`;
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function getWorkingDaysInMonth(year: number, month: number): number {
+  const daysInMonth = getDaysInMonth(year, month);
+  let workingDays = 0;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month - 1, day);
+    if (!isWeekend(date)) {
+      workingDays++;
+    }
+  }
+  return workingDays;
+}
+
 async function main() {
   console.log("Starting data seeding...");
 
   // Clear existing data (be careful with this in production!)
   console.log("Cleaning existing data...");
+  await prisma.payslip.deleteMany({});
+  await prisma.payrun.deleteMany({});
+  await prisma.salaryComponent.deleteMany({});
   await prisma.workSession.deleteMany({});
   await prisma.leave.deleteMany({});
   await prisma.leaveBalance.deleteMany({});
@@ -233,6 +260,7 @@ async function main() {
       const lastName = getRandomElement(LAST_NAMES);
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${employeeCount}@techcorp.com`;
       const employeeCode = `EMP${String(employeeCount).padStart(4, "0")}`;
+      const profileImageUrl = getNotionistsAvatar(email);
 
       // Create user with Better Auth
       console.log(`  Creating user ${employeeCount}/${TOTAL_USERS}: ${email}`);
@@ -261,6 +289,7 @@ async function main() {
           middleName:
             Math.random() > 0.7 ? getRandomElement(FIRST_NAMES) : null,
           lastName: lastName,
+          profileImage: profileImageUrl,
           dateOfBirth: new Date(
             1985 + Math.floor(Math.random() * 15),
             Math.floor(Math.random() * 12),
@@ -327,6 +356,9 @@ async function main() {
             65 + Math.floor(Math.random() * 26)
           )}${Math.floor(1000 + Math.random() * 8999)}${String.fromCharCode(
             65 + Math.floor(Math.random() * 26)
+          )}`,
+          uanNumber: `${Math.floor(
+            100000000000 + Math.random() * 899999999999
           )}`,
         },
       });
@@ -615,6 +647,305 @@ async function main() {
 
   console.log("✅ Updated leave balances");
 
+  // Generate Payroll Data for past 3 months
+  console.log("\nGenerating payroll data for past 3 months...");
+  const payrunMonths = [];
+
+  // Calculate the 3 months to generate payroll for
+  for (let i = 2; i >= 0; i--) {
+    const targetDate = new Date(now);
+    targetDate.setMonth(targetDate.getMonth() - i - 1); // -1 because payroll is for previous month
+    const month = targetDate.getMonth() + 1;
+    const year = targetDate.getFullYear();
+    payrunMonths.push({ month, year });
+  }
+
+  console.log(
+    `Creating payruns and payslips for: ${payrunMonths
+      .map((m) => `${m.month}/${m.year}`)
+      .join(", ")}`
+  );
+
+  let totalPayslipsCreated = 0;
+
+  for (const { month, year } of payrunMonths) {
+    console.log(`\n  Processing payrun for ${month}/${year}...`);
+
+    const periodStart = new Date(year, month - 1, 1);
+    const periodEnd = new Date(year, month, 0);
+
+    // Create payrun
+    const payrun = await prisma.payrun.create({
+      data: {
+        month,
+        year,
+        periodStart,
+        periodEnd,
+        status: "COMPLETED",
+        processedAt: new Date(year, month, 5), // Processed on 5th of next month
+        totalAmount: 0, // Will be updated after creating payslips
+      },
+    });
+
+    const workingDaysInMonth = getWorkingDaysInMonth(year, month);
+    const payslipsForMonth: any[] = [];
+
+    // Create payslip for each employee
+    for (const employee of employees) {
+      // Get work sessions for this employee in this month
+      const workSessions = await prisma.workSession.findMany({
+        where: {
+          employeeId: employee.id,
+          date: {
+            gte: periodStart,
+            lte: periodEnd,
+          },
+        },
+        select: {
+          workingHours: true,
+          overtimeHours: true,
+        },
+      });
+
+      // Get approved leaves for this month
+      const approvedLeaves = await prisma.leave.findMany({
+        where: {
+          employeeId: employee.id,
+          status: LeaveStatus.APPROVED,
+          startDate: {
+            lte: periodEnd,
+          },
+          endDate: {
+            gte: periodStart,
+          },
+        },
+        select: {
+          leaveType: true,
+          startDate: true,
+          endDate: true,
+          totalDays: true,
+        },
+      });
+
+      // Calculate attendance metrics
+      const presentDays = workSessions.length;
+
+      // Calculate leave days in this month
+      let paidLeaveDays = 0;
+      let unpaidLeaveDays = 0;
+
+      for (const leave of approvedLeaves) {
+        const leaveStart =
+          leave.startDate > periodStart ? leave.startDate : periodStart;
+        const leaveEnd = leave.endDate < periodEnd ? leave.endDate : periodEnd;
+
+        let daysInMonth = 0;
+        let currentDate = new Date(leaveStart);
+
+        while (currentDate <= leaveEnd) {
+          if (!isWeekend(currentDate)) {
+            daysInMonth++;
+          }
+          currentDate = addDays(currentDate, 1);
+        }
+
+        if (leave.leaveType === LeaveType.UNPAID_LEAVE) {
+          unpaidLeaveDays += daysInMonth;
+        } else {
+          paidLeaveDays += daysInMonth;
+        }
+      }
+
+      const totalLeaveDays = paidLeaveDays + unpaidLeaveDays;
+      const absentDays = Math.max(
+        0,
+        workingDaysInMonth - presentDays - totalLeaveDays
+      );
+
+      // Calculate overtime
+      const overtimeHours = workSessions.reduce((sum, session) => {
+        return (
+          sum + (session.overtimeHours ? Number(session.overtimeHours) : 0)
+        );
+      }, 0);
+
+      // Calculate salary components
+      const basicSalary = Number(employee.basicSalary) * 0.5;
+      const houseRentAllowance = basicSalary * 0.5; // 50% HRA
+      const standardAllowance = 4167;
+      const performanceBonus = basicSalary * 0.0833;
+      const leaveTravelAllowance = basicSalary * 0.08333;
+      const fixedAllowance =
+        Number(employee.basicSalary) -
+        (basicSalary +
+          houseRentAllowance +
+          standardAllowance +
+          performanceBonus +
+          leaveTravelAllowance);
+
+      const grossSalary = Number(employee.basicSalary);
+
+      // Calculate deductions
+      const pfDeduction = basicSalary * 0.12; // 12% of basic
+      const professionalTax = Number(employee.professionalTax);
+
+      // LOP (Loss of Pay) deduction for absent and unpaid leave days
+      const lopDays = Math.max(0, absentDays + unpaidLeaveDays);
+      const lopDeduction =
+        lopDays > 0
+          ? Math.min(
+              (grossSalary / workingDaysInMonth) * lopDays,
+              grossSalary * 0.5
+            )
+          : 0; // Cap LOP at 50% of gross
+
+      const totalDeductions = pfDeduction + professionalTax + lopDeduction;
+      const netSalary = Math.max(0, grossSalary - totalDeductions); // Ensure net salary is never negative
+      const totalEarnings = grossSalary;
+
+      payslipsForMonth.push({
+        employeeId: employee.id,
+        payrunId: payrun.id,
+        month,
+        year,
+        totalWorkingDays: workingDaysInMonth,
+        workingDays: workingDaysInMonth,
+        presentDays,
+        absentDays,
+        paidLeaveDays,
+        unpaidLeaveDays,
+        leaveDays: totalLeaveDays,
+        overtimeHours,
+        basicSalary,
+        grossSalary,
+        totalEarnings,
+        totalDeductions,
+        netSalary,
+        pfDeduction,
+        professionalTax,
+        lopDeduction,
+        otherDeductions: 0,
+        status: "PAID",
+        paidAt: new Date(year, month, 5),
+      });
+    }
+
+    // Batch create payslips
+    await prisma.payslip.createMany({
+      data: payslipsForMonth,
+    });
+
+    // Update payrun total amount
+    const totalAmount = payslipsForMonth.reduce(
+      (sum, p) => sum + p.netSalary,
+      0
+    );
+    await prisma.payrun.update({
+      where: { id: payrun.id },
+      data: { totalAmount },
+    });
+
+    totalPayslipsCreated += payslipsForMonth.length;
+    console.log(
+      `  ✅ Created ${payslipsForMonth.length} payslips for ${month}/${year}`
+    );
+    console.log(
+      `     Total payout: ₹${totalAmount.toLocaleString("en-IN", {
+        maximumFractionDigits: 0,
+      })}`
+    );
+  }
+
+  console.log(
+    `\n✅ Created ${payrunMonths.length} payruns with ${totalPayslipsCreated} total payslips`
+  );
+
+  // Create some salary components for random employees
+  console.log("\nCreating custom salary components...");
+  const salaryComponentsData: any[] = [];
+
+  // Give 20% of employees some custom components
+  const employeesWithComponents = employees
+    .sort(() => Math.random() - 0.5)
+    .slice(0, Math.floor(employees.length * 0.2));
+
+  for (const employee of employeesWithComponents) {
+    // Add 1-3 components per employee
+    const numComponents = 1 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < numComponents; i++) {
+      const isEarning = Math.random() > 0.3; // 70% earnings, 30% deductions
+
+      if (isEarning) {
+        const component = getRandomElement([
+          {
+            name: "Special Allowance",
+            amount: 2000 + Math.floor(Math.random() * 5000),
+          },
+          {
+            name: "Transport Allowance",
+            amount: 1500 + Math.floor(Math.random() * 2500),
+          },
+          {
+            name: "Mobile Allowance",
+            amount: 500 + Math.floor(Math.random() * 1500),
+          },
+          {
+            name: "Meal Allowance",
+            amount: 1000 + Math.floor(Math.random() * 2000),
+          },
+          {
+            name: "Incentive",
+            amount: 3000 + Math.floor(Math.random() * 7000),
+          },
+        ]);
+
+        salaryComponentsData.push({
+          employeeId: employee.id,
+          name: component.name,
+          type: "EARNING",
+          amount: component.amount,
+          isPercentage: false,
+          isRecurring: true,
+          isActive: true,
+        });
+      } else {
+        const component = getRandomElement([
+          {
+            name: "Loan Repayment",
+            amount: 2000 + Math.floor(Math.random() * 8000),
+          },
+          {
+            name: "Insurance Premium",
+            amount: 1000 + Math.floor(Math.random() * 3000),
+          },
+          {
+            name: "Other Deduction",
+            amount: 500 + Math.floor(Math.random() * 2000),
+          },
+        ]);
+
+        salaryComponentsData.push({
+          employeeId: employee.id,
+          name: component.name,
+          type: "DEDUCTION",
+          amount: component.amount,
+          isPercentage: false,
+          isRecurring: true,
+          isActive: true,
+        });
+      }
+    }
+  }
+
+  await prisma.salaryComponent.createMany({
+    data: salaryComponentsData,
+  });
+
+  console.log(
+    `✅ Created ${salaryComponentsData.length} custom salary components for ${employeesWithComponents.length} employees`
+  );
+
   // Summary
   console.log("\n=== Seeding Summary ===");
   console.log(`Organizations: 1`);
@@ -641,11 +972,16 @@ async function main() {
     }`
   );
   console.log(`Work Sessions: ${workSessionsData.length}`);
+  console.log(`Payruns: ${payrunMonths.length}`);
+  console.log(`Payslips: ${totalPayslipsCreated}`);
+  console.log(`Custom Salary Components: ${salaryComponentsData.length}`);
   console.log(`\n🔐 Login Credentials:`);
   console.log(
     `  All users can login with their email and password: ${DEFAULT_PASSWORD}`
   );
   console.log(`  Example: amit.sharma1@techcorp.com / ${DEFAULT_PASSWORD}`);
+  console.log(`\n🖼️  Profile Pictures:`);
+  console.log(`  All users have profile pictures from Notionists avatars`);
   console.log(`\n✅ Seeding completed successfully!`);
 }
 

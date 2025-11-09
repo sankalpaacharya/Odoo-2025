@@ -91,15 +91,19 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
-          <p className="text-muted-foreground">Manage your team members</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Employees
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Manage your team members
+          </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative w-96">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative w-full sm:w-64 md:w-80 lg:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               type="search"
@@ -129,7 +133,7 @@ export default function EmployeesPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {filteredEmployees.map((emp) => (
               <EmployeeCard
                 key={emp.id}

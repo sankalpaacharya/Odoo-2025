@@ -155,6 +155,13 @@ export default function ReportsPage() {
 
   const getProfileImageUrl = (profileImage: string | null | undefined) => {
     if (!profileImage) return null;
+    // If it's already a full URL, return it as is
+    if (
+      profileImage.startsWith("http://") ||
+      profileImage.startsWith("https://")
+    ) {
+      return profileImage;
+    }
     const API_URL =
       process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
     return `${API_URL}${profileImage}`;
@@ -203,16 +210,18 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Reports
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Generate and view salary statement reports
         </p>
       </div>
 
-      <div className="space-y-6">
-        <div className="flex items-end gap-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 sm:gap-4">
           <div className="flex-1 space-y-2">
             <label className="text-sm font-medium">Employee</label>
             <Popover open={open} onOpenChange={setOpen}>
@@ -254,7 +263,7 @@ export default function ReportsPage() {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] p-0">
                 <Command>
                   <CommandInput
                     placeholder="Search employee..."
@@ -399,77 +408,84 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Salary Components Table */}
-                <div className="overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-left py-3 text-sm font-semibold">
-                          Salary Components
-                        </TableHead>
-                        <TableHead className="text-right py-3 text-sm font-semibold">
-                          Monthly Amount
-                        </TableHead>
-                        <TableHead className="text-right py-3 text-sm font-semibold">
-                          Yearly Amount
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableCell
-                          colSpan={3}
-                          className="py-2 text-sm font-semibold"
-                        >
-                          Earnings
-                        </TableCell>
-                      </TableRow>
-                      {salaryData.earnings.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="pl-8 text-sm">
-                            {item.name}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            ₹ {item.monthlyAmount.toLocaleString("en-IN")}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            ₹ {item.yearlyAmount.toLocaleString("en-IN")}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                    <div className="overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-left py-3 text-sm font-semibold">
+                              Salary Components
+                            </TableHead>
+                            <TableHead className="text-right py-3 text-sm font-semibold">
+                              Monthly Amount
+                            </TableHead>
+                            <TableHead className="text-right py-3 text-sm font-semibold">
+                              Yearly Amount
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableCell
+                              colSpan={3}
+                              className="py-2 text-sm font-semibold"
+                            >
+                              Earnings
+                            </TableCell>
+                          </TableRow>
+                          {salaryData.earnings.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="pl-8 text-sm">
+                                {item.name}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                ₹ {item.monthlyAmount.toLocaleString("en-IN")}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                ₹ {item.yearlyAmount.toLocaleString("en-IN")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
 
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableCell
-                          colSpan={3}
-                          className="py-2 text-sm font-semibold"
-                        >
-                          Deductions
-                        </TableCell>
-                      </TableRow>
-                      {salaryData.deductions.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="pl-8 text-sm">
-                            {item.name}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            ₹ {item.monthlyAmount.toLocaleString("en-IN")}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            ₹ {item.yearlyAmount.toLocaleString("en-IN")}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                          <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableCell
+                              colSpan={3}
+                              className="py-2 text-sm font-semibold"
+                            >
+                              Deductions
+                            </TableCell>
+                          </TableRow>
+                          {salaryData.deductions.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="pl-8 text-sm">
+                                {item.name}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                ₹ {item.monthlyAmount.toLocaleString("en-IN")}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                ₹ {item.yearlyAmount.toLocaleString("en-IN")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
 
-                      <TableRow className="bg-primary/10 border-t-2 border-primary/20 font-semibold hover:bg-primary/10">
-                        <TableCell className="text-sm">Net Salary</TableCell>
-                        <TableCell className="text-right text-sm">
-                          ₹ {totals.netSalary.toLocaleString("en-IN")}
-                        </TableCell>
-                        <TableCell className="text-right text-sm">
-                          ₹ {(totals.netSalary * 12).toLocaleString("en-IN")}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                          <TableRow className="bg-primary/10 border-t-2 border-primary/20 font-semibold hover:bg-primary/10">
+                            <TableCell className="text-sm">
+                              Net Salary
+                            </TableCell>
+                            <TableCell className="text-right text-sm">
+                              ₹ {totals.netSalary.toLocaleString("en-IN")}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">
+                              ₹{" "}
+                              {(totals.netSalary * 12).toLocaleString("en-IN")}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

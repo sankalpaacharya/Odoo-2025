@@ -85,8 +85,10 @@ export default function SignInForm({
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
+    <div className="mx-auto w-full mt-6 sm:mt-10 max-w-md px-4 sm:px-6 py-4 sm:py-6">
+      <h1 className="mb-4 sm:mb-6 text-center text-2xl sm:text-3xl font-bold">
+        Welcome Back
+      </h1>
 
       <form
         onSubmit={(e) => {

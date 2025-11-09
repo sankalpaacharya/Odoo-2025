@@ -53,15 +53,20 @@ export function AttendanceTrendChart() {
   }));
 
   return (
-    <Card className="w-full h-full">
-      <CardHeader>
-        <CardTitle>Employee Status Today</CardTitle>
-        <CardDescription>
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base sm:text-lg">
+          Employee Status Today
+        </CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
           Current status breakdown of all employees
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
+      <CardContent className="px-2 sm:px-6">
+        <ChartContainer
+          config={chartConfig}
+          className="h-[250px] sm:h-[300px] lg:h-[350px] w-full"
+        >
           <BarChart data={formattedData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis

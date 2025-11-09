@@ -28,23 +28,37 @@ export default function PayrollPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payroll</h1>
-        <p className="text-muted-foreground">Manage employee compensation</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Payroll
+        </h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Manage employee compensation
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="payrun">Payrun</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="dashboard" className="flex-1 sm:flex-initial">
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="payrun" className="flex-1 sm:flex-initial">
+            Payrun
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard" className="space-y-6 mt-6">
+        <TabsContent
+          value="dashboard"
+          className="space-y-4 sm:space-y-6 mt-4 sm:mt-6"
+        >
           <PayrollDashboard />
         </TabsContent>
 
-        <TabsContent value="payrun" className="space-y-6 mt-6">
+        <TabsContent
+          value="payrun"
+          className="space-y-4 sm:space-y-6 mt-4 sm:mt-6"
+        >
           <PayrollPayrun />
         </TabsContent>
       </Tabs>

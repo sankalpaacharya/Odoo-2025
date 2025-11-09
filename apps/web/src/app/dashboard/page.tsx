@@ -106,19 +106,22 @@ export default function DashboardPage() {
 
       <StatsCards data={statsData} />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 w-full min-w-0">
           <AttendanceTrendChart />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 w-full min-w-0">
           <RecentLeaveRequests />
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <LeaveDistributionChart />
-
-        <WeeklyAttendanceChart />
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="w-full min-w-0">
+          <LeaveDistributionChart />
+        </div>
+        <div className="w-full min-w-0">
+          <WeeklyAttendanceChart />
+        </div>
       </div>
     </div>
   );
